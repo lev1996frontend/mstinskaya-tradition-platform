@@ -11,7 +11,7 @@ The platform is intended to become a unified digital platform for the community:
 - athletes, instructors, judges and clubs;
 - equipment and weapon catalog;
 - orders and sellers;
-- ratings, certificates and accreditation in later stages.
+- ratings, certificates and accreditation in later stages.d
 
 The project is designed as an extensible platform, not as a single tournament website.
 
