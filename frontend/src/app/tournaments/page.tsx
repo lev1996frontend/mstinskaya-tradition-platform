@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Plus, Trophy } from "lucide-react";
 
-import { listTournaments } from "@/api/tournaments";
+import { listTournamentsWithStatus } from "@/api/tournaments";
 import { ApiOfflineNotice } from "@/components/api-status";
 import { ButtonLink, Container, EmptyState, PageHeader } from "@/components/ui";
 import { TournamentGrid } from "@/features/home/tournament-grid";
@@ -38,7 +38,7 @@ function sortTournaments(tournaments: Tournament[]): Tournament[] {
 }
 
 export default async function TournamentsPage() {
-  const tournaments = await listTournaments();
+  const { items: tournaments, offline } = await listTournamentsWithStatus();
   const sorted = sortTournaments(tournaments);
 
   return (
@@ -58,7 +58,7 @@ export default async function TournamentsPage() {
 
       {sorted.length === 0 ? (
         <div className="space-y-4">
-          <ApiOfflineNotice />
+          {offline ? <ApiOfflineNotice /> : null}
           <EmptyState
             title="Турниров пока нет"
             icon={<Trophy className="size-5" strokeWidth={1.75} />}

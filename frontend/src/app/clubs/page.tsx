@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { listClubs } from "@/api/catalog";
+import { listClubsWithStatus } from "@/api/catalog";
 import { ApiOfflineNotice } from "@/components/api-status";
 import { CrestRoundel } from "@/components/brand/crest-roundel";
 import { Badge, Card, Container, EmptyState, PageHeader } from "@/components/ui";
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
  * status is a struck label — so it reads as a filing card, not a product tile.
  */
 export default async function ClubsPage() {
-  const clubs = await listClubs();
+  const { items: clubs, offline } = await listClubsWithStatus();
 
   return (
     <Container className="space-y-8 py-10">
@@ -38,7 +38,7 @@ export default async function ClubsPage() {
 
       {clubs.length === 0 ? (
         <div className="space-y-4">
-          <ApiOfflineNotice />
+          {offline ? <ApiOfflineNotice /> : null}
           <EmptyState
             title="Клубов пока нет"
             description="Реестр клубов заполнится, как только появятся первые записи."

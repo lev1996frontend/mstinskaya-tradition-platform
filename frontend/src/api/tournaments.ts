@@ -1,4 +1,4 @@
-import { apiListOrEmpty, apiRequest, apiRequestOrNull } from "@/lib/api";
+import { apiListOrEmpty, apiListWithOffline, apiRequest, apiRequestOrNull } from "@/lib/api";
 import type {
   AthleteParticipationView,
   BoutDetailView,
@@ -31,6 +31,9 @@ import type {
 // ---------------------------------------------------------------- reads ---
 
 export const listTournaments = () => apiListOrEmpty<Tournament>("/api/v1/tournaments");
+
+export const listTournamentsWithStatus = () =>
+  apiListWithOffline<Tournament>("/api/v1/tournaments");
 
 export const getTournament = (id: string) =>
   apiRequestOrNull<Tournament>(`/api/v1/tournaments/${id}`);

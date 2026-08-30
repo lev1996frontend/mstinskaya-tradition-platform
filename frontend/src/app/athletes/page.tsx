@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Users } from "lucide-react";
 import Link from "next/link";
 
-import { listAthletes } from "@/api/catalog";
+import { listAthletesWithStatus } from "@/api/catalog";
 import { ApiOfflineNotice } from "@/components/api-status";
 import { Badge, Container, EmptyState, PageHeader, Table, Td, Th } from "@/components/ui";
 import { Avatar } from "@/components/ui/avatar";
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
  * lost. Every athlete is still one link to the same detail route.
  */
 export default async function AthletesPage() {
-  const athletes = await listAthletes();
+  const { items: athletes, offline } = await listAthletesWithStatus();
 
   return (
     <Container className="space-y-8 py-10">
@@ -40,7 +40,7 @@ export default async function AthletesPage() {
 
       {athletes.length === 0 ? (
         <div className="space-y-4">
-          <ApiOfflineNotice />
+          {offline ? <ApiOfflineNotice /> : null}
           <EmptyState
             title="Профилей пока нет"
             description="Реестр спортсменов заполнится, как только появятся первые записи."

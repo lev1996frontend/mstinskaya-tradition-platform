@@ -114,3 +114,22 @@ export async function apiListOrEmpty<T>(path: string, options: RequestOptions = 
   const result = await apiRequestOrNull<T[]>(path, options);
   return result ?? [];
 }
+
+/**
+ * Same as `apiListOrEmpty`, but keeps the "API unreachable" case distinct
+ * from a genuinely empty list, so a page can tell the two apart instead of
+ * showing an offline notice for an empty-but-working backend.
+ */
+export async function apiListWithOffline<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<{ items: T[]; offline: boolean }> {
+  try {
+    const items = await apiRequest<T[]>(path, options);
+    return { items, offline: false };
+  } catch (error) {
+    if (error instanceof ApiUnreachableError) return { items: [], offline: true };
+    if (error instanceof ApiError) return { items: [], offline: false };
+    throw error;
+  }
+}

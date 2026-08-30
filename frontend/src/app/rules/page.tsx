@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { BookOpen } from "lucide-react";
 import Link from "next/link";
 
-import { listRuleSets } from "@/api/catalog";
+import { listRuleSetsWithStatus } from "@/api/catalog";
 import { ApiOfflineNotice } from "@/components/api-status";
 import { Badge, Container, EmptyState, PageHeader } from "@/components/ui";
 import { formatDate } from "@/lib/format";
@@ -26,7 +26,7 @@ const STATUS: Record<RuleSet["status"], { label: string; tone: "neutral" | "succ
  * then whether it is in force. Cards would have buried that number in a badge.
  */
 export default async function RulesPage() {
-  const ruleSets = await listRuleSets();
+  const { items: ruleSets, offline } = await listRuleSetsWithStatus();
 
   return (
     <Container className="space-y-8 py-10">
@@ -38,7 +38,7 @@ export default async function RulesPage() {
 
       {ruleSets.length === 0 ? (
         <div className="space-y-4">
-          <ApiOfflineNotice />
+          {offline ? <ApiOfflineNotice /> : null}
           <EmptyState
             title="Регламентов пока нет"
             description="Здесь появятся действующие и архивные редакции правил."

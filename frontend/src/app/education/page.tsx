@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { GraduationCap } from "lucide-react";
 
-import { listCourses } from "@/api/catalog";
+import { listCoursesWithStatus } from "@/api/catalog";
 import { ApiOfflineNotice } from "@/components/api-status";
 import { Badge, Card, Container, EmptyState, PageHeader } from "@/components/ui";
 import { courseLevel, courseType, labelOf } from "@/lib/labels";
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
  * the bottom rule instead of floating as pills under the heading.
  */
 export default async function EducationPage() {
-  const courses = await listCourses();
+  const { items: courses, offline } = await listCoursesWithStatus();
   const published = courses.filter((course) => course.is_published);
 
   return (
@@ -39,7 +39,7 @@ export default async function EducationPage() {
 
       {published.length === 0 ? (
         <div className="space-y-4">
-          <ApiOfflineNotice />
+          {offline ? <ApiOfflineNotice /> : null}
           <EmptyState
             title="Опубликованных курсов пока нет"
             description={
