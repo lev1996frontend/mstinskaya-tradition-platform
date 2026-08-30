@@ -1,42 +1,135 @@
 @import "tailwindcss";
 
 /*
- * Palette: warm parchment ground with a deep crimson accent, matching the
- * traditional-martial character of the product without going decorative.
+ * Design tokens — "Полевой архив" (Field Archive).
+ *
+ * The system reads every piece of information as an entry stamped into an
+ * official record: warm paper stock, oxblood + aged gold marks, cold iron for
+ * structural rules and chrome, and a typewriter face reserved for anything
+ * that is a *value* (number, date, code, status).
+ *
+ * Three type roles, never interchanged:
+ *   --font-display  Playfair Display — editorial headings only
+ *   --font-sans     Inter            — interface and running text
+ *   --font-record   IBM Plex Mono    — numerals, dates, codes, field labels
+ *
+ * Two neutral ramps on purpose:
+ *   --neutral-*  warm (paper, ink, running text)
+ *   --iron-*     cold graphite (rules, chrome, table heads, stamped plates)
+ * Mixing a cold rule against warm paper is what keeps the palette from
+ * collapsing into a single flat "gray-500 on white" SaaS surface.
+ *
+ * The manual theme toggle sets `data-theme` on <html>; when it's absent the
+ * page still follows the OS preference via prefers-color-scheme, so the site
+ * degrades correctly with JS disabled. See `features/theme/theme-context.tsx`.
  */
 :root {
-  --background: #f7f5f1;
-  --surface: #ffffff;
-  --surface-muted: #f1eee8;
-  --border: #e0dbd1;
-  --border-strong: #cbc3b5;
-  --foreground: #1c1a17;
-  --muted: #6c665c;
-  --accent: #9b2226;
-  --accent-strong: #7c161a;
-  --accent-soft: #fbeaea;
+  /* ---- surfaces & ink ---------------------------------------------- */
+  /* Parchment ground, one step deeper than the card stock so paper reads as
+     paper laid *on* a desk rather than a white panel on a white page. */
+  --background: #f2eee4;
+  --surface: #fbf9f3;
+  --surface-muted: #ebe5d8;
+  --foreground: #17140f;
+  --muted: #6b6459;
+
+  /* warm neutral ramp — paper, ink, running text */
+  --neutral-50: #faf8f4;
+  --neutral-100: #f1eee7;
+  --neutral-200: #e0dbd1;
+  --neutral-300: #cbc3b5;
+  --neutral-400: #ada190;
+  --neutral-500: #8d8170;
+  --neutral-600: #6c665c;
+  --neutral-700: #4a443a;
+  --neutral-800: #2c2822;
+  --neutral-900: #17140f;
+
+  /* cold iron ramp — structural rules, chrome, stamped plates. Deliberately
+     desaturated-cool so it never reads as "the same gray as the paper edge". */
+  --iron: #343b3c;
+  --iron-strong: #1b2122;
+  /* `--iron-muted` is the colour of every stamped field label, and those sit on
+     the tinted table-head/footer grounds as well as on plain paper — it is
+     tuned to clear 4.5:1 against `--surface-muted`, not just `--surface`. */
+  --iron-muted: #5b6364;
+  --iron-line: #b9bfbd;
+
+  /* card/paper edge (warm) vs. structural rule (cold iron) */
+  --border: #ded7c7;
+  --border-strong: #c6bda9;
+  --rule: var(--iron-line);
+
+  /* ---- brand: oxblood + gold ----------------------------------------- */
+  --accent: #8c1f24;
+  --accent-strong: #6e171b;
+  --accent-soft: #f4e3e0;
+  --gold: #a67c22;
+  --gold-strong: #7f5d16;
+  --gold-soft: #f2e6ca;
+  --live: #c8382c;
+  --live-soft: #f7e4e0;
+
+  /* ---- semantic status -------------------------------------------- */
   --success: #2f6b46;
-  --success-soft: #e6f2ea;
-  --warning: #8a5a13;
-  --warning-soft: #fbf1de;
+  --success-soft: #e2efe5;
+  --warning: #7d5211;
+  --warning-soft: #f4ead2;
   --info: #1f4f7a;
-  --info-soft: #e6eff7;
-  --danger: #9b2226;
-  --danger-soft: #fbeaea;
+  --info-soft: #e2ecf4;
+  --danger: #8c1f24;
+  --danger-soft: #f4e3e0;
+
+  /* ---- radius / shadow / motion ------------------------------------ */
+  /* Tight radii on purpose: a filed record has a cut edge, not a pill edge.
+     Anything above ~4px starts reading as a generic SaaS card. */
+  --radius-sm: 0.125rem;
+  --radius-md: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-pill: 999px;
+
+  /* Depth comes from a hard printed offset + a hairline, not from a soft
+     floating blur. The large blur survives only for real overlays. */
+  --shadow-sm: 0 1px 0 rgba(27, 33, 34, 0.05);
+  --shadow-md: 0 1px 0 rgba(27, 33, 34, 0.07), 0 10px 22px -18px rgba(27, 33, 34, 0.55);
+  --shadow-lg: 0 2px 0 rgba(27, 33, 34, 0.08), 0 26px 56px -28px rgba(27, 33, 34, 0.45);
+  --shadow-glow-accent: 0 0 0 3px var(--accent-soft), 0 2px 0 rgba(140, 31, 36, 0.25);
+
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 420ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* paper grain strength (see body::after) */
+  --grain: 0.035;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #14130f;
-    --surface: #1c1a16;
-    --surface-muted: #23211c;
-    --border: #322f28;
-    --border-strong: #4a4539;
-    --foreground: #f0ece4;
-    --muted: #a49c8e;
+  :root:not([data-theme="light"]) {
+    --background: #100f0d;
+    --surface: #1a1814;
+    --surface-muted: #23201a;
+    --foreground: #f1ece2;
+    --muted: #a89d8c;
+
+    --iron: #aab2b3;
+    --iron-strong: #dee3e3;
+    --iron-muted: #8d9596;
+    --iron-line: #3a4042;
+
+    --border: #322d24;
+    --border-strong: #4a4336;
+    --rule: var(--iron-line);
+
     --accent: #d9484d;
     --accent-strong: #ef6a6e;
     --accent-soft: #331a1b;
+    --gold: #d0a34a;
+    --gold-strong: #e6c07a;
+    --gold-soft: #2a2114;
+    --live: #ff5c4d;
+    --live-soft: #2c1917;
+
     --success: #6fbb8d;
     --success-soft: #16261d;
     --warning: #d9a44e;
@@ -45,7 +138,56 @@
     --info-soft: #16222d;
     --danger: #e2686c;
     --danger-soft: #2c1719;
+
+    --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 1px 0 rgba(0, 0, 0, 0.55), 0 10px 22px -18px rgba(0, 0, 0, 0.8);
+    --shadow-lg: 0 2px 0 rgba(0, 0, 0, 0.6), 0 26px 56px -28px rgba(0, 0, 0, 0.85);
+    --shadow-glow-accent: 0 0 0 3px var(--accent-soft), 0 2px 0 rgba(217, 72, 77, 0.35);
+
+    --grain: 0.05;
   }
+}
+
+:root[data-theme="dark"] {
+  --background: #100f0d;
+  --surface: #1a1814;
+  --surface-muted: #23201a;
+  --foreground: #f1ece2;
+  --muted: #a89d8c;
+
+  --iron: #aab2b3;
+  --iron-strong: #dee3e3;
+  --iron-muted: #8d9596;
+  --iron-line: #3a4042;
+
+  --border: #322d24;
+  --border-strong: #4a4336;
+  --rule: var(--iron-line);
+
+  --accent: #d9484d;
+  --accent-strong: #ef6a6e;
+  --accent-soft: #331a1b;
+  --gold: #d0a34a;
+  --gold-strong: #e6c07a;
+  --gold-soft: #2a2114;
+  --live: #ff5c4d;
+  --live-soft: #2c1917;
+
+  --success: #6fbb8d;
+  --success-soft: #16261d;
+  --warning: #d9a44e;
+  --warning-soft: #2a2114;
+  --info: #7bb2df;
+  --info-soft: #16222d;
+  --danger: #e2686c;
+  --danger-soft: #2c1719;
+
+  --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 1px 0 rgba(0, 0, 0, 0.55), 0 10px 22px -18px rgba(0, 0, 0, 0.8);
+  --shadow-lg: 0 2px 0 rgba(0, 0, 0, 0.6), 0 26px 56px -28px rgba(0, 0, 0, 0.85);
+  --shadow-glow-accent: 0 0 0 3px var(--accent-soft), 0 2px 0 rgba(217, 72, 77, 0.35);
+
+  --grain: 0.05;
 }
 
 @theme inline {
@@ -54,11 +196,35 @@
   --color-surface-muted: var(--surface-muted);
   --color-border-base: var(--border);
   --color-border-strong: var(--border-strong);
+  --color-rule: var(--rule);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+
+  --color-neutral-50: var(--neutral-50);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500);
+  --color-neutral-600: var(--neutral-600);
+  --color-neutral-700: var(--neutral-700);
+  --color-neutral-800: var(--neutral-800);
+  --color-neutral-900: var(--neutral-900);
+
+  --color-iron: var(--iron);
+  --color-iron-strong: var(--iron-strong);
+  --color-iron-muted: var(--iron-muted);
+  --color-iron-line: var(--iron-line);
+
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-accent-soft: var(--accent-soft);
+  --color-gold: var(--gold);
+  --color-gold-strong: var(--gold-strong);
+  --color-gold-soft: var(--gold-soft);
+  --color-live: var(--live);
+  --color-live-soft: var(--live-soft);
+
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
@@ -67,7 +233,12 @@
   --color-info-soft: var(--info-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-playfair), ui-serif, Georgia, serif;
+  /* Tailwind's `font-mono` and our `.font-record` resolve to the same face, so
+     the few existing <code> usages join the record system for free. */
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 body {
@@ -75,6 +246,23 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  transition: background-color var(--duration-base) var(--ease-out), color var(--duration-base) var(--ease-out);
+}
+
+/*
+ * Paper grain. A fixed, non-interactive fractal-noise overlay at ~3-5%: the
+ * one piece of "texture" in the system, and it earns its place — it is what
+ * stops large flat parchment fields from reading as a flat #fff canvas. Not
+ * animated, not parallaxed, no gradient blobs.
+ */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  opacity: var(--grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 *,
@@ -88,8 +276,127 @@ body {
   outline-offset: 2px;
 }
 
-/* The playoff bracket scrolls sideways; keep the scrollbar unobtrusive. */
+/* The playoff bracket and wide tables scroll sideways; keep the scrollbar unobtrusive. */
 .scroll-x {
   overflow-x: auto;
   scrollbar-width: thin;
+}
+
+/* ------------------------------------------------------------ type roles */
+
+/* Editorial display face — headings and hero only, never body copy. */
+.font-display {
+  font-family: var(--font-display);
+}
+
+/*
+ * The "record" face. Reserved for values: scores, seeds, ratings, bout
+ * numbers, dates, round numerals, identifiers, status stamps. Tabular +
+ * slashed zero so columns of digits align and 0/O never read alike — the
+ * difference between a data table and a ledger.
+ */
+.font-record {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+/* Digits inside otherwise-sans text (counts in a sentence, table cells that
+   must keep the UI face) — alignment without switching typeface. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Field label: the uppercase micro-caption stamped above a value on a paper
+ * form. Used for eyebrows, table heads, stat captions, footer column heads —
+ * one recurring shape that makes unrelated pages feel like the same document.
+ *
+ * NOTE for future work: this class is unlayered, so it beats Tailwind's
+ * layered utilities. `record-label text-sm` will NOT resize it — the class
+ * wins. Compose it only with properties it does not set (colour, spacing,
+ * borders); if you need a different size, write the four properties out.
+ */
+.record-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+/* ------------------------------------------------------- ledger surfaces */
+
+/*
+ * Ruled paper. Faint horizontal writing lines, used only where a surface is
+ * standing in for an unfilled record (empty states, the masthead margin).
+ */
+.ledger-lines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 1.625rem,
+    color-mix(in srgb, var(--rule) 32%, transparent) 1.625rem,
+    color-mix(in srgb, var(--rule) 32%, transparent) calc(1.625rem + 1px)
+  );
+}
+
+/*
+ * Cold double rule — the structural separator of the system. Two directions,
+ * because the direction is load-bearing: `.rule-double` opens a block (it sits
+ * above the content, as at the top of the footer), `.rule-double-b` closes one
+ * (under a page title). Getting this backwards stacks a second bar directly
+ * under the site header's own rule and reads as a broken toolbar.
+ */
+.rule-double {
+  border-top: 2px solid var(--rule);
+  background-image: linear-gradient(to bottom, transparent 2px, var(--rule) 2px);
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 100% 3px;
+}
+
+.rule-double-b {
+  border-bottom: 2px solid var(--rule);
+  background-image: linear-gradient(to bottom, var(--rule) 1px, transparent 1px);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 3px;
+}
+
+/* ------------------------------------------------------------ motion */
+
+/*
+ * "Stamp landing" — the only mount animation in the system, and it is applied
+ * to exactly one element per page at most (the h1). Fast, slightly
+ * over-scaled, no drift: a seal being pressed, not a block fading in.
+ * Pure CSS so the element stays a server component and the global
+ * prefers-reduced-motion override below neutralises it for free.
+ */
+@keyframes stamp-in {
+  from {
+    opacity: 0;
+    transform: scale(1.035);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.stamp-in {
+  animation: stamp-in 220ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

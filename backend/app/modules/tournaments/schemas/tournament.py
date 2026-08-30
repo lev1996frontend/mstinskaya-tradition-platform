@@ -5,7 +5,21 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-TournamentStatus = Literal["DRAFT", "REGISTRATION", "RUNNING", "ACTIVE", "FINISHED", "ARCHIVED"]
+#: One enum, extended rather than forked. ``READY``, ``BRACKET_CREATED`` and
+#: ``FINAL`` are the new engine-driven states; ``RUNNING`` is the spec's
+#: "in progress" and ``FINISHED`` its "completed", both kept under the names
+#: the API and the frontend already used.
+TournamentStatus = Literal[
+    "DRAFT",
+    "REGISTRATION",
+    "READY",
+    "BRACKET_CREATED",
+    "RUNNING",
+    "ACTIVE",
+    "FINAL",
+    "FINISHED",
+    "ARCHIVED",
+]
 
 
 class TournamentCreateRequest(BaseModel):

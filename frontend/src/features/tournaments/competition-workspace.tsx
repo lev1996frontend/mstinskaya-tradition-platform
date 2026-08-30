@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
@@ -7,24 +8,38 @@ import { Stat, cn } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
 import type {
   BracketTreeView,
+  ChampionSummaryView,
   CompetitionEventView,
   CompetitionView,
   DrawView,
   MatchView,
   ParticipantView,
   StandingsView,
+  TeamBoutView,
   TeamView,
 } from "@/types";
 
+import { BoutDetailHost } from "./bout-detail";
+import { BracketGenerator } from "./bracket-generator";
 import { BracketView } from "./bracket-view";
+import { ChampionSummary } from "./champion-summary";
 import { EventsJournal } from "./events-journal";
 import { MatchResultDialog } from "./match-result-dialog";
 import { MatchesList } from "./matches-list";
 import { ParticipantsTable } from "./participants-table";
 import { StandingsTable } from "./standings-table";
+import { TeamBouts } from "./team-bouts";
 import { TeamsList } from "./teams-list";
 
-type TabKey = "participants" | "teams" | "matches" | "standings" | "bracket" | "journal";
+type TabKey =
+  | "participants"
+  | "teams"
+  | "matches"
+  | "standings"
+  | "bracket"
+  | "teamBouts"
+  | "results"
+  | "journal";
 
 export type CompetitionData = {
   competition: CompetitionView;
@@ -35,15 +50,20 @@ export type CompetitionData = {
   bracket: BracketTreeView | null;
   draws: DrawView[];
   events: CompetitionEventView[];
+  teamBouts: TeamBoutView[];
+  champion: ChampionSummaryView | null;
 };
 
 export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
-  const { competition, participants, teams, matches, standings, bracket, events } = data;
+  const { competition, participants, teams, matches, standings, bracket, events, teamBouts, champion } =
+    data;
   const { user } = useAuth();
   const router = useRouter();
   const [, startTransition] = useTransition();
 
   const [editing, setEditing] = useState<MatchView | null>(null);
+  /** Which поединок the judge panel is open on. */
+  const [runningBoutId, setRunningBoutId] = useState<string | null>(null);
 
   const tabs = useMemo(() => {
     // A win/loss tally only means something where everyone meets everyone; in a
@@ -64,13 +84,25 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
     ];
     if (competition.type === "TEAM" || teams.length > 0) {
       list.push({ key: "teams", label: "Команды", count: teams.length });
+      list.push({ key: "teamBouts", label: "Трое на трое", count: teamBouts.length });
     }
     if (showStandings) list.push({ key: "standings", label: "Таблица" });
     if (showBracket) list.push({ key: "bracket", label: "Сетка" });
     list.push({ key: "matches", label: "Бои", count: matches.length });
+    // Only offered once the final is actually decided — no placeholder champion.
+    if (champion?.complete) list.push({ key: "results", label: "Итоги" });
     list.push({ key: "journal", label: "Журнал", count: events.length });
     return list;
-  }, [competition, participants.length, teams, matches.length, events.length, bracket]);
+  }, [
+    competition,
+    participants.length,
+    teams,
+    matches.length,
+    events.length,
+    bracket,
+    teamBouts.length,
+    champion,
+  ]);
 
   const [tab, setTab] = useState<TabKey>(tabs[0]?.key ?? "participants");
   const activeTab = tabs.some((item) => item.key === tab) ? tab : (tabs[0]?.key ?? "participants");
@@ -81,7 +113,13 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
     startTransition(() => router.refresh());
   }
 
+  /** Same, but keeps the judge panel open — it re-reads the bout itself. */
+  function refreshInPlace() {
+    startTransition(() => router.refresh());
+  }
+
   const canManage = Boolean(user);
+  const reduceMotion = useReducedMotion();
 
   return (
     <div className="space-y-6">
@@ -97,34 +135,42 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
         />
       </div>
 
-      <div className="border-b border-[var(--border)]">
+      <div className="sticky top-16 z-20 -mx-4 border-b border-[var(--border)] bg-[var(--background)]/95 px-4 backdrop-blur sm:-mx-6 sm:px-6">
         <div
           className="scroll-x -mb-px flex gap-1"
           role="tablist"
           aria-label="Разделы дисциплины"
         >
-          {tabs.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              role="tab"
-              id={`tab-${item.key}`}
-              aria-selected={activeTab === item.key}
-              aria-controls={`panel-${item.key}`}
-              onClick={() => setTab(item.key)}
-              className={cn(
-                "whitespace-nowrap border-b-2 px-4 py-2.5 text-sm transition-colors",
-                activeTab === item.key
-                  ? "border-[var(--accent)] font-medium text-[var(--accent)]"
-                  : "border-transparent text-[var(--muted)] hover:text-[var(--foreground)]",
-              )}
-            >
-              {item.label}
-              {item.count !== undefined ? (
-                <span className="ml-1.5 tabular-nums opacity-60">{item.count}</span>
-              ) : null}
-            </button>
-          ))}
+          {tabs.map((item) => {
+            const active = activeTab === item.key;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                role="tab"
+                id={`tab-${item.key}`}
+                aria-selected={active}
+                aria-controls={`panel-${item.key}`}
+                onClick={() => setTab(item.key)}
+                className={cn(
+                  "relative whitespace-nowrap px-4 py-2.5 text-sm transition-colors",
+                  active ? "font-medium text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]",
+                )}
+              >
+                {item.label}
+                {item.count !== undefined ? (
+                  <span className="ml-1.5 tabular-nums opacity-60">{item.count}</span>
+                ) : null}
+                {active ? (
+                  <motion.span
+                    layoutId="workspace-tab-indicator"
+                    className="absolute inset-x-0 -bottom-px h-0.5 bg-[var(--accent)]"
+                    transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 32 }}
+                  />
+                ) : null}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -142,32 +188,69 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
         ) : null}
         {activeTab === "bracket" ? (
           bracket ? (
-            <BracketView
-              bracket={bracket}
-              onEditMatch={canManage ? (match) => setEditing(match) : undefined}
-            />
+            <div className="space-y-6">
+              {/* Nothing has been drawn yet: offer the real generator, with its
+                  bye count and city verdict, rather than an empty tree. */}
+              {bracket.rounds.length === 0 && bracket.unassigned.length === 0 && canManage ? (
+                <BracketGenerator
+                  competitionId={competition.id}
+                  participantCount={participants.length}
+                  onGenerated={refresh}
+                />
+              ) : null}
+              <BracketView
+                bracket={bracket}
+                onEditMatch={canManage ? (match) => setRunningBoutId(match.id) : undefined}
+              />
+            </div>
           ) : (
             <p className="text-sm text-[var(--muted)]">Сетка недоступна.</p>
           )
         ) : null}
+        {activeTab === "teamBouts" ? (
+          <TeamBouts
+            competitionId={competition.id}
+            bouts={teamBouts}
+            canManage={canManage}
+            onChanged={refresh}
+          />
+        ) : null}
+        {activeTab === "results" ? <ChampionSummary summary={champion} /> : null}
         {activeTab === "matches" ? (
           <MatchesList
             matches={matches}
             canManage={canManage}
-            onEditResult={(match) => setEditing(match)}
+            onEditResult={(match) =>
+              // A generated-bracket bout is run through the judge panel (lot,
+              // соступ, win conditions); anything else keeps the plain
+              // result dialog.
+              match.lot_required || match.stage === "FINAL"
+                ? setRunningBoutId(match.id)
+                : setEditing(match)
+            }
             onChanged={refresh}
           />
         ) : null}
         {activeTab === "journal" ? <EventsJournal events={events} /> : null}
       </div>
 
-      {editing ? (
-        <MatchResultDialog
-          match={editing}
-          onClose={() => setEditing(null)}
-          onSaved={refresh}
-        />
-      ) : null}
+      <BoutDetailHost
+        matchId={runningBoutId}
+        canManage={canManage}
+        onClose={() => setRunningBoutId(null)}
+        onChanged={refreshInPlace}
+      />
+
+      <AnimatePresence>
+        {editing ? (
+          <MatchResultDialog
+            key={editing.id}
+            match={editing}
+            onClose={() => setEditing(null)}
+            onSaved={refresh}
+          />
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

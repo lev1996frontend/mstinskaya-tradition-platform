@@ -1,0 +1,91 @@
+"use client";
+
+import { useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+
+import { WEAPON_MOTIFS } from "@/components/brand/weapon-glyphs";
+import { Badge, Button, Card } from "@/components/ui";
+
+const SIZE = 96;
+const HEIGHT = 220;
+const HALF = SIZE / 2;
+const EXTRA_TURNS = 3;
+
+/**
+ * A teaching aid, and explicitly labelled as one.
+ *
+ * The real жребий now exists: it is drawn per bout in the judge panel
+ * (`lot-dice.tsx`), where the value comes from the server and is persisted and
+ * audited. This widget spins a local `Math.random()` and writes nothing, so the
+ * copy below states plainly that it is an illustration and points at where the
+ * real draw happens — otherwise the page would carry two lot UIs that both look
+ * live. It is kept because the carved-billet mechanic explains the tradition to
+ * a first-time visitor better than prose does.
+ */
+export function WeaponDrawBillet() {
+  const [rotation, setRotation] = useState(0);
+  const [faceIndex, setFaceIndex] = useState<number | null>(null);
+  const reduceMotion = useReducedMotion();
+
+  const roll = () => {
+    const nextIndex = Math.floor(Math.random() * WEAPON_MOTIFS.length);
+    const targetMod = (((-nextIndex * 90) % 360) + 360) % 360;
+    const currentMod = ((rotation % 360) + 360) % 360;
+    let delta = targetMod - currentMod;
+    if (delta <= 0) delta += 360;
+    const extraTurns = reduceMotion ? 0 : EXTRA_TURNS * 360;
+    setRotation(rotation + delta + extraTurns);
+    setFaceIndex(nextIndex);
+  };
+
+  const result = faceIndex === null ? null : WEAPON_MOTIFS[faceIndex];
+
+  return (
+    <Card className="flex flex-col items-center gap-5 px-6 py-8 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
+      <div className="max-w-sm space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="font-display text-lg font-semibold tracking-tight">
+            Как проходит жеребьёвка
+          </h2>
+          <Badge>Наглядно</Badge>
+        </div>
+        <p className="text-sm leading-relaxed text-[var(--muted)]">
+          Перед поединком участники кидают жребий по деревянному бруску: на каждой из четырёх
+          граней — свой вид оружия. Какая грань выпадет — с тем и выходят биться.
+        </p>
+        <Button type="button" variant="secondary" size="sm" onClick={roll} className="mt-1">
+          Покрутить для примера
+        </Button>
+        <p aria-live="polite" className="min-h-5 text-sm font-medium text-[var(--accent)]">
+          {result ? `Выпало: ${result.label}` : ""}
+        </p>
+        <p className="text-xs text-[var(--muted)]">
+          Это демонстрация. Настоящий жребий бросается в карточке поединка, его результат
+          определяет сервер и сразу записывает в журнал дисциплины.
+        </p>
+      </div>
+
+      <div className="mx-auto shrink-0" style={{ width: SIZE, height: HEIGHT, perspective: 700 }}>
+        <motion.div
+          className="relative h-full w-full"
+          style={{ transformStyle: "preserve-3d" }}
+          animate={{ rotateY: rotation }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 1.3, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {WEAPON_MOTIFS.map(({ key, Icon }, index) => (
+            <div
+              key={key}
+              className="absolute inset-0 flex items-center justify-center rounded-[6px] border border-[var(--gold)]/40 bg-[linear-gradient(180deg,var(--gold-soft),var(--surface-muted))]"
+              style={{
+                backfaceVisibility: "hidden",
+                transform: `rotateY(${index * 90}deg) translateZ(${HALF}px)`,
+              }}
+            >
+              <Icon size={30} className="text-[var(--gold-strong)]" />
+            </div>
+          ))}
+        </motion.div>
+      </div>
+    </Card>
+  );
+}

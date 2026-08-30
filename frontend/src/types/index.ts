@@ -5,11 +5,17 @@
  * `Tournament` ← `TournamentResponse`, `CompetitionView` ← `views.CompetitionView`.
  */
 
+/** One enum, extended rather than forked — mirrors the backend Literal.
+ *  READY/BRACKET_CREATED/FINAL are the engine-driven states; RUNNING is the
+ *  spec's "in progress" and FINISHED its "completed". */
 export type TournamentStatus =
   | "DRAFT"
   | "REGISTRATION"
+  | "READY"
+  | "BRACKET_CREATED"
   | "RUNNING"
   | "ACTIVE"
+  | "FINAL"
   | "FINISHED"
   | "ARCHIVED";
 
@@ -23,9 +29,44 @@ export type CompetitionStatus =
   | "FINISHED"
   | "CANCELLED";
 
-export type MatchStatus = "SCHEDULED" | "IN_PROGRESS" | "FINISHED" | "CANCELLED";
-export type MatchStage = "QUALIFICATION" | "GROUP" | "QUARTERFINAL" | "SEMIFINAL" | "FINAL";
-export type ResultMethod = "JUDGE_DECISION" | "WITHDRAWAL" | "DISQUALIFICATION" | "NO_SHOW";
+/** Bout lifecycle. READY_FOR_LOT/LOT_COMPLETED are the жребий phase; READY is
+ *  the equivalent for a final and a team pairing, neither of which draws a lot. */
+export type MatchStatus =
+  | "SCHEDULED"
+  | "READY_FOR_LOT"
+  | "LOT_COMPLETED"
+  | "READY"
+  | "IN_PROGRESS"
+  | "FINISHED"
+  | "CANCELLED";
+
+export type MatchStage =
+  | "QUALIFICATION"
+  | "GROUP"
+  | "TEAM_BOUT"
+  | "ROUND_OF_128"
+  | "ROUND_OF_64"
+  | "ROUND_OF_32"
+  | "ROUND_OF_16"
+  | "QUARTERFINAL"
+  | "SEMIFINAL"
+  | "FINAL";
+
+export type ResultMethod =
+  | "JUDGE_DECISION"
+  | "ROUND_WINS"
+  | "DISARM"
+  | "PIN_AND_FINISH"
+  | "WITHDRAWAL"
+  | "DISQUALIFICATION"
+  | "NO_SHOW";
+
+/** The four lot categories. PALKA/NOZH/HANDS are the tradition's official
+ *  three; KISTEN is this platform's deliberate fourth. */
+export type WeaponCategory = "PALKA" | "NOZH" | "HANDS" | "KISTEN";
+
+export type LotMethod = "PHYSICAL_DICE" | "ONLINE_DICE";
+export type BoutSide = "RED" | "BLUE";
 export type ParticipantStatus =
   | "REGISTERED"
   | "CONFIRMED"
@@ -90,6 +131,8 @@ export interface ParticipantView {
   athlete_id: string | null;
   team_id: string | null;
   club_id: string | null;
+  /** Registration city — what the first-round city constraint works from. */
+  city: string | null;
   seed: number | null;
   status: ParticipantStatus;
 }
@@ -134,6 +177,20 @@ export interface MatchView {
   participant_b: ParticipantView | null;
   winner_id: string | null;
   result: MatchResultView | null;
+  /** A generated-bracket slot with one empty side — shown explicitly. */
+  is_bye: boolean;
+  /** Where the winner goes. The backend owns advancement; this is here so the
+   *  tree can draw the connector, not so the client can move anyone. */
+  next_match_id: string | null;
+  next_slot: BoutSide | null;
+  weapon_red: WeaponCategory | null;
+  weapon_blue: WeaponCategory | null;
+  lot_required: boolean;
+  lot_completed: boolean;
+  rounds_won_red: number;
+  rounds_won_blue: number;
+  required_rounds_red: number | null;
+  required_rounds_blue: number | null;
 }
 
 export interface StandingsRow {
@@ -155,6 +212,44 @@ export interface StandingsView {
   matches_finished: number;
   provisional: boolean;
   ordering: string;
+}
+
+export type AthleteParticipationOutcome =
+  | "CHAMPION"
+  | "FINALIST"
+  | "ELIMINATED"
+  | "STANDINGS"
+  | "IN_PROGRESS"
+  | "WITHDRAWN"
+  | "DISQUALIFIED";
+
+/**
+ * One competition an athlete entered, for their profile's history list.
+ *
+ * `outcome` only ever states facts read directly off recorded matches — who
+ * actually won the final, who reached it and lost, what stage an eliminated
+ * run ended at. It deliberately carries no numeric placement: the platform
+ * has no bronze match and no confirmed tie-break rules, so this, like the
+ * standings table, never implies an official rank it didn't compute.
+ */
+export interface AthleteParticipationView {
+  participant_id: string;
+  tournament_id: string;
+  tournament_title: string;
+  competition_id: string;
+  competition_name: string;
+  format: CompetitionFormat;
+  competition_status: string;
+  participant_status: ParticipantStatus;
+  city: string | null;
+  seed: number | null;
+  outcome: AthleteParticipationOutcome;
+  eliminated_at_stage: MatchStage | null;
+  standings_wins: number | null;
+  standings_losses: number | null;
+  standings_position: number | null;
+  standings_tied: boolean;
+  standings_provisional: boolean;
 }
 
 export interface BracketRoundView {
@@ -259,6 +354,154 @@ export interface Course {
   level: CourseLevel;
   thumbnail_url: string | null;
   is_published: boolean;
+}
+
+// ------------------------------------------------ bracket generation (plan)
+
+export interface FirstRoundPairPlan {
+  position: number;
+  is_bye: boolean;
+  participant_a_id: string | null;
+  participant_a_name: string | null;
+  participant_a_city: string | null;
+  participant_b_id: string | null;
+  participant_b_name: string | null;
+  participant_b_city: string | null;
+}
+
+export interface CityCollisionView {
+  position: number;
+  city: string;
+  participant_a_id: string;
+  participant_b_id: string;
+  participant_a_name: string;
+  participant_b_name: string;
+}
+
+export interface BracketPlanView {
+  bracket_size: number;
+  participant_count: number;
+  bye_count: number;
+  round_count: number;
+  strategy: string;
+  /** False when same-city first-round pairs could not all be avoided; the
+   *  collisions are then listed rather than silently accepted. */
+  city_constraint_satisfied: boolean;
+  unavoidable_collisions: CityCollisionView[];
+  first_round: FirstRoundPairPlan[];
+}
+
+// ------------------------------------------------------------- жребий / bout
+
+export interface LotView {
+  id: string;
+  side: BoutSide;
+  method: LotMethod;
+  die_value: number;
+  weapon: WeaponCategory;
+  sequence: number;
+  created_at: string;
+}
+
+export interface RoundScoreView {
+  id: string;
+  participant_id: string;
+  action_code: string;
+  weapon: WeaponCategory;
+  points: number | null;
+  label: string;
+}
+
+/** One соступ. */
+export interface MatchRoundView {
+  id: string;
+  round_number: number;
+  status: "IN_PROGRESS" | "COMPLETED";
+  points_red: number;
+  points_blue: number;
+  winner_id: string | null;
+  end_reason: string | null;
+  notes: string | null;
+  scores: RoundScoreView[];
+}
+
+export interface BoutDetailView {
+  match: MatchView;
+  is_final: boolean;
+  is_bye: boolean;
+  lot_required: boolean;
+  weapon_red: WeaponCategory | null;
+  weapon_blue: WeaponCategory | null;
+  required_rounds_red: number | null;
+  required_rounds_blue: number | null;
+  win_condition_note: string | null;
+  staging_note: string | null;
+  lots: LotView[];
+  rounds: MatchRoundView[];
+  rounds_won_red: number;
+  rounds_won_blue: number;
+  max_rounds: number;
+}
+
+export interface ScoringActionView {
+  code: string;
+  weapon: WeaponCategory;
+  /** null where the primary source defines no point value (кистень, disarm). */
+  points: number | null;
+  ends_round: boolean;
+  ends_bout: boolean;
+  label_ru: string;
+}
+
+export interface WeaponRulesView {
+  weapons: { code: WeaponCategory; label_ru: string; armed: boolean }[];
+  die_sides: number;
+  die_face_to_weapon: Record<string, WeaponCategory>;
+  actions: ScoringActionView[];
+  round_target_points: number;
+  max_rounds_per_bout: number;
+  staging_note_nozh_vs_palka: string;
+}
+
+// ------------------------------------------------------------------ champion
+
+export interface ChampionPathEntry {
+  match_id: string;
+  stage: MatchStage | null;
+  round_number: number | null;
+  is_bye: boolean;
+  opponent: ParticipantView | null;
+  won: boolean;
+  weapon: WeaponCategory | null;
+  opponent_weapon: WeaponCategory | null;
+  rounds_won: number;
+}
+
+export interface ChampionSummaryView {
+  competition_id: string;
+  /** False while the final is still open — never a guessed champion. */
+  complete: boolean;
+  champion: (ParticipantView & { city: string | null; club_id: string | null }) | null;
+  path: ChampionPathEntry[];
+  completed_at: string | null;
+}
+
+// --------------------------------------------------------- трое на трое (3x3)
+
+export interface TeamBoutView {
+  id: string;
+  competition_id: string;
+  team_red_id: string;
+  team_blue_id: string;
+  team_red_name: string;
+  team_blue_name: string;
+  status: "SCHEDULED" | "IN_PROGRESS" | "FINISHED";
+  wins_red: number;
+  wins_blue: number;
+  winner_team_id: string | null;
+  round_number: number | null;
+  position: number | null;
+  pairings: MatchView[];
 }
 
 export interface AuthTokens {

@@ -1,6 +1,8 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import router
+from app.core.config import get_settings
 from app.modules.auth import router as auth_router
 from app.modules.athletes.routers import router as athletes_router
 from app.modules.clubs.routers import router as clubs_router
@@ -10,12 +12,25 @@ from app.modules.identity.routers import router as identity_router
 from app.modules.media.router import router as media_router
 from app.modules.ratings.router import router as ratings_router
 from app.modules.rules.routers import router as rules_router
-from app.modules.tournaments.routers import router as tournaments_router
+from app.modules.tournaments.routers import (
+    bout_router as tournament_bout_router,
+    engine_router as tournament_engine_router,
+    read_router as tournament_read_router,
+    router as tournaments_router,
+)
 
 app = FastAPI(
     title="Mstina Platform API",
     version="0.1.0",
     description="Backend foundation for the Mstinskaya Tradition Platform.",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_settings().cors_origin_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(router)
@@ -29,6 +44,9 @@ app.include_router(media_router)
 app.include_router(ratings_router)
 app.include_router(rules_router)
 app.include_router(tournaments_router)
+app.include_router(tournament_engine_router)
+app.include_router(tournament_read_router)
+app.include_router(tournament_bout_router)
 
 
 @app.get("/", tags=["meta"])

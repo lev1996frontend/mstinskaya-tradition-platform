@@ -1,3 +1,5 @@
+import { ScrollText } from "lucide-react";
+
 import { Badge, EmptyState } from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
 import { eventType, labelOf } from "@/lib/labels";
@@ -12,6 +14,7 @@ export function EventsJournal({ events }: { events: CompetitionEventView[] }) {
     return (
       <EmptyState
         title="Журнал пуст"
+        icon={<ScrollText className="size-5" strokeWidth={1.75} />}
         description="Здесь фиксируются жеребьёвки, изменения результатов, снятия и дисквалификации."
       />
     );

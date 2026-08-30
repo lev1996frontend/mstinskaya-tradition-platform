@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import {
   getBracket,
+  getChampion,
   getCompetition,
   getStandings,
   getTournament,
@@ -11,6 +12,7 @@ import {
   listEvents,
   listMatches,
   listParticipants,
+  listTeamBouts,
   listTeams,
 } from "@/api/tournaments";
 import { Badge, Container, PageHeader } from "@/components/ui";
@@ -35,18 +37,21 @@ export default async function CompetitionPage({ params }: PageProps) {
   ]);
   if (!competition || competition.tournament_id !== id) notFound();
 
-  const [participants, teams, matches, standings, bracket, draws, events] = await Promise.all([
-    listParticipants(competitionId),
-    listTeams(competitionId),
-    listMatches(competitionId),
-    getStandings(competitionId),
-    getBracket(competitionId),
-    listDraws(competitionId),
-    listEvents(competitionId),
-  ]);
+  const [participants, teams, matches, standings, bracket, draws, events, teamBouts, champion] =
+    await Promise.all([
+      listParticipants(competitionId),
+      listTeams(competitionId),
+      listMatches(competitionId),
+      getStandings(competitionId),
+      getBracket(competitionId),
+      listDraws(competitionId),
+      listEvents(competitionId),
+      listTeamBouts(competitionId),
+      getChampion(competitionId),
+    ]);
 
   return (
-    <Container className="space-y-8 py-10">
+    <Container wide className="space-y-8 py-10">
       <PageHeader
         eyebrow={
           <Link href={`/tournaments/${id}`}>← {tournament?.title ?? "Турнир"}</Link>
@@ -74,7 +79,18 @@ export default async function CompetitionPage({ params }: PageProps) {
       ) : null}
 
       <CompetitionWorkspace
-        data={{ competition, participants, teams, matches, standings, bracket, draws, events }}
+        data={{
+          competition,
+          participants,
+          teams,
+          matches,
+          standings,
+          bracket,
+          draws,
+          events,
+          teamBouts,
+          champion,
+        }}
       />
     </Container>
   );

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Layers } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -46,7 +47,7 @@ export default async function TournamentPage({ params }: PageProps) {
   ]);
 
   return (
-    <Container className="space-y-10 py-10">
+    <Container wide className="space-y-10 py-10">
       <PageHeader
         eyebrow={<Link href="/tournaments">← Все турниры</Link>}
         title={tournament.title}
@@ -78,6 +79,7 @@ export default async function TournamentPage({ params }: PageProps) {
         {competitions.length === 0 ? (
           <EmptyState
             title="Дисциплины ещё не заданы"
+            icon={<Layers className="size-5" strokeWidth={1.75} />}
             description="Организатор пока не создал ни одной дисциплины для этого турнира."
           />
         ) : (

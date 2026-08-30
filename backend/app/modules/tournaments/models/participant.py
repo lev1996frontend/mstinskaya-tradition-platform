@@ -50,6 +50,15 @@ class Participant(Base):
     )
     seed: Mapped[int | None] = mapped_column(nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="REGISTERED")
+    #: Registration city, used by the first-round city constraint. Kept on the
+    #: entry rather than on ``Athlete`` because a fighter can move between
+    #: events and past results must stay true to the city they entered under.
+    city: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    club_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True, index=True)
+    #: Only for an entrant with no platform profile yet. When ``athlete_id`` is
+    #: set the name always comes from that profile, so linking an existing
+    #: athlete can never produce a duplicate identity.
+    display_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         default=lambda: datetime.now(timezone.utc),

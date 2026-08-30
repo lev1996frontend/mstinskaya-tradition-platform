@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { BookOpen } from "lucide-react";
 import Link from "next/link";
 
 import { listRuleSets } from "@/api/catalog";
 import { ApiOfflineNotice } from "@/components/api-status";
-import { Badge, Card, Container, EmptyState, PageHeader } from "@/components/ui";
+import { Badge, Container, EmptyState, PageHeader } from "@/components/ui";
 import { formatDate } from "@/lib/format";
 import type { RuleSet } from "@/types";
 
@@ -18,6 +19,12 @@ const STATUS: Record<RuleSet["status"], { label: string; tone: "neutral" | "succ
   ARCHIVED: { label: "В архиве", tone: "neutral" },
 };
 
+/**
+ * A register of editions. Versioning is the whole point of this module, so the
+ * version number is promoted to the left margin and set large in the record
+ * face — the first thing you read on a row is *which edition*, then the title,
+ * then whether it is in force. Cards would have buried that number in a badge.
+ */
 export default async function RulesPage() {
   const ruleSets = await listRuleSets();
 
@@ -32,34 +39,56 @@ export default async function RulesPage() {
       {ruleSets.length === 0 ? (
         <div className="space-y-4">
           <ApiOfflineNotice />
-          <EmptyState title="Регламентов пока нет" />
+          <EmptyState
+            title="Регламентов пока нет"
+            description="Здесь появятся действующие и архивные редакции правил."
+            icon={<BookOpen className="size-5" strokeWidth={1.75} />}
+          />
         </div>
       ) : (
-        <ul className="space-y-3">
+        <ul className="border-t-2 border-[var(--rule)]">
           {ruleSets.map((ruleSet) => {
             const status = STATUS[ruleSet.status] ?? { label: ruleSet.status, tone: "neutral" };
             return (
-              <Card
-                as="li"
-                key={ruleSet.id}
-                className="transition-colors hover:border-[var(--accent)]"
-              >
-                <Link href={`/rules/${ruleSet.id}`} className="flex flex-col gap-2 p-5">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="font-semibold">{ruleSet.title}</h2>
-                    <Badge>Версия {ruleSet.version}</Badge>
-                    <Badge tone={status.tone}>{status.label}</Badge>
-                  </div>
-                  {ruleSet.description ? (
-                    <p className="text-sm text-[var(--muted)]">{ruleSet.description}</p>
-                  ) : null}
-                  {ruleSet.published_at ? (
-                    <p className="text-xs text-[var(--muted)]">
-                      Опубликован {formatDate(ruleSet.published_at)}
-                    </p>
-                  ) : null}
+              <li key={ruleSet.id}>
+                <Link
+                  href={`/rules/${ruleSet.id}`}
+                  className="group flex gap-5 border-b border-[var(--border)] py-5 transition-colors hover:border-[var(--accent)] sm:gap-8"
+                >
+                  <span className="w-16 shrink-0 border-r border-[var(--border)] pr-4 text-right sm:w-24">
+                    <span className="record-label block text-[var(--muted)]">Ред.</span>
+                    <span className="font-record mt-1 block text-xl leading-none text-[var(--accent)]">
+                      {ruleSet.version}
+                    </span>
+                  </span>
+
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                      <span className="font-display text-lg font-semibold tracking-tight transition-colors group-hover:text-[var(--accent)]">
+                        {ruleSet.title}
+                      </span>
+                      <Badge tone={status.tone}>{status.label}</Badge>
+                    </span>
+                    {ruleSet.description ? (
+                      <span className="mt-2 block text-sm leading-relaxed text-[var(--muted)]">
+                        {ruleSet.description}
+                      </span>
+                    ) : null}
+                    {ruleSet.published_at ? (
+                      <span className="font-record mt-2 block text-xs text-[var(--muted)]">
+                        Опубликован {formatDate(ruleSet.published_at)}
+                      </span>
+                    ) : null}
+                  </span>
+
+                  <span
+                    aria-hidden="true"
+                    className="shrink-0 self-center text-[var(--muted)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--accent)]"
+                  >
+                    →
+                  </span>
                 </Link>
-              </Card>
+              </li>
             );
           })}
         </ul>

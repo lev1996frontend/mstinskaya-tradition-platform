@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Alert, Button, Card, Container, PageHeader } from "@/components/ui";
+import { Monogram } from "@/components/brand/monogram";
+import { Alert, Button, Card, Container } from "@/components/ui";
 import { Field, Input } from "@/components/ui/form";
 import { ApiError, ApiUnreachableError } from "@/lib/api";
 
@@ -59,14 +60,29 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
   return (
     <Container className="max-w-md space-y-8 py-14">
-      <PageHeader
-        title={mode === "login" ? "Вход" : "Регистрация"}
-        description={
-          mode === "login"
-            ? "Вход нужен организаторам и судьям для внесения результатов."
-            : "Создайте аккаунт, чтобы участвовать в жизни платформы."
-        }
-      />
+      {/* Two mount fade-ins (heading block, then the card on a delay) used to
+          run here. Removed: nothing about a login form benefits from arriving
+          late, and it was the same "every block fades in" reflex the redesign
+          is cutting everywhere else. Dropping them also removed framer-motion
+          from this route. */}
+      <div className="rule-double-b flex items-start gap-4 pb-6">
+        <span
+          aria-hidden
+          className="grid size-11 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-[var(--accent)] text-white"
+        >
+          <Monogram size={24} />
+        </span>
+        <div className="space-y-2">
+          <h1 className="font-display text-3xl font-semibold leading-tight tracking-tight">
+            {mode === "login" ? "Вход" : "Регистрация"}
+          </h1>
+          <p className="text-sm leading-relaxed text-[var(--muted)]">
+            {mode === "login"
+              ? "Вход нужен организаторам и судьям для внесения результатов."
+              : "Создайте аккаунт, чтобы участвовать в жизни платформы."}
+          </p>
+        </div>
+      </div>
 
       <Card className="p-6">
         <form onSubmit={handleSubmit} className="space-y-4">

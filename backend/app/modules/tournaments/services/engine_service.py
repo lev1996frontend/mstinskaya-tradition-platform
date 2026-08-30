@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -76,8 +77,15 @@ class TournamentEngineService:
         competition = await TournamentEngineService.competition(session, data["competition_id"])
         athlete_id = parse_id(data["athlete_id"], "athlete") if data.get("athlete_id") else None
         team_id = parse_id(data["team_id"], "team") if data.get("team_id") else None
-        if competition.competition_type == "INDIVIDUAL" and athlete_id is None:
-            raise HTTPException(status_code=400, detail="Individual participant requires an athlete")
+        if competition.competition_type == "INDIVIDUAL" and athlete_id is None and not data.get("display_name"):
+            # An entrant who already has a platform profile must be *linked* to
+            # it (``athlete_id``) so no duplicate identity is created. Someone
+            # with no profile at all is still a legitimate entrant and is
+            # recorded by name on the entry itself.
+            raise HTTPException(
+                status_code=400,
+                detail="Individual participant requires a linked athlete or a display name",
+            )
         if competition.competition_type == "TEAM" and team_id is None:
             raise HTTPException(status_code=400, detail="Team participant requires a team")
         if athlete_id is not None and await session.get(Athlete, athlete_id) is None:
@@ -87,7 +95,20 @@ class TournamentEngineService:
             if team is None or team.competition_id != competition.id:
                 raise HTTPException(status_code=404, detail="Team not found in competition")
         category = await session.scalar(select(TournamentCategory).where(TournamentCategory.tournament_id == competition.tournament_id).order_by(TournamentCategory.created_at.asc()))
-        item = Participant(tournament_id=competition.tournament_id, category_id=category.id if category else None, competition_id=competition.id, athlete_id=athlete_id, team_id=team_id, seed=data.get("seed"), status=data["status"])
+        item = Participant(
+            tournament_id=competition.tournament_id,
+            category_id=category.id if category else None,
+            competition_id=competition.id,
+            athlete_id=athlete_id,
+            team_id=team_id,
+            seed=data.get("seed"),
+            status=data["status"],
+            city=data.get("city"),
+            club_id=parse_id(data["club_id"], "club") if data.get("club_id") else None,
+            # Only meaningful for an entrant with no athlete profile; when one is
+            # linked the read side resolves the name from that profile instead.
+            display_name=data.get("display_name") if athlete_id is None else None,
+        )
         session.add(item)
         await session.flush()
         return item
@@ -164,3 +185,101 @@ class TournamentEngineService:
         session.add(item)
         await session.flush()
         return item
+
+    @staticmethod
+    async def _log(session: AsyncSession, match: Match, event_type: str, description: str, payload: dict) -> None:
+        """Append to the competition journal, when the match belongs to one."""
+        if match.competition_id is None:
+            return
+        session.add(
+            CompetitionEvent(
+                competition_id=match.competition_id,
+                event_type=event_type,
+                description=description,
+                payload=payload,
+            )
+        )
+
+    @staticmethod
+    async def update_result(session: AsyncSession, match_id: str, **data) -> MatchResult:
+        """Correct an already recorded result.
+
+        ``docs/tournament-engine.md`` asks for fast result changes, while the
+        architecture guardrails forbid losing history. The previous values are
+        therefore copied into a ``MATCH_UPDATED`` competition event before the
+        row is rewritten.
+        """
+        match = await session.get(Match, parse_id(match_id, "match"))
+        if match is None:
+            raise HTTPException(status_code=404, detail="Match not found")
+        result = await session.scalar(select(MatchResult).where(MatchResult.match_id == match.id))
+        if result is None:
+            raise HTTPException(status_code=404, detail="Match has no result to update")
+
+        winner_id = None
+        if data.get("winner_id"):
+            winner_id = parse_id(data["winner_id"], "winner participant")
+            winner = await session.get(Participant, winner_id)
+            if winner is None or winner.tournament_id != match.tournament_id or winner.id not in {match.participant_red_id, match.participant_blue_id}:
+                raise HTTPException(status_code=404, detail="Winner participant not found")
+
+        previous = {
+            "winner_id": str(result.winner_participant_id) if result.winner_participant_id else None,
+            "method": result.result_type,
+            "comment": result.notes,
+            "recorded_at": result.recorded_at.isoformat(),
+        }
+
+        result.winner_participant_id = winner_id
+        result.result_type = data["method"]
+        result.notes = data.get("comment")
+        result.recorded_at = datetime.now(timezone.utc)
+        match.status = "FINISHED"
+        match.winner_id = winner_id
+
+        await TournamentEngineService._log(
+            session,
+            match,
+            "MATCH_UPDATED",
+            data.get("reason") or "Match result corrected",
+            {
+                "match_id": str(match.id),
+                "previous_result": previous,
+                "new_result": {
+                    "winner_id": str(winner_id) if winner_id else None,
+                    "method": result.result_type,
+                    "comment": result.notes,
+                },
+                "reason": data.get("reason"),
+            },
+        )
+        await session.flush()
+        return result
+
+    @staticmethod
+    async def update_match_status(session: AsyncSession, match_id: str, *, new_status: str, reason: str | None = None) -> Match:
+        match = await session.get(Match, parse_id(match_id, "match"))
+        if match is None:
+            raise HTTPException(status_code=404, detail="Match not found")
+
+        normalized = str(new_status).upper()
+        if normalized == "RUNNING":
+            normalized = "IN_PROGRESS"
+        if normalized not in {"SCHEDULED", "IN_PROGRESS", "FINISHED", "CANCELLED"}:
+            raise HTTPException(status_code=400, detail="Invalid match status")
+        if normalized == "FINISHED":
+            existing = await session.scalar(select(MatchResult).where(MatchResult.match_id == match.id))
+            if existing is None:
+                raise HTTPException(status_code=400, detail="Record a result before finishing the match")
+
+        previous_status = match.status
+        match.status = normalized
+        await TournamentEngineService._log(
+            session,
+            match,
+            "MATCH_UPDATED",
+            reason or f"Match status {previous_status} -> {normalized}",
+            {"match_id": str(match.id), "previous_status": previous_status, "new_status": normalized, "reason": reason},
+        )
+        await session.flush()
+        return match

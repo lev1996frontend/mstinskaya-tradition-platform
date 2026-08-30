@@ -57,14 +57,16 @@ export default function ProfilePage() {
       </Card>
 
       <Card className="p-6">
-        <h2 className="font-semibold">Что доступно после входа</h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">
+        <h2 className="record-label border-b border-[var(--border)] pb-2 text-[var(--iron-muted)]">
+          Что доступно после входа
+        </h2>
+        <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
           Внесение и изменение результатов боёв в дисциплинах турнира. Все изменения фиксируются в
           журнале дисциплины — предыдущие решения сохраняются.
         </p>
         <Link
           href="/tournaments"
-          className="mt-4 inline-block text-sm text-[var(--accent)] hover:underline"
+          className="record-label mt-4 inline-block text-[var(--accent)] hover:underline"
         >
           Перейти к турнирам →
         </Link>

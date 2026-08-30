@@ -3,7 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getAthlete } from "@/api/catalog";
-import { Card, Container, DefinitionList, PageHeader } from "@/components/ui";
+import { listAthleteTournamentHistory } from "@/api/tournaments";
+import { Card, Container, DefinitionList, PageHeader, Section } from "@/components/ui";
+import { Avatar } from "@/components/ui/avatar";
+import { AthleteHistory } from "@/features/tournaments/athlete-history";
 import { plural } from "@/lib/format";
 import { athleteLevel, labelOf } from "@/lib/labels";
 
@@ -17,14 +20,23 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function AthletePage({ params }: PageProps) {
   const { id } = await params;
-  const athlete = await getAthlete(id);
+  const [athlete, history] = await Promise.all([getAthlete(id), listAthleteTournamentHistory(id)]);
   if (!athlete) notFound();
 
   return (
     <Container className="max-w-3xl space-y-8 py-10">
       <PageHeader
-        eyebrow={<Link href="/athletes">← Все спортсмены</Link>}
-        title={athlete.nickname ?? "Профиль спортсмена"}
+        eyebrow={
+          <Link href="/athletes" className="hover:underline">
+            ← Все спортсмены
+          </Link>
+        }
+        title={
+          <span className="flex items-center gap-3">
+            <Avatar name={athlete.nickname ?? "?"} photoUrl={athlete.photo_url} size="lg" />
+            {athlete.nickname ?? "Профиль спортсмена"}
+          </span>
+        }
       />
 
       <Card className="p-6">
@@ -42,10 +54,16 @@ export default async function AthletePage({ params }: PageProps) {
 
       {athlete.bio ? (
         <Card className="p-6">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-[var(--muted)]">О себе</h2>
-          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed">{athlete.bio}</p>
+          <h2 className="record-label border-b border-[var(--border)] pb-2 text-[var(--iron-muted)]">
+            О себе
+          </h2>
+          <p className="mt-3 whitespace-pre-line text-sm leading-relaxed">{athlete.bio}</p>
         </Card>
       ) : null}
+
+      <Section title="Турниры" description="Дисциплины, в которых спортсмен был заявлен участником.">
+        <AthleteHistory history={history} />
+      </Section>
     </Container>
   );
 }

@@ -1,9 +1,19 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
+from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
+
+
+def _as_id(value: object) -> object:
+    """Accept the UUID that comes off an ORM attribute and hand back a string."""
+    return str(value) if isinstance(value, UUID) else value
+
+
+#: Identifier field: a string over the wire, tolerant of ORM UUIDs on the way out.
+IdStr = Annotated[str, BeforeValidator(_as_id)]
 
 CompetitionType = Literal["INDIVIDUAL", "TEAM"]
 CompetitionFormat = Literal["SINGLE_ELIMINATION", "ROUND_ROBIN", "GROUP_PLAYOFF"]
@@ -11,10 +21,51 @@ CompetitionStatus = Literal["DRAFT", "REGISTRATION", "RUNNING", "ACTIVE", "FINIS
 DrawType = Literal["RANDOM", "SEEDED", "MANUAL"]
 ParticipantEngineStatus = Literal["REGISTERED", "CONFIRMED", "APPROVED", "WAITLISTED", "WITHDRAWN", "DISQUALIFIED", "ELIMINATED"]
 
+#: Bracket stages. The ROUND_OF_* names are produced by generated brackets
+#: wider than eight fighters; TEAM_BOUT is one pairing of a «трое на трое».
+MatchStage = Literal[
+    "QUALIFICATION",
+    "GROUP",
+    "TEAM_BOUT",
+    "ROUND_OF_128",
+    "ROUND_OF_64",
+    "ROUND_OF_32",
+    "ROUND_OF_16",
+    "QUARTERFINAL",
+    "SEMIFINAL",
+    "FINAL",
+]
+
+#: Bout lifecycle. READY_FOR_LOT/LOT_COMPLETED are the lot phase; READY is the
+#: final's and a team pairing's equivalent, since neither draws a lot.
+#: FINISHED is the persisted spelling of "completed".
+MatchStatus = Literal[
+    "SCHEDULED",
+    "READY_FOR_LOT",
+    "LOT_COMPLETED",
+    "READY",
+    "RUNNING",
+    "IN_PROGRESS",
+    "FINISHED",
+    "CANCELLED",
+]
+
+#: How a поединок was decided. ROUND_WINS and DISARM come from the confirmed
+#: соступ rules; PIN_AND_FINISH is the «трое на трое» decision.
+ResultMethod = Literal[
+    "JUDGE_DECISION",
+    "ROUND_WINS",
+    "DISARM",
+    "PIN_AND_FINISH",
+    "WITHDRAWAL",
+    "DISQUALIFICATION",
+    "NO_SHOW",
+]
+
 
 class CompetitionCreateRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
-    tournament_id: str
+    tournament_id: IdStr
     name: str = Field(..., min_length=2, max_length=200)
     description: str | None = Field(default=None, max_length=4000)
     type: CompetitionType = "INDIVIDUAL"
@@ -31,8 +82,8 @@ class CompetitionCreateRequest(BaseModel):
 
 class CompetitionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    tournament_id: str
+    id: IdStr
+    tournament_id: IdStr
     name: str
     description: str | None = None
     type: CompetitionType
@@ -41,59 +92,69 @@ class CompetitionResponse(BaseModel):
 
 
 class TeamCreateRequest(BaseModel):
-    competition_id: str
+    competition_id: IdStr
     name: str = Field(..., min_length=2, max_length=150)
     short_name: str | None = Field(default=None, max_length=50)
-    club_id: str | None = None
-    captain_id: str | None = None
+    club_id: IdStr | None = None
+    captain_id: IdStr | None = None
 
 
 class TeamResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    competition_id: str
+    id: IdStr
+    competition_id: IdStr
     name: str
     short_name: str | None = None
-    club_id: str | None = None
-    captain_id: str | None = None
+    club_id: IdStr | None = None
+    captain_id: IdStr | None = None
 
 
 class TeamMemberCreateRequest(BaseModel):
-    team_id: str
-    athlete_id: str
+    team_id: IdStr
+    athlete_id: IdStr
     role: Literal["FIGHTER", "RESERVE", "CAPTAIN"] = "FIGHTER"
 
 
 class TeamMemberResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    team_id: str
-    athlete_id: str
+    id: IdStr
+    team_id: IdStr
+    athlete_id: IdStr
     role: str
 
 
 class EngineParticipantCreateRequest(BaseModel):
-    competition_id: str
-    athlete_id: str | None = None
-    team_id: str | None = None
+    competition_id: IdStr
+    athlete_id: IdStr | None = None
+    team_id: IdStr | None = None
     type: Literal["ATHLETE", "TEAM"] | None = None
     seed: int | None = Field(default=None, ge=1)
     status: ParticipantEngineStatus = "REGISTERED"
+    #: Registration city — the input to the first-round city constraint.
+    city: str | None = Field(default=None, max_length=100)
+    club_id: IdStr | None = None
+    #: Only for an entrant with no platform profile. When ``athlete_id`` is set
+    #: the name is always resolved from that profile instead, so linking an
+    #: existing athlete can never create a duplicate identity.
+    display_name: str | None = Field(default=None, max_length=150)
 
 
 class EngineParticipantResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    tournament_id: str
-    competition_id: str | None = None
-    athlete_id: str | None = None
-    team_id: str | None = None
+    id: IdStr
+    tournament_id: IdStr
+    competition_id: IdStr | None = None
+    athlete_id: IdStr | None = None
+    team_id: IdStr | None = None
     seed: int | None = None
     status: str
+    city: str | None = None
+    club_id: IdStr | None = None
+    display_name: str | None = None
 
 
 class DrawCreateRequest(BaseModel):
-    competition_id: str
+    competition_id: IdStr
     name: str = Field(..., min_length=2, max_length=150)
     type: DrawType
     draw_type: DrawType | None = None
@@ -108,16 +169,16 @@ class DrawCreateRequest(BaseModel):
 
 class DrawResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    competition_id: str
+    id: IdStr
+    competition_id: IdStr
     name: str
     type: str
     status: str
 
 
 class BracketCreateRequest(BaseModel):
-    competition_id: str
-    draw_id: str | None = None
+    competition_id: IdStr
+    draw_id: IdStr | None = None
     name: str = Field(..., min_length=2, max_length=150)
     round: int | str
     position: int = Field(ge=1)
@@ -125,64 +186,64 @@ class BracketCreateRequest(BaseModel):
 
 class BracketResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    competition_id: str
-    draw_id: str | None = None
+    id: IdStr
+    competition_id: IdStr
+    draw_id: IdStr | None = None
     name: str
     round: int | str
     position: int
 
 
 class EngineMatchCreateRequest(BaseModel):
-    competition_id: str
-    draw_id: str | None = None
-    bracket_id: str | None = None
-    participant_a_id: str | None = None
-    participant_b_id: str | None = None
-    stage: Literal["QUALIFICATION", "GROUP", "QUARTERFINAL", "SEMIFINAL", "FINAL"] = "QUALIFICATION"
-    status: Literal["SCHEDULED", "RUNNING", "IN_PROGRESS", "FINISHED", "CANCELLED"] = "SCHEDULED"
+    competition_id: IdStr
+    draw_id: IdStr | None = None
+    bracket_id: IdStr | None = None
+    participant_a_id: IdStr | None = None
+    participant_b_id: IdStr | None = None
+    stage: MatchStage = "QUALIFICATION"
+    status: MatchStatus = "SCHEDULED"
 
 
 class EngineMatchResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    tournament_id: str
-    competition_id: str | None = None
-    draw_id: str | None = None
-    bracket_id: str | None = None
-    participant_a_id: str | None = None
-    participant_b_id: str | None = None
+    id: IdStr
+    tournament_id: IdStr
+    competition_id: IdStr | None = None
+    draw_id: IdStr | None = None
+    bracket_id: IdStr | None = None
+    participant_a_id: IdStr | None = None
+    participant_b_id: IdStr | None = None
     stage: str | None = None
     status: str
 
 
 class MatchResultCreateRequest(BaseModel):
-    match_id: str
-    winner_id: str | None = None
-    method: Literal["JUDGE_DECISION", "WITHDRAWAL", "DISQUALIFICATION", "NO_SHOW"]
+    match_id: IdStr
+    winner_id: IdStr | None = None
+    method: ResultMethod
     comment: str | None = Field(default=None, max_length=4000)
 
 
 class MatchResultResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    match_id: str
-    winner_id: str | None = None
+    id: IdStr
+    match_id: IdStr
+    winner_id: IdStr | None = None
     method: str
     comment: str | None = None
     recorded_at: datetime
 
 
 class ParticipantStatusHistoryCreateRequest(BaseModel):
-    participant_id: str
+    participant_id: IdStr
     new_status: str
     reason: str | None = Field(default=None, max_length=2000)
 
 
 class ParticipantStatusHistoryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    participant_id: str
+    id: IdStr
+    participant_id: IdStr
     old_status: str | None = None
     new_status: str
     reason: str | None = None
@@ -190,7 +251,7 @@ class ParticipantStatusHistoryResponse(BaseModel):
 
 
 class CompetitionEventCreateRequest(BaseModel):
-    competition_id: str
+    competition_id: IdStr
     event_type: str = Field(..., min_length=2, max_length=50)
     description: str | None = Field(default=None, max_length=4000)
     payload: dict | None = None
@@ -198,8 +259,8 @@ class CompetitionEventCreateRequest(BaseModel):
 
 class CompetitionEventResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    competition_id: str
+    id: IdStr
+    competition_id: IdStr
     event_type: str
     description: str | None = None
     payload: dict | None = None

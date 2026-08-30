@@ -1,4 +1,7 @@
+import { Users } from "lucide-react";
+
 import { EmptyState, Table, Td, Th } from "@/components/ui";
+import { Avatar } from "@/components/ui/avatar";
 import type { ParticipantView } from "@/types";
 
 import { ParticipantStatusBadge } from "./badges";
@@ -14,6 +17,7 @@ export function ParticipantsTable({
     return (
       <EmptyState
         title="Участников пока нет"
+        icon={<Users className="size-5" strokeWidth={1.75} />}
         description="Как только организатор зарегистрирует спортсменов или команды, они появятся здесь."
       />
     );
@@ -25,7 +29,7 @@ export function ParticipantsTable({
         <tr>
           {showSeed ? <Th align="center" className="w-16">№</Th> : null}
           <Th>Участник</Th>
-          <Th className="w-32">Тип</Th>
+          <Th className="hidden w-32 sm:table-cell">Тип</Th>
           <Th className="w-52">Статус</Th>
         </tr>
       </thead>
@@ -33,12 +37,17 @@ export function ParticipantsTable({
         {participants.map((participant) => (
           <tr key={participant.id}>
             {showSeed ? (
-              <Td align="center" className="tabular-nums text-[var(--muted)]">
+              <Td align="center" className="font-display tabular-nums text-[var(--muted)]">
                 {participant.seed ?? "—"}
               </Td>
             ) : null}
-            <Td className="font-medium">{participant.display_name}</Td>
-            <Td className="text-[var(--muted)]">
+            <Td className="font-medium">
+              <div className="flex items-center gap-2.5">
+                <Avatar name={participant.display_name} size="xs" />
+                <span className="min-w-0 truncate">{participant.display_name}</span>
+              </div>
+            </Td>
+            <Td className="hidden text-[var(--muted)] sm:table-cell">
               {participant.type === "TEAM" ? "Команда" : "Спортсмен"}
             </Td>
             <Td>

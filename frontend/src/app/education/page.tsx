@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { GraduationCap } from "lucide-react";
 
 import { listCourses } from "@/api/catalog";
 import { ApiOfflineNotice } from "@/components/api-status";
@@ -10,6 +11,13 @@ export const metadata: Metadata = {
   description: "Курсы Мстинской традиции для спортсменов, инструкторов и судей.",
 };
 
+/**
+ * Courses keep a card grid — they are self-contained items of roughly equal
+ * weight, which is the one case where a grid is the honest form. What changed
+ * is the card: a numbered course sheet with the index stamped in the margin,
+ * the title in the editorial face, and the type/level struck as labels along
+ * the bottom rule instead of floating as pills under the heading.
+ */
 export default async function EducationPage() {
   const courses = await listCourses();
   const published = courses.filter((course) => course.is_published);
@@ -20,6 +28,13 @@ export default async function EducationPage() {
         eyebrow="Развитие"
         title="Обучение"
         description="Курсы разбиты на модули и уроки. Прогресс сохраняется за каждым учеником."
+        actions={
+          published.length > 0 ? (
+            <span className="record-label self-end text-[var(--muted)]">
+              {String(published.length).padStart(2, "0")} курсов
+            </span>
+          ) : undefined
+        }
       />
 
       {published.length === 0 ? (
@@ -30,24 +45,38 @@ export default async function EducationPage() {
             description={
               courses.length > 0
                 ? "Есть черновики курсов — они станут видны после публикации."
-                : undefined
+                : "Здесь появятся курсы для спортсменов, инструкторов и судей."
             }
+            icon={<GraduationCap className="size-5" strokeWidth={1.75} />}
           />
         </div>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {published.map((course) => (
-            <Card as="li" key={course.id} className="flex flex-col gap-2 p-5">
-              <h2 className="font-semibold leading-snug">{course.title}</h2>
-              <div className="flex flex-wrap gap-2">
-                <Badge tone="info">{labelOf(courseType, course.type)}</Badge>
-                <Badge>{labelOf(courseLevel, course.level)}</Badge>
+        <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {published.map((course, index) => (
+            <Card
+              as="li"
+              key={course.id}
+              className="flex flex-col p-5 transition-colors hover:border-[var(--accent)]"
+            >
+              <div className="flex items-start gap-4">
+                <span className="font-record shrink-0 pt-1 text-xs text-[var(--muted)]">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <h2 className="font-display min-w-0 text-lg font-semibold leading-snug tracking-tight">
+                  {course.title}
+                </h2>
               </div>
+
               {course.description ? (
-                <p className="mt-1 line-clamp-4 text-sm text-[var(--muted)]">
+                <p className="mt-3 line-clamp-4 text-sm leading-relaxed text-[var(--muted)]">
                   {course.description}
                 </p>
               ) : null}
+
+              <div className="mt-auto flex flex-wrap gap-2 border-t border-[var(--border)] pt-4">
+                <Badge tone="info">{labelOf(courseType, course.type)}</Badge>
+                <Badge>{labelOf(courseLevel, course.level)}</Badge>
+              </div>
             </Card>
           ))}
         </ul>
