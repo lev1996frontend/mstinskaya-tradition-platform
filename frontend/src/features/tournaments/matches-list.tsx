@@ -1,6 +1,5 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
 import { Swords } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -72,7 +71,6 @@ export function MatchesList({
   const [filter, setFilter] = useState<Filter>("ALL");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const reduceMotion = useReducedMotion();
 
   const counts = useMemo(() => {
     const base: Record<string, number> = { ALL: matches.length };
@@ -123,23 +121,14 @@ export function MatchesList({
               onClick={() => setFilter(item.key)}
               aria-pressed={active}
               className={cn(
-                "relative rounded-[var(--radius-pill)] border px-3 py-1.5 text-sm transition-colors",
+                "rounded-[var(--radius-sm)] border px-3 py-1.5 text-sm transition-colors",
                 active
-                  ? "border-transparent text-white"
+                  ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
                   : "border-[var(--border-strong)] text-[var(--muted)] hover:bg-[var(--surface-muted)]",
               )}
             >
-              {active ? (
-                <motion.span
-                  layoutId="match-filter-pill"
-                  className="absolute inset-0 rounded-[var(--radius-pill)] bg-[var(--accent)]"
-                  transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 32 }}
-                />
-              ) : null}
-              <span className="relative">
-                {item.label}
-                <span className="ml-1.5 tabular-nums opacity-70">{counts[item.key] ?? 0}</span>
-              </span>
+              {item.label}
+              <span className="ml-1.5 font-record opacity-70">{counts[item.key] ?? 0}</span>
             </button>
           );
         })}
@@ -159,10 +148,7 @@ export function MatchesList({
               <Card
                 as="li"
                 key={match.id}
-                className={cn(
-                  "p-4 transition-shadow",
-                  isLive && "border-[var(--live)]/60 shadow-[var(--shadow-glow-accent)]",
-                )}
+                className={cn("p-4", isLive && "border-[var(--live)]/60")}
               >
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                   <Badge>{labelOf(matchStage, match.stage)}</Badge>

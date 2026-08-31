@@ -54,8 +54,6 @@ export default async function TournamentsPage() {
         }
       />
 
-      <WeaponDrawBillet />
-
       {sorted.length === 0 ? (
         <div className="space-y-4">
           {offline ? <ApiOfflineNotice /> : null}
@@ -73,6 +71,8 @@ export default async function TournamentsPage() {
           <TournamentGrid tournaments={sorted} />
         </>
       )}
+
+      <WeaponDrawBillet />
     </Container>
   );
 }

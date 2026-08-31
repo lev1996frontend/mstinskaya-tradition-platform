@@ -58,13 +58,13 @@ export default async function ClubsPage() {
                     className="size-11 rounded-[var(--radius-sm)] object-cover"
                   />
                 ) : (
-                  <CrestRoundel size={44} className="text-[var(--iron-muted)]" />
+                  <CrestRoundel size={44} className="text-[var(--chrome-muted)]" />
                 )}
               </div>
 
               <div className="flex min-w-0 flex-1 flex-col gap-2 p-5">
                 <div className="flex items-start justify-between gap-3">
-                  <h2 className="font-display min-w-0 text-lg font-semibold leading-snug tracking-tight">
+                  <h2 className="font-display line-clamp-2 min-w-0 text-lg font-semibold leading-snug tracking-tight">
                     {club.name}
                   </h2>
                   {club.is_active ? (

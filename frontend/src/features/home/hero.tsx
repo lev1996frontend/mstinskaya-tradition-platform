@@ -22,14 +22,14 @@ import { HelmetReveal } from "@/features/home/helmet-reveal";
  */
 export function Hero() {
   return (
-    <section className="relative overflow-hidden border-b-2 border-[var(--rule)] bg-[var(--surface)]">
+    <section id="krug" className="relative overflow-hidden border-b-2 border-[var(--rule)] bg-[var(--surface)]">
       <InterlacePattern className="text-[var(--accent)]" />
 
       <Container wide className="relative">
         {/* strapline — what this document covers, stated the way a masthead
             states its sections */}
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-b border-[var(--border)] py-3">
-          <span className="record-label text-[var(--iron-muted)]">Цифровой архив сообщества</span>
+          <span className="record-label text-[var(--chrome-muted)]">Цифровой архив сообщества</span>
           <span className="record-label hidden text-[var(--muted)] md:inline">
             Обучение · Правила · Судейство · Клубы · Турниры
           </span>
@@ -78,7 +78,7 @@ export function Hero() {
             emblem there, not a left-aligned list trailing off), reverting to
             the left-aligned masthead row from `sm` up. */}
         <div className="flex flex-col items-center gap-4 border-t border-[var(--border)] py-6 text-center sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-8 sm:gap-y-5 sm:text-left">
-          <span className="record-label text-[var(--iron-muted)]">Знаки традиции</span>
+          <span className="record-label text-[var(--chrome-muted)]">Знаки традиции</span>
           {/* the captions are wider than the seals, so the row is allowed to
               wrap into two lines at phone width rather than being squeezed */}
           <div className="flex flex-wrap items-start justify-center gap-x-6 gap-y-5 sm:justify-start sm:gap-x-8">

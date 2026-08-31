@@ -35,7 +35,7 @@ const COLUMNS = [
  */
 export function SiteFooter() {
   return (
-    <footer className="mt-14 bg-[var(--surface-muted)]/70">
+    <footer className="mt-14 bg-[var(--background-deep)]">
       <Container>
         <div className="rule-double pt-8" />
       </Container>
@@ -58,7 +58,7 @@ export function SiteFooter() {
 
         {COLUMNS.map((column) => (
           <nav key={column.title} aria-label={column.title} className="space-y-3">
-            <p className="record-label border-b border-[var(--border-strong)] pb-2 text-[var(--iron-muted)]">
+            <p className="record-label border-b border-[var(--border-strong)] pb-2 text-[var(--chrome-muted)]">
               {column.title}
             </p>
             <ul className="space-y-2">
@@ -83,7 +83,7 @@ export function SiteFooter() {
         </p>
         <div className="flex items-center gap-3" aria-hidden="true">
           {WEAPON_MOTIFS.map((motif) => (
-            <WeaponSeal key={motif.key} motif={motif.key} size={28} tone="muted" />
+            <WeaponSeal key={motif.key} motif={motif.key} size={28} tone="iron" />
           ))}
         </div>
       </Container>

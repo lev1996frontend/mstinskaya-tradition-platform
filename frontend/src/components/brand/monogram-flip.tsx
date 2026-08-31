@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
 import { Monogram } from "@/components/brand/monogram";
 import { WEAPON_MOTIFS } from "@/components/brand/weapon-glyphs";
+import { IMPULSE_TAP, TURN_EASE } from "@/lib/motion";
 
 /**
  * The header plate turns over on hover/focus (driven by the enclosing link in
@@ -20,16 +21,18 @@ export function MonogramFlip({ flipped, size = 20 }: { flipped: boolean; size?: 
   const reduceMotion = useReducedMotion();
   const [rotation, setRotation] = useState(0);
   const [weaponIndex, setWeaponIndex] = useState(0);
-  const prevFlipped = useRef(flipped);
-
-  useEffect(() => {
-    if (flipped === prevFlipped.current) return;
-    prevFlipped.current = flipped;
+  // Adjusting state on a prop change, done during render rather than in an
+  // effect (react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes)
+  // — this is the recommended escape hatch for "prop changed -> derive next
+  // state" and avoids the extra render an effect-based version would cause.
+  const [prevFlipped, setPrevFlipped] = useState(flipped);
+  if (flipped !== prevFlipped) {
+    setPrevFlipped(flipped);
+    setRotation((r) => r + 180);
     if (flipped) {
       setWeaponIndex((current) => (current + 1) % WEAPON_MOTIFS.length);
     }
-    setRotation((r) => r + 180);
-  }, [flipped]);
+  }
 
   const { Icon } = WEAPON_MOTIFS[weaponIndex];
 
@@ -38,8 +41,10 @@ export function MonogramFlip({ flipped, size = 20 }: { flipped: boolean; size?: 
       <motion.span
         className="grid size-9 place-items-center rounded-[var(--radius-sm)] bg-[var(--accent)] text-white"
         style={{ transformStyle: "preserve-3d" }}
-        animate={{ rotateX: rotation }}
-        transition={reduceMotion ? { duration: 0 } : { duration: 0.34, ease: [0.16, 1, 0.3, 1] }}
+        // rotateX carries the turn; scale dips briefly at the edge-on hold so
+        // the flip reads as a weighted toss with a beat, not a frictionless spin.
+        animate={reduceMotion ? { rotateX: rotation } : { rotateX: rotation, scale: [1, IMPULSE_TAP.scale, 1] }}
+        transition={reduceMotion ? { duration: 0 } : { duration: 0.34, ease: TURN_EASE }}
       >
         <span className="grid place-items-center" style={{ backfaceVisibility: "hidden" }}>
           <Monogram size={size} />

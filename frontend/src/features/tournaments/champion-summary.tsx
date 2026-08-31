@@ -2,7 +2,6 @@
 
 import { Trophy } from "lucide-react";
 
-import { CornerMark } from "@/components/brand/corner-mark";
 import { Badge, Card, EmptyState } from "@/components/ui";
 import { Avatar } from "@/components/ui/avatar";
 import { labelOf, matchStage } from "@/lib/labels";
@@ -33,16 +32,22 @@ export function ChampionSummary({ summary }: { summary: ChampionSummaryView | nu
 
   return (
     <div className="space-y-4">
-      <Card variant="featured" className="relative overflow-hidden p-6">
-        <CornerMark className="absolute right-3 top-3 text-[var(--gold)]" size={18} />
+      {/* The champion record is the one card in the product that is
+          genuinely a physical document — struck on paper, not wood/charcoal
+          like everything else, per the tokens' own reserved-use comment. */}
+      <Card
+        variant="featured"
+        className="relative overflow-hidden p-6"
+        style={{ backgroundColor: "var(--surface-paper)", color: "var(--surface-paper-ink)" }}
+      >
         <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
           <Avatar name={champion.display_name} size="lg" />
           <div className="min-w-0">
-            <p className="record-label text-[var(--iron-muted)]">Чемпион</p>
+            <p className="record-label text-[var(--surface-paper-ink)] opacity-70">Чемпион</p>
             <h3 className="font-display mt-1 text-2xl font-semibold tracking-tight">
               {champion.display_name}
             </h3>
-            <p className="mt-1 text-sm text-[var(--muted)]">
+            <p className="mt-1 text-sm opacity-80">
               {[champion.city, champion.seed ? `посев ${champion.seed}` : null]
                 .filter(Boolean)
                 .join(" · ") || "—"}
@@ -78,7 +83,7 @@ export function ChampionSummary({ summary }: { summary: ChampionSummaryView | nu
                   <WeaponMark weapon={entry.weapon} size={16} />
                 ) : null}
                 {entry.rounds_won > 0 ? (
-                  <span className="font-display shrink-0 text-xs tabular-nums text-[var(--muted)]">
+                  <span className="font-record shrink-0 text-xs text-[var(--muted)]">
                     {entry.rounds_won} соступ.
                   </span>
                 ) : null}

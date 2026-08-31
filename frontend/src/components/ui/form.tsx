@@ -8,7 +8,7 @@ import { cn } from "./index";
 // Square-cut, iron-edged fields: boxes ruled onto a form. The old rounded-lg
 // control was the other half (with the pill badge) of the generic-SaaS read.
 const controlClasses =
-  "w-full rounded-[var(--radius-sm)] border border-[var(--iron-line)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] transition-colors placeholder:text-[var(--muted)] hover:border-[var(--iron-muted)] disabled:opacity-60";
+  "w-full rounded-[var(--radius-sm)] border border-[var(--chrome-line)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] transition-colors placeholder:text-[var(--muted)] hover:border-[var(--chrome-muted)] disabled:opacity-60";
 
 export function Field({
   label,
@@ -27,7 +27,7 @@ export function Field({
   return (
     <div className="space-y-1.5">
       {/* the same stamped caption used above every other value in the system */}
-      <label htmlFor={id} className="record-label block text-[var(--iron-muted)]">
+      <label htmlFor={id} className="record-label block text-[var(--chrome-muted)]">
         {label}
       </label>
       {children({ id, "aria-describedby": describedBy })}

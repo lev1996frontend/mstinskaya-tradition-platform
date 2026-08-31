@@ -4,6 +4,8 @@ import { Alert, EmptyState, Td, Th, cn } from "@/components/ui";
 import { Avatar } from "@/components/ui/avatar";
 import type { StandingsView } from "@/types";
 
+import { ParticipantStatusBadge } from "./badges";
+
 /**
  * Round-robin table. Deliberately shows counts only — no points column and no
  * official placement, because the rating and tie-break rules are unconfirmed
@@ -74,7 +76,7 @@ export function StandingsTable({ standings }: { standings: StandingsView }) {
                       ) : (
                         <span
                           className={cn(
-                            "font-display text-lg font-semibold tabular-nums",
+                            "font-record text-lg font-semibold",
                             isLeader && "text-[var(--accent)]",
                           )}
                         >
@@ -86,20 +88,11 @@ export function StandingsTable({ standings }: { standings: StandingsView }) {
                   <Td className="font-medium">
                     <div className="flex items-center gap-2.5">
                       <Avatar name={row.participant.display_name} size="xs" />
-                      <span className="min-w-0 truncate">
-                        {row.participant.display_name}
-                        {row.participant.status !== "REGISTERED" &&
-                        row.participant.status !== "APPROVED" &&
-                        row.participant.status !== "CONFIRMED" ? (
-                          <span className="ml-2 text-xs font-normal text-[var(--muted)]">
-                            {row.participant.status === "WITHDRAWN"
-                              ? "снялся"
-                              : row.participant.status === "DISQUALIFIED"
-                                ? "дисквалифицирован"
-                                : ""}
-                          </span>
-                        ) : null}
-                      </span>
+                      <span className="min-w-0 truncate">{row.participant.display_name}</span>
+                      {row.participant.status === "WITHDRAWN" ||
+                      row.participant.status === "DISQUALIFIED" ? (
+                        <ParticipantStatusBadge status={row.participant.status} />
+                      ) : null}
                     </div>
                   </Td>
                   <Td align="center" className="tabular-nums">

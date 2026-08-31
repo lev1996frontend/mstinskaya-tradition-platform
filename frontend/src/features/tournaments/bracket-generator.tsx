@@ -48,7 +48,7 @@ export function CityVerdict({ plan }: { plan: BracketPlanView }) {
       <ul className="mt-2 space-y-1">
         {plan.unavoidable_collisions.map((collision) => (
           <li key={`${collision.position}-${collision.participant_a_id}`} className="text-sm">
-            <span className="font-display tabular-nums">№{collision.position}</span>{" "}
+            <span className="font-record">№{collision.position}</span>{" "}
             {collision.participant_a_name} — {collision.participant_b_name}{" "}
             <span className="text-[var(--muted)]">({collision.city})</span>
           </li>
@@ -71,8 +71,8 @@ export function PlanSummary({ plan }: { plan: BracketPlanView }) {
           key={item.label}
           className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
         >
-          <div className="record-label text-[var(--iron-muted)]">{item.label}</div>
-          <div className="font-display mt-0.5 text-xl font-semibold tabular-nums">{item.value}</div>
+          <div className="record-label text-[var(--chrome-muted)]">{item.label}</div>
+          <div className="font-record mt-0.5 text-xl font-semibold">{item.value}</div>
         </div>
       ))}
     </div>
@@ -97,9 +97,7 @@ export function PairPreview({ plan }: { plan: BracketPlanView }) {
                 : "border-[var(--border)] bg-[var(--surface)]",
             )}
           >
-            <span className="font-display w-5 shrink-0 tabular-nums text-[var(--muted)]">
-              {pair.position}
-            </span>
+            <span className="font-record w-5 shrink-0 text-[var(--muted)]">{pair.position}</span>
             <span className="min-w-0 flex-1 truncate">
               {pair.participant_a_name ?? <em className="text-[var(--muted)]">свободно</em>}
               {pair.participant_a_city ? (
@@ -164,7 +162,7 @@ export function BracketGenerator({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="font-display flex items-center gap-2 text-lg font-semibold tracking-tight">
-            <Network className="size-4 text-[var(--accent)]" strokeWidth={2} />
+            <Network className="size-4 text-[var(--muted)]" strokeWidth={2} />
             Построение сетки
           </h3>
           <p className="mt-1 max-w-prose text-sm text-[var(--muted)]">
@@ -191,7 +189,7 @@ export function BracketGenerator({
           <PairPreview plan={plan} />
 
           <div className="space-y-2 border-t border-[var(--border)] pt-3">
-            <p className="record-label text-[var(--iron-muted)]">Оружие финала</p>
+            <p className="record-label text-[var(--chrome-muted)]">Оружие финала</p>
             <p className="text-xs text-[var(--muted)]">
               В финале жребий не бросается — оружие задаётся правилами турнира заранее.
             </p>

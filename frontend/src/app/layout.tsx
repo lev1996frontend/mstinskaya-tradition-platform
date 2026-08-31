@@ -1,25 +1,30 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Inter, Playfair_Display } from "next/font/google";
+import { Alegreya, Commissioner, IBM_Plex_Mono } from "next/font/google";
 
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { AuthProvider } from "@/features/auth/auth-context";
-import { ThemeProvider } from "@/features/theme/theme-context";
-import { ThemeScript } from "@/features/theme/theme-script";
+import { IrisTransitionProvider } from "@/features/transitions/iris-transition";
 
 import "./globals.css";
 
-const inter = Inter({
+// Interface/running text. Ships a real Cyrillic cut (verified against
+// next/font's google font-data before adopting, same diligence Playfair
+// needed below) — replaces Inter for the "Живой архив" v2 type system.
+const commissioner = Commissioner({
   subsets: ["latin", "cyrillic"],
-  variable: "--font-inter",
+  weight: ["300", "400", "500"],
+  variable: "--font-commissioner",
   display: "swap",
 });
 
-// Fraunces (originally planned) has no Cyrillic subset; Playfair Display does
-// and gives the same "carved/editorial" display character at heading sizes.
-const playfairDisplay = Playfair_Display({
+// Fraunces (originally considered) has no Cyrillic subset; Alegreya does and
+// gives the same "carved/editorial" display character at heading sizes —
+// replaces Playfair Display as the display face.
+const alegreya = Alegreya({
   subsets: ["latin", "cyrillic"],
-  variable: "--font-playfair",
+  weight: ["700", "800"],
+  variable: "--font-alegreya",
   display: "swap",
 });
 
@@ -49,19 +54,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="ru"
-      className={`${inter.variable} ${playfairDisplay.variable} ${plexMono.variable}`}
+      className={`${commissioner.variable} ${alegreya.variable} ${plexMono.variable}`}
     >
-      <head>
-        <ThemeScript />
-      </head>
       <body className="flex min-h-dvh flex-col">
-        <ThemeProvider>
+        <IrisTransitionProvider>
           <AuthProvider>
             <SiteHeader />
             <main className="flex-1">{children}</main>
             <SiteFooter />
           </AuthProvider>
-        </ThemeProvider>
+        </IrisTransitionProvider>
       </body>
     </html>
   );

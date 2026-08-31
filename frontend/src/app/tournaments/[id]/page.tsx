@@ -133,7 +133,7 @@ export default async function TournamentPage({ params }: PageProps) {
                   href={document.file_url}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm hover:border-[var(--accent)]"
+                  className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm transition-colors hover:border-[var(--accent)]"
                 >
                   <span className="truncate font-medium">{document.title}</span>
                   <Badge>{labelOf(documentType, document.type)}</Badge>

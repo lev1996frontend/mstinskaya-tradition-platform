@@ -25,7 +25,7 @@ const buttonVariants: Record<ButtonVariant, string> = {
   primary:
     "border-b-2 border-[var(--accent-strong)] bg-[var(--accent)] text-white hover:bg-[var(--accent-strong)]",
   secondary:
-    "border border-[var(--iron-line)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--iron-muted)] hover:bg-[var(--surface-muted)]",
+    "border border-[var(--chrome-line)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--chrome-muted)] hover:bg-[var(--surface-muted)]",
   ghost: "text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]",
   danger: "border-b-2 border-[var(--accent-strong)] bg-[var(--danger)] text-white hover:opacity-90",
 };

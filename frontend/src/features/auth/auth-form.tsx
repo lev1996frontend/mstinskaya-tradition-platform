@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Monogram } from "@/components/brand/monogram";
 import { Alert, Button, Card, Container } from "@/components/ui";
 import { Field, Input } from "@/components/ui/form";
 import { ApiError, ApiUnreachableError } from "@/lib/api";
@@ -65,23 +64,18 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           late, and it was the same "every block fades in" reflex the redesign
           is cutting everywhere else. Dropping them also removed framer-motion
           from this route. */}
-      <div className="rule-double-b flex items-start gap-4 pb-6">
-        <span
-          aria-hidden
-          className="grid size-11 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-[var(--accent)] text-white"
-        >
-          <Monogram size={24} />
-        </span>
-        <div className="space-y-2">
-          <h1 className="font-display text-3xl font-semibold leading-tight tracking-tight">
-            {mode === "login" ? "Вход" : "Регистрация"}
-          </h1>
-          <p className="text-sm leading-relaxed text-[var(--muted)]">
-            {mode === "login"
-              ? "Вход нужен организаторам и судьям для внесения результатов."
-              : "Создайте аккаунт, чтобы участвовать в жизни платформы."}
-          </p>
-        </div>
+      <div className="rule-double-b space-y-2 pb-6">
+        <p className="record-label text-[var(--accent)]">
+          {mode === "login" ? "Личный кабинет" : "Регистрация"}
+        </p>
+        <h1 className="font-display text-3xl font-semibold leading-tight tracking-tight">
+          {mode === "login" ? "Вход" : "Создание аккаунта"}
+        </h1>
+        <p className="max-w-sm text-sm leading-relaxed text-[var(--muted)]">
+          {mode === "login"
+            ? "Вход нужен организаторам и судьям для внесения результатов."
+            : "Создайте аккаунт, чтобы участвовать в жизни платформы."}
+        </p>
       </div>
 
       <Card className="p-6">
@@ -153,7 +147,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
           {error ? <Alert tone="danger">{error}</Alert> : null}
 
-          <Button type="submit" className="w-full" disabled={busy}>
+          <Button type="submit" disabled={busy}>
             {busy ? "Подождите…" : mode === "login" ? "Войти" : "Создать аккаунт"}
           </Button>
         </form>

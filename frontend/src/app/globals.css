@@ -1,39 +1,60 @@
 @import "tailwindcss";
 
 /*
- * Design tokens — "Полевой архив" (Field Archive).
+ * Design tokens — "Живой архив" (Living Archive), single material mode.
  *
- * The system reads every piece of information as an entry stamped into an
- * official record: warm paper stock, oxblood + aged gold marks, cold iron for
- * structural rules and chrome, and a typewriter face reserved for anything
- * that is a *value* (number, date, code, status).
+ * Second-generation token set for the same "Полевой архив" material
+ * identity (charcoal/wood underfoot, oxblood + aged ochre marks, cold metal
+ * for structural rules, old paper reserved for genuine documents). This pass
+ * ports the exact values from the design_handoff_mstinskaya v3 handoff:
+ * coal ground, wood surfaces, a warmer/darker action red, and a four-step
+ * text ramp instead of two. The material philosophy is unchanged — this is
+ * a deepening of the same direction, not a new theme.
  *
  * Three type roles, never interchanged:
- *   --font-display  Playfair Display — editorial headings only
- *   --font-sans     Inter            — interface and running text
+ *   --font-display  Alegreya         — editorial headings only
+ *   --font-sans     Commissioner     — interface and running text
  *   --font-record   IBM Plex Mono    — numerals, dates, codes, field labels
  *
  * Two neutral ramps on purpose:
- *   --neutral-*  warm (paper, ink, running text)
- *   --iron-*     cold graphite (rules, chrome, table heads, stamped plates)
- * Mixing a cold rule against warm paper is what keeps the palette from
- * collapsing into a single flat "gray-500 on white" SaaS surface.
+ *   --neutral-*  warm (paper, ink) — used sparingly now, for a rare paper
+ *                accent, not the page ground
+ *   --chrome-*   cold graphite (rules, chrome, table heads, stamped plates)
+ * Mixing a cold rule against a warm surface is what keeps the palette from
+ * collapsing into a single flat "gray-500 on black" theme.
  *
- * The manual theme toggle sets `data-theme` on <html>; when it's absent the
- * page still follows the OS preference via prefers-color-scheme, so the site
- * degrades correctly with JS disabled. See `features/theme/theme-context.tsx`.
+ * `--iron` is a *separate*, warm bronze-metal accent (declare buttons, cube
+ * frame, footer glyphs) — not to be confused with the cold `--chrome-*`
+ * ramp above. Same word, two different materials in the source palette;
+ * kept as two token families on purpose rather than overloading one name.
+ *
+ * There is only one mode. A prior light/dark toggle was removed: two
+ * switchable registers were pulling against the material identity this pass
+ * is built around, and one committed, art-directed mode reads as a specific
+ * place rather than a configurable UI theme.
  */
 :root {
   /* ---- surfaces & ink ---------------------------------------------- */
-  /* Parchment ground, one step deeper than the card stock so paper reads as
-     paper laid *on* a desk rather than a white panel on a white page. */
-  --background: #f2eee4;
-  --surface: #fbf9f3;
-  --surface-muted: #ebe5d8;
-  --foreground: #17140f;
-  --muted: #6b6459;
+  /* Coal ground, wood-toned surfaces stacked on it. */
+  --background: #14120f;
+  --background-deep: #100e0c; /* accent-section ground: ПОЕДИНОК, ПРАВИЛА, ЖИВОПИСЬ */
+  --surface: #241c15;
+  --surface-muted: #1b1611;
+  --foreground: #e8dcc4;
+  --muted: #c9bfa8; /* text-2 */
+  --text-3: #9a8f7c; /* descriptions */
+  --text-4: #8b7f6b; /* captions, technical/mono labels */
 
-  /* warm neutral ramp — paper, ink, running text */
+  /* Old paper — NOT a general surface. Reserved for the few moments that are
+     genuinely a physical document: the champion record, an athlete dossier
+     header, a bio note. Everywhere else stays wood/charcoal on purpose. */
+  --surface-paper: #d6c7a7;
+  --surface-paper-ink: #241c15;
+  --surface-paper-label: #6b5c42; /* club/spec captions on paper */
+  --surface-paper-muted: #7a6b50; /* secondary paper copy */
+
+  /* warm neutral ramp — kept for the rare paper-toned accent (an avatar
+     swatch, the paper surface above), not the page ground */
   --neutral-50: #faf8f4;
   --neutral-100: #f1eee7;
   --neutral-200: #e0dbd1;
@@ -45,40 +66,51 @@
   --neutral-800: #2c2822;
   --neutral-900: #17140f;
 
-  /* cold iron ramp — structural rules, chrome, stamped plates. Deliberately
-     desaturated-cool so it never reads as "the same gray as the paper edge". */
-  --iron: #343b3c;
-  --iron-strong: #1b2122;
-  /* `--iron-muted` is the colour of every stamped field label, and those sit on
-     the tinted table-head/footer grounds as well as on plain paper — it is
-     tuned to clear 4.5:1 against `--surface-muted`, not just `--surface`. */
-  --iron-muted: #5b6364;
-  --iron-line: #b9bfbd;
+  /* cold chrome ramp — structural rules, chrome, stamped plates. Warmed a few
+     points off pure slate so it never reads as "the same gray as concrete".
+     Renamed from --iron-* (same values) to free that name for the warm
+     bronze-metal accent below — the two are unrelated materials. */
+  --chrome: #9aa19a;
+  --chrome-strong: #dee3e3;
+  --chrome-muted: #8b9186;
+  --chrome-line: #3a3d38;
 
-  /* card/paper edge (warm) vs. structural rule (cold iron) */
-  --border: #ded7c7;
-  --border-strong: #c6bda9;
-  --rule: var(--iron-line);
+  /* warm bronze metal — declare-button borders, lot cube frame, footer
+     weapon glyphs. Distinct register from --chrome-* above: this is a
+     material accent (forged metal), not a structural rule color. */
+  --iron: #4a3a28;
 
-  /* ---- brand: oxblood + gold ----------------------------------------- */
-  --accent: #8c1f24;
-  --accent-strong: #6e171b;
-  --accent-soft: #f4e3e0;
-  --gold: #a67c22;
-  --gold-strong: #7f5d16;
-  --gold-soft: #f2e6ca;
-  --live: #c8382c;
-  --live-soft: #f7e4e0;
+  --border: #322820;
+  --border-strong: #3a2e22;
+  --rule: var(--chrome-line);
+
+  /* ---- brand: oxblood + ochre ----------------------------------------- */
+  /* --accent/--accent-strong are the contrast-tuned interactive red — link,
+     focus ring, active state. --accent-deep is a separate register: the
+     "stamped ink / pressed / final" red — resting fill for primary actions
+     and the champion seal — so brand, hover, urgency and finality aren't all
+     carried by one identical hue. --live stays its own register too:
+     "something is happening right now" must never be confusable with "this
+     is the brand colour". */
+  --accent: #b02a20;
+  --accent-strong: color-mix(in srgb, var(--accent) 78%, white);
+  --accent-soft: color-mix(in srgb, var(--accent) 20%, var(--background) 80%);
+  --accent-deep: #8e241d;
+  --gold: #b07a35;
+  --gold-strong: color-mix(in srgb, var(--gold) 80%, white);
+  --gold-soft: color-mix(in srgb, var(--gold) 16%, var(--background) 84%);
+  --live: #ff5c4d;
+  --live-soft: #2c1917;
 
   /* ---- semantic status -------------------------------------------- */
-  --success: #2f6b46;
-  --success-soft: #e2efe5;
-  --warning: #7d5211;
-  --warning-soft: #f4ead2;
-  --info: #1f4f7a;
-  --info-soft: #e2ecf4;
-  --danger: #8c1f24;
-  --danger-soft: #f4e3e0;
+  --success: #6fbb8d;
+  --success-soft: #16261d;
+  --warning: #d9a44e;
+  --warning-soft: #2a2114;
+  --info: #7bb2df;
+  --info-soft: #16222d;
+  --danger: #e2686c;
+  --danger-soft: #2c1719;
 
   /* ---- radius / shadow / motion ------------------------------------ */
   /* Tight radii on purpose: a filed record has a cut edge, not a pill edge.
@@ -90,10 +122,10 @@
 
   /* Depth comes from a hard printed offset + a hairline, not from a soft
      floating blur. The large blur survives only for real overlays. */
-  --shadow-sm: 0 1px 0 rgba(27, 33, 34, 0.05);
-  --shadow-md: 0 1px 0 rgba(27, 33, 34, 0.07), 0 10px 22px -18px rgba(27, 33, 34, 0.55);
-  --shadow-lg: 0 2px 0 rgba(27, 33, 34, 0.08), 0 26px 56px -28px rgba(27, 33, 34, 0.45);
-  --shadow-glow-accent: 0 0 0 3px var(--accent-soft), 0 2px 0 rgba(140, 31, 36, 0.25);
+  --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 1px 0 rgba(0, 0, 0, 0.55), 0 10px 22px -18px rgba(0, 0, 0, 0.8);
+  --shadow-lg: 0 2px 0 rgba(0, 0, 0, 0.6), 0 26px 56px -28px rgba(0, 0, 0, 0.85);
+  --shadow-glow-accent: 0 0 0 3px var(--accent-soft), 0 2px 0 rgba(217, 72, 77, 0.35);
 
   --duration-fast: 120ms;
   --duration-base: 200ms;
@@ -101,104 +133,25 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* paper grain strength (see body::after) */
-  --grain: 0.035;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --background: #100f0d;
-    --surface: #1a1814;
-    --surface-muted: #23201a;
-    --foreground: #f1ece2;
-    --muted: #a89d8c;
-
-    --iron: #aab2b3;
-    --iron-strong: #dee3e3;
-    --iron-muted: #8d9596;
-    --iron-line: #3a4042;
-
-    --border: #322d24;
-    --border-strong: #4a4336;
-    --rule: var(--iron-line);
-
-    --accent: #d9484d;
-    --accent-strong: #ef6a6e;
-    --accent-soft: #331a1b;
-    --gold: #d0a34a;
-    --gold-strong: #e6c07a;
-    --gold-soft: #2a2114;
-    --live: #ff5c4d;
-    --live-soft: #2c1917;
-
-    --success: #6fbb8d;
-    --success-soft: #16261d;
-    --warning: #d9a44e;
-    --warning-soft: #2a2114;
-    --info: #7bb2df;
-    --info-soft: #16222d;
-    --danger: #e2686c;
-    --danger-soft: #2c1719;
-
-    --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.5);
-    --shadow-md: 0 1px 0 rgba(0, 0, 0, 0.55), 0 10px 22px -18px rgba(0, 0, 0, 0.8);
-    --shadow-lg: 0 2px 0 rgba(0, 0, 0, 0.6), 0 26px 56px -28px rgba(0, 0, 0, 0.85);
-    --shadow-glow-accent: 0 0 0 3px var(--accent-soft), 0 2px 0 rgba(217, 72, 77, 0.35);
-
-    --grain: 0.05;
-  }
-}
-
-:root[data-theme="dark"] {
-  --background: #100f0d;
-  --surface: #1a1814;
-  --surface-muted: #23201a;
-  --foreground: #f1ece2;
-  --muted: #a89d8c;
-
-  --iron: #aab2b3;
-  --iron-strong: #dee3e3;
-  --iron-muted: #8d9596;
-  --iron-line: #3a4042;
-
-  --border: #322d24;
-  --border-strong: #4a4336;
-  --rule: var(--iron-line);
-
-  --accent: #d9484d;
-  --accent-strong: #ef6a6e;
-  --accent-soft: #331a1b;
-  --gold: #d0a34a;
-  --gold-strong: #e6c07a;
-  --gold-soft: #2a2114;
-  --live: #ff5c4d;
-  --live-soft: #2c1917;
-
-  --success: #6fbb8d;
-  --success-soft: #16261d;
-  --warning: #d9a44e;
-  --warning-soft: #2a2114;
-  --info: #7bb2df;
-  --info-soft: #16222d;
-  --danger: #e2686c;
-  --danger-soft: #2c1719;
-
-  --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 1px 0 rgba(0, 0, 0, 0.55), 0 10px 22px -18px rgba(0, 0, 0, 0.8);
-  --shadow-lg: 0 2px 0 rgba(0, 0, 0, 0.6), 0 26px 56px -28px rgba(0, 0, 0, 0.85);
-  --shadow-glow-accent: 0 0 0 3px var(--accent-soft), 0 2px 0 rgba(217, 72, 77, 0.35);
-
   --grain: 0.05;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-background-deep: var(--background-deep);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
+  --color-surface-paper: var(--surface-paper);
+  --color-surface-paper-ink: var(--surface-paper-ink);
+  --color-surface-paper-label: var(--surface-paper-label);
+  --color-surface-paper-muted: var(--surface-paper-muted);
   --color-border-base: var(--border);
   --color-border-strong: var(--border-strong);
   --color-rule: var(--rule);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+  --color-text-3: var(--text-3);
+  --color-text-4: var(--text-4);
 
   --color-neutral-50: var(--neutral-50);
   --color-neutral-100: var(--neutral-100);
@@ -211,14 +164,16 @@
   --color-neutral-800: var(--neutral-800);
   --color-neutral-900: var(--neutral-900);
 
+  --color-chrome: var(--chrome);
+  --color-chrome-strong: var(--chrome-strong);
+  --color-chrome-muted: var(--chrome-muted);
+  --color-chrome-line: var(--chrome-line);
   --color-iron: var(--iron);
-  --color-iron-strong: var(--iron-strong);
-  --color-iron-muted: var(--iron-muted);
-  --color-iron-line: var(--iron-line);
 
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-accent-soft: var(--accent-soft);
+  --color-accent-deep: var(--accent-deep);
   --color-gold: var(--gold);
   --color-gold-strong: var(--gold-strong);
   --color-gold-soft: var(--gold-soft);
@@ -234,8 +189,8 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-playfair), ui-serif, Georgia, serif;
+  --font-sans: var(--font-commissioner), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-alegreya), ui-serif, Georgia, serif;
   /* Tailwind's `font-mono` and our `.font-record` resolve to the same face, so
      the few existing <code> usages join the record system for free. */
   --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -246,14 +201,13 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  transition: background-color var(--duration-base) var(--ease-out), color var(--duration-base) var(--ease-out);
 }
 
 /*
- * Paper grain. A fixed, non-interactive fractal-noise overlay at ~3-5%: the
- * one piece of "texture" in the system, and it earns its place — it is what
- * stops large flat parchment fields from reading as a flat #fff canvas. Not
- * animated, not parallaxed, no gradient blobs.
+ * Paper grain. A fixed, non-interactive fractal-noise overlay: the one piece
+ * of "texture" applied to the whole page, and it earns its place — it is
+ * what stops large flat wood/charcoal fields from reading as a flat digital
+ * gradient. Not animated, not parallaxed, no gradient blobs.
  */
 body::after {
   content: "";
@@ -327,11 +281,31 @@ body::after {
   font-variant-numeric: tabular-nums slashed-zero;
 }
 
+/*
+ * Kinetic word reveal — a large culturally-loaded word (ПОЕДИНОК, etc.)
+ * unmasking left-to-right once on mount, via a swept clip-path rather than an
+ * opacity fade. Reserved for a handful of named moments (see the components
+ * that use it); never applied broadly, and never looping.
+ */
+@keyframes reveal-word {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.reveal-word {
+  animation: reveal-word 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* ------------------------------------------------------- ledger surfaces */
 
 /*
  * Ruled paper. Faint horizontal writing lines, used only where a surface is
- * standing in for an unfilled record (empty states, the masthead margin).
+ * standing in for an unfilled record (empty states, the masthead margin) or
+ * a handwritten note (a bio block).
  */
 .ledger-lines {
   background-image: repeating-linear-gradient(
@@ -388,6 +362,245 @@ body::after {
 
 .stamp-in {
   animation: stamp-in 220ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+/*
+ * шаг (step) — a short, sharp step-in used for one-shot entrance stagger
+ * (a page's first roster rows, stat tiles). Pure CSS so a server-rendered
+ * list can stagger via `animation-delay` alone, with no client JS. Reserved
+ * for a bounded number of items per list (see call sites) — never applied to
+ * every row of an arbitrarily long table.
+ */
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.step-in {
+  animation: step-in 220ms cubic-bezier(0.32, 0, 0.67, 0) both;
+}
+
+/*
+ * шаг, section scale — same shape as .step-in above but the larger
+ * translate/duration the v3 handoff specifies for whole-section entrances
+ * (vs. .step-in's tighter row-stagger timing, kept as-is so existing list
+ * usages don't shift). Two sizes of the same primitive, not two primitives.
+ */
+.step-in-lg {
+  animation: step-in-lg 450ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+@keyframes step-in-lg {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/*
+ * The remaining v3 motion vocabulary. `impulse` (press feedback) and `swing`
+ * (3D nav/logo flip) are deliberately NOT duplicated here — both already
+ * exist as framer-motion primitives (`IMPULSE_TAP`/`IMPULSE_SPRING`,
+ * `TURN_EASE` in `lib/motion.ts`) driving `Button`, `site-header.tsx` and
+ * `monogram-flip.tsx`; a second CSS implementation would just be two sources
+ * of truth for the same gesture.
+ */
+
+/* удар (impact) — one-shot scene jolt after a clash lands. */
+@keyframes impact {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  20% {
+    transform: translate3d(-9px, 0, 0);
+  }
+  40% {
+    transform: translate3d(7px, 0, 0);
+  }
+  60% {
+    transform: translate3d(-5px, 0, 0);
+  }
+  80% {
+    transform: translate3d(3px, 0, 0);
+  }
+}
+
+.impact {
+  animation: impact 500ms steps(2, end);
+}
+
+/* дрожь (cam) — scene shake while the lot is spinning. */
+@keyframes cam {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(2px, -2px);
+  }
+}
+
+.cam {
+  animation: cam 280ms steps(2, end) infinite;
+}
+
+/* поток (flow) — the hero ring's slow continuous rotation. Pure CSS: no
+   interaction, safe on a server-rendered element. */
+@keyframes flow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.flow {
+  animation: flow 90s linear infinite;
+}
+
+/* кен (ken/drift) — slow background-photo zoom+drift. Pure CSS for the same
+   reason as `flow`: continuous, non-interactive, server-renderable. */
+@keyframes ken {
+  from {
+    transform: scale(1.04) translate(0, 0);
+  }
+  to {
+    transform: scale(1.14) translate(-1.5%, -1%);
+  }
+}
+
+.ken {
+  animation: ken 34s ease-in-out infinite alternate;
+}
+
+/* раскрытие (unmask) — one-shot clip-path reveal, toggled by adding this
+   class from an IntersectionObserver wrapper (see `features/home/*`
+   reveal components) rather than on mount, so below-the-fold photos reveal
+   on scroll, not on page load. */
+@keyframes unmask {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.unmask {
+  animation: unmask 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* прорисовка (draw-x / draw-y) — bracket connector lines drawing in.
+   Apply with an inline `animation-delay` per cell (same pattern as
+   `.step-in`'s stagger). */
+@keyframes draw-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes draw-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.draw-x {
+  animation: draw-x 450ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+  transform-origin: left center;
+}
+
+.draw-y {
+  animation: draw-y 500ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+  transform-origin: top center;
+}
+
+/* выпад (lunge-a / lunge-b) — fighters stepping toward each other on clash.
+   Mirrored pair: -a moves right, -b moves left. */
+@keyframes lunge-a {
+  50% {
+    transform: translateX(34px) rotateY(-6deg);
+  }
+}
+
+@keyframes lunge-b {
+  50% {
+    transform: translateX(-34px) rotateY(6deg);
+  }
+}
+
+.lunge-a {
+  animation: lunge-a 760ms ease-in-out;
+}
+
+.lunge-b {
+  animation: lunge-b 760ms ease-in-out;
+}
+
+/* вспышка (flash) — impact flash overlay. */
+@keyframes flash {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 0.8;
+  }
+}
+
+.flash {
+  animation: flash 600ms ease-out;
+}
+
+/* буква (letter) — kinetic per-letter name reveal. Apply with an inline
+   `animation-delay: calc(var(--i) * 45ms)` per letter span. */
+@keyframes letter {
+  from {
+    opacity: 0;
+    transform: translateY(14px) rotateX(-40deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotateX(0);
+  }
+}
+
+.letter {
+  animation: letter 500ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+/* пыль (dust) — puff under the lot cube on clash. */
+@keyframes dust {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  55% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+.dust {
+  animation: dust 900ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {

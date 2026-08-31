@@ -10,7 +10,7 @@ import { MonogramFlip } from "@/components/brand/monogram-flip";
 import { WEAPON_MOTIFS, type WeaponMotifKey } from "@/components/brand/weapon-glyphs";
 import { ButtonLink, Container, cn } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
-import { ThemeToggle } from "@/features/theme/theme-toggle";
+import { IMPULSE_TAP } from "@/lib/motion";
 
 const NAV = [
   { href: "/tournaments", label: "Турниры" },
@@ -58,9 +58,21 @@ const navItemBase =
  * start, not a re-render, so it never "jumps". State-driven (mirrors
  * `logoActive` above) rather than `whileHover`, so keyboard focus drives the
  * identical animation via the same `animate` prop.
+ *
+ * A brief импульс (compress, `IMPULSE_TAP.scale`) is inserted right at the
+ * edge-on hold, between the existing grow-in and grow-out, so the toss reads
+ * as weighted — a die actually landing edge-on for an instant — rather than a
+ * frictionless spin that only ever expands.
  */
-const navSpinKeyframes = { rotateX: [0, 180, 180, 360], scale: [1, 1.05, 1.05, 1.1] };
-const navSpinTransition = { duration: 0.8, times: [0, 0.42, 0.6, 1], ease: "easeInOut" as const };
+const navSpinKeyframes = {
+  rotateX: [0, 180, 180, 180, 360],
+  scale: [1, 1.05, IMPULSE_TAP.scale, 1.05, 1.1],
+};
+const navSpinTransition = {
+  duration: 0.8,
+  times: [0, 0.38, 0.5, 0.62, 1],
+  ease: "easeInOut" as const,
+};
 const navRestState = { rotateX: 0, scale: 1 };
 const navRestTransition = { duration: 0.25, ease: "easeOut" as const };
 
@@ -129,7 +141,7 @@ export function SiteHeader() {
                     }
                   />
                 ) : null}
-                <span className="relative block" style={{ perspective: 480 }}>
+                <span className="relative block min-w-[88px] text-center" style={{ perspective: 480 }}>
                   <motion.span
                     className="block"
                     style={{ transformStyle: "preserve-3d" }}
@@ -172,17 +184,15 @@ export function SiteHeader() {
               Войти
             </ButtonLink>
           )}
-          <ThemeToggle />
         </div>
 
         <div className="ml-auto flex items-center gap-1.5 lg:hidden">
-          <ThemeToggle />
           <button
             type="button"
             onClick={() => setOpen((value) => !value)}
             aria-expanded={open}
             aria-label="Меню"
-            className="rounded-[var(--radius-sm)] border border-[var(--iron-line)] p-2 text-[var(--iron-muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            className="rounded-[var(--radius-sm)] border border-[var(--chrome-line)] p-2 text-[var(--chrome-muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
           >
             {open ? <X className="size-4" /> : <Menu className="size-4" />}
           </button>

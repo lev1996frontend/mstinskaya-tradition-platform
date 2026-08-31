@@ -34,10 +34,14 @@ export function ParticipantsTable({
         </tr>
       </thead>
       <tbody>
-        {participants.map((participant) => (
-          <tr key={participant.id}>
+        {participants.map((participant, index) => (
+          <tr
+            key={participant.id}
+            className={index < 8 ? "step-in" : undefined}
+            style={index < 8 ? { animationDelay: `${index * 40}ms` } : undefined}
+          >
             {showSeed ? (
-              <Td align="center" className="font-display tabular-nums text-[var(--muted)]">
+              <Td align="center" className="font-record text-[var(--muted)]">
                 {participant.seed ?? "—"}
               </Td>
             ) : null}

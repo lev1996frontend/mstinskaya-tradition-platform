@@ -207,6 +207,22 @@ export const eventType: Record<string, string> = {
   TEAM_PAIRING_COMPLETED: "Завершена командная схватка",
 };
 
+/**
+ * Journal severity. Most events are routine record-keeping (info); a
+ * disqualification or a judge overriding an already-thrown lot is the kind of
+ * entry that should stand out from "жребий брошен" in the same list. Anything
+ * not listed here reads as routine (info).
+ */
+export const eventTone: Record<string, Tone> = {
+  PLAYER_WITHDRAWN: "warning",
+  PLAYER_DISQUALIFIED: "danger",
+  LOT_OVERRIDDEN: "warning",
+  MATCH_UPDATED: "warning",
+  WINNER_DECLARED: "success",
+  BOUT_COMPLETED: "success",
+  TEAM_PAIRING_COMPLETED: "success",
+};
+
 /** Falls back to the raw code so an unmapped backend value is still visible. */
 export function labelOf<T extends string>(dict: Record<string, string>, key: T | null): string {
   if (!key) return "—";

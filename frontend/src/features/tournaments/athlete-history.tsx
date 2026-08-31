@@ -1,7 +1,7 @@
 import { ScrollText } from "lucide-react";
 import Link from "next/link";
 
-import { Card, EmptyState } from "@/components/ui";
+import { EmptyState } from "@/components/ui";
 import { competitionFormat, labelOf, matchStage } from "@/lib/labels";
 import type { AthleteParticipationView } from "@/types";
 
@@ -28,35 +28,41 @@ export function AthleteHistory({ history }: { history: AthleteParticipationView[
   }
 
   return (
-    <ul className="space-y-2">
+    <ul className="border-t-2 border-[var(--rule)]">
       {history.map((entry) => (
         <li key={entry.participant_id}>
-          <Card className="p-4">
-            <Link
-              href={`/tournaments/${entry.tournament_id}/competitions/${entry.competition_id}`}
-              className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0">
-                <p className="font-medium">{entry.tournament_title}</p>
-                <p className="mt-0.5 text-sm text-[var(--muted)]">
-                  {entry.competition_name} · {labelOf(competitionFormat, entry.format)}
-                  {entry.city ? ` · ${entry.city}` : ""}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2 text-sm text-[var(--muted)]">
-                {entry.outcome === "ELIMINATED" && entry.eliminated_at_stage ? (
-                  <span>{labelOf(matchStage, entry.eliminated_at_stage)}</span>
+          <Link
+            href={`/tournaments/${entry.tournament_id}/competitions/${entry.competition_id}`}
+            className="group flex flex-col gap-2 border-b border-[var(--border)] py-4 transition-[border-color,transform] hover:translate-x-0.5 hover:border-b-[var(--accent)] sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="min-w-0">
+              <p className="flex items-center gap-2 font-medium">
+                {entry.outcome === "CHAMPION" ? (
+                  <span
+                    aria-hidden="true"
+                    className="size-2 shrink-0 rounded-full bg-[var(--accent)]"
+                  />
                 ) : null}
-                {entry.outcome === "STANDINGS" && entry.standings_wins !== null ? (
-                  <span className="font-record tabular-nums">
-                    {entry.standings_wins}П–{entry.standings_losses}П
-                    {entry.standings_provisional ? " · предварительно" : ""}
-                  </span>
-                ) : null}
-                <AthleteOutcomeBadge outcome={entry.outcome} />
-              </div>
-            </Link>
-          </Card>
+                {entry.tournament_title}
+              </p>
+              <p className="mt-0.5 text-sm text-[var(--muted)]">
+                {entry.competition_name} · {labelOf(competitionFormat, entry.format)}
+                {entry.city ? ` · ${entry.city}` : ""}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2 text-sm text-[var(--muted)]">
+              {entry.outcome === "ELIMINATED" && entry.eliminated_at_stage ? (
+                <span>{labelOf(matchStage, entry.eliminated_at_stage)}</span>
+              ) : null}
+              {entry.outcome === "STANDINGS" && entry.standings_wins !== null ? (
+                <span className="font-record">
+                  {entry.standings_wins}П–{entry.standings_losses}П
+                  {entry.standings_provisional ? " · предварительно" : ""}
+                </span>
+              ) : null}
+              <AthleteOutcomeBadge outcome={entry.outcome} />
+            </div>
+          </Link>
         </li>
       ))}
     </ul>

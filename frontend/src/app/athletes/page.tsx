@@ -67,7 +67,10 @@ export default async function AthletesPage() {
                   <Avatar name={athlete.nickname ?? "?"} photoUrl={athlete.photo_url} size="sm" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
-                      <span className="min-w-0 truncate font-medium">
+                      <span
+                        className="min-w-0 truncate font-medium"
+                        title={athlete.nickname ?? "Без псевдонима"}
+                      >
                         {athlete.nickname ?? "Без псевдонима"}
                       </span>
                       <Badge tone="info">{labelOf(athleteLevel, athlete.level)}</Badge>
@@ -111,7 +114,10 @@ export default async function AthletesPage() {
                   >
                     <Avatar name={athlete.nickname ?? "?"} photoUrl={athlete.photo_url} size="sm" />
                     <span className="min-w-0">
-                      <span className="block truncate font-medium">
+                      <span
+                        className="block truncate font-medium"
+                        title={athlete.nickname ?? "Без псевдонима"}
+                      >
                         {athlete.nickname ?? "Без псевдонима"}
                       </span>
                       {athlete.bio ? (

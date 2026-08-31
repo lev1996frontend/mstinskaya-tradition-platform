@@ -121,18 +121,39 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
   const canManage = Boolean(user);
   const reduceMotion = useReducedMotion();
 
+  // Entrance stagger for the stat strip — plays once, on the workspace's own
+  // mount, never on the `router.refresh()` re-renders that follow saving a
+  // result (this component instance persists across those, so `initial`
+  // never re-triggers).
+  const statItems = [
+    { label: "Участников", value: competition.participant_count },
+    ...(competition.type === "TEAM"
+      ? [{ label: "Команд", value: competition.team_count }]
+      : []),
+    { label: "Боёв", value: competition.match_count },
+    {
+      label: "Завершено",
+      value: `${competition.finished_match_count} / ${competition.match_count}`,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Участников" value={competition.participant_count} />
-        {competition.type === "TEAM" ? (
-          <Stat label="Команд" value={competition.team_count} />
-        ) : null}
-        <Stat label="Боёв" value={competition.match_count} />
-        <Stat
-          label="Завершено"
-          value={`${competition.finished_match_count} / ${competition.match_count}`}
-        />
+        {statItems.map((item, index) => (
+          <motion.div
+            key={item.label}
+            initial={reduceMotion ? undefined : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={
+              reduceMotion
+                ? { duration: 0 }
+                : { duration: 0.22, ease: [0.32, 0, 0.67, 0], delay: index * 0.05 }
+            }
+          >
+            <Stat label={item.label} value={item.value} />
+          </motion.div>
+        ))}
       </div>
 
       <div className="sticky top-16 z-20 -mx-4 border-b border-[var(--border)] bg-[var(--background)]/95 px-4 backdrop-blur sm:-mx-6 sm:px-6">

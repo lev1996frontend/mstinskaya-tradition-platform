@@ -9,6 +9,7 @@ import { Field, Input, Select, Textarea } from "@/components/ui/form";
 import { ApiError, ApiUnreachableError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { resultMethod } from "@/lib/labels";
+import { IMPULSE_SPRING, IMPULSE_TAP } from "@/lib/motion";
 import { RESULT_METHOD_ICONS } from "@/lib/result-method-icons";
 import type { MatchView, ResultMethod } from "@/types";
 
@@ -54,6 +55,7 @@ function MethodPicker({
   describedBy?: string;
   id: string;
 }) {
+  const reduceMotion = useReducedMotion();
   return (
     <div
       id={id}
@@ -65,12 +67,14 @@ function MethodPicker({
         const Icon = RESULT_METHOD_ICONS[method];
         const active = value === method;
         return (
-          <button
+          <motion.button
             key={method}
             type="button"
             role="radio"
             aria-checked={active}
             disabled={disabled}
+            whileTap={reduceMotion ? undefined : IMPULSE_TAP}
+            transition={IMPULSE_SPRING}
             onClick={() => onChange(method)}
             className={cn(
               "flex flex-col items-center gap-1.5 rounded-[var(--radius-sm)] border px-2 py-3 text-center text-xs transition-colors disabled:opacity-55",
@@ -81,7 +85,7 @@ function MethodPicker({
           >
             <Icon className="size-4" strokeWidth={2} />
             <span className="leading-tight">{resultMethod[method]}</span>
-          </button>
+          </motion.button>
         );
       })}
     </div>
@@ -180,7 +184,7 @@ export function MatchResultDialog({
           role="dialog"
           aria-modal="true"
           aria-labelledby="match-result-title"
-          className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-lg)] sm:rounded-[var(--radius-lg)]"
+          className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-t-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-lg)] sm:rounded-[var(--radius-lg)]"
           initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 12 }}
           animate={reduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
           exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 12 }}

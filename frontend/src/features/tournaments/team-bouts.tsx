@@ -4,7 +4,7 @@ import { Users } from "lucide-react";
 import { useState } from "react";
 
 import { generateTeamBouts, recordTeamPairingResult } from "@/api/tournaments";
-import { Alert, Badge, Button, Card, EmptyState, cn } from "@/components/ui";
+import { Alert, Badge, Button, Card, EmptyState, TwoSided, cn } from "@/components/ui";
 import { ApiError, ApiUnreachableError } from "@/lib/api";
 import type { TeamBoutView } from "@/types";
 
@@ -33,7 +33,7 @@ function ScoreBar({ bout }: { bout: TeamBoutView }) {
   const decided = bout.wins_red + bout.wins_blue;
   return (
     <div className="flex items-center gap-3">
-      <span className="font-display text-2xl font-semibold tabular-nums">
+      <span className="font-record text-2xl font-semibold">
         {bout.wins_red}
         <span className="mx-1 text-[var(--muted)]">:</span>
         {bout.wins_blue}
@@ -105,15 +105,22 @@ export function TeamBouts({
         const blueWon = bout.winner_team_id === bout.team_blue_id;
         return (
           <Card key={bout.id} className="space-y-3 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-display truncate text-base font-semibold tracking-tight">
-                  <span className={cn(redWon && "text-[var(--accent)]")}>{bout.team_red_name}</span>
-                  <span className="mx-2 text-[var(--muted)]">—</span>
-                  <span className={cn(blueWon && "text-[var(--accent)]")}>{bout.team_blue_name}</span>
+            <TwoSided
+              mirror
+              className="items-center"
+              left={
+                <p className={cn("truncate font-display text-base font-semibold tracking-tight", redWon && "text-[var(--accent)]")}>
+                  {bout.team_red_name}
                 </p>
-                <ScoreBar bout={bout} />
-              </div>
+              }
+              right={
+                <p className={cn("truncate font-display text-base font-semibold tracking-tight", blueWon && "text-[var(--accent)]")}>
+                  {bout.team_blue_name}
+                </p>
+              }
+            />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <ScoreBar bout={bout} />
               <Badge tone={bout.status === "FINISHED" ? "success" : bout.status === "IN_PROGRESS" ? "active" : "neutral"}>
                 {bout.status === "FINISHED"
                   ? bout.winner_team_id
@@ -131,12 +138,10 @@ export function TeamBouts({
                   key={pairing.id}
                   className="flex flex-wrap items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] px-3 py-2 text-sm"
                 >
-                  <span className="font-display w-5 shrink-0 tabular-nums text-[var(--muted)]">
-                    {index + 1}
-                  </span>
+                  <span className="font-record w-5 shrink-0 text-[var(--muted)]">{index + 1}</span>
                   <span
                     className={cn(
-                      "min-w-0 flex-1 truncate",
+                      "min-w-0 flex-1 truncate text-right",
                       pairing.winner_id === pairing.participant_a?.id && "font-semibold text-[var(--accent)]",
                     )}
                   >

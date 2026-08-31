@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
 
 import { Seal } from "@/components/brand/seal";
 import type { Tone } from "@/lib/labels";
@@ -107,16 +107,56 @@ export function Section({
   );
 }
 
+// ---------------------------------------------------------------- стенка
+
+/**
+ * Two sides facing each other across a seam — the "стенка" composition.
+ * Reserved for pairs that are genuinely two opposed sides (a bout's two
+ * fighters, a team meeting's two teams), not a generic two-column layout.
+ * Each side's primary text converges on the seam (left side right-aligns,
+ * right side stays left-aligned) so the two columns read as facing off
+ * rather than as two ordinary left-to-right blocks.
+ */
+export function TwoSided({
+  left,
+  right,
+  mirror = false,
+  className,
+}: {
+  left: ReactNode;
+  right: ReactNode;
+  /** Right-aligns the left side so both sides' text converges on the seam.
+   *  Only safe when a side's own content is a plain vertical text stack —
+   *  text-align does not reorder an internal flex row (an icon+text line
+   *  stays pinned left), so leave this off for content built that way. */
+  mirror?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex flex-col gap-3 sm:flex-row sm:items-stretch", className)}>
+      <div className={cn("min-w-0 flex-1", mirror && "sm:text-right")}>{left}</div>
+      <span aria-hidden="true" className="hidden w-px shrink-0 bg-[var(--rule)] sm:block" />
+      <div className="min-w-0 flex-1">{right}</div>
+    </div>
+  );
+}
+
 // -------------------------------------------------------------------- card
 
 export function Card({
   children,
   className,
+  style,
   as: As = "div",
   variant = "default",
 }: {
   children: ReactNode;
   className?: string;
+  /** Escape hatch for the rare card that is a genuinely different material
+   *  (the champion record on paper) rather than another wood/charcoal
+   *  surface — an inline style always wins over the class-based background,
+   *  so it doesn't fight `bg-[var(--surface)]` for the same CSS property. */
+  style?: CSSProperties;
   as?: "div" | "article" | "li";
   /** "featured" strikes a gold band across the top edge — reserve for one card
    *  per screen (next tournament, championship match) so it keeps meaning
@@ -134,6 +174,7 @@ export function Card({
           : "border-[var(--border)]",
         className,
       )}
+      style={style}
     >
       {variant === "featured" ? (
         <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-[var(--gold)]" />
@@ -290,7 +331,7 @@ export function Th({
     <th
       scope="col"
       className={cn(
-        "record-label border-b-2 border-[var(--rule)] bg-[var(--surface-muted)]/60 px-4 py-2.5 text-[var(--iron-muted)]",
+        "record-label border-b-2 border-[var(--rule)] bg-[var(--surface-muted)]/60 px-4 py-2.5 text-[var(--chrome-muted)]",
         align === "center" && "text-center",
         align === "right" && "text-right",
         align === "left" && "text-left",

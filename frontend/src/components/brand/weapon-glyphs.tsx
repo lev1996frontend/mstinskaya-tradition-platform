@@ -7,9 +7,11 @@
  * draw billet faces).
  *
  * `WEAPON_MOTIFS` is presentational config only, colocated here on purpose:
- * there is no backend "weapon" enum yet (iteration 2 will add real per-match
- * weapon data), so this list must never be imported as if it were a domain
- * type — it exists purely to drive decorative UI in this iteration.
+ * the real backend weapon enum is `WeaponCategory` in `@/types` (see
+ * `features/tournaments/weapon-mark.tsx` for the domain-typed bridge) — this
+ * list must never be imported as if it were that type, since it also carries
+ * `krug`/`stenka` below, which are decorative-only (header nav backs, the
+ * homepage lot cube's two non-outcome faces) and have no domain meaning.
  */
 import type { ComponentType } from "react";
 
@@ -59,8 +61,40 @@ export function NozhIcon({ className, size = 24 }: GlyphProps) {
   );
 }
 
+export function KrugIcon({ className, size = 24 }: GlyphProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
+      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+export function StenkaIcon({ className, size = 24 }: GlyphProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
+      <path
+        d="M4 6 L20 6 M4 12 L20 12 M4 18 L20 18"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export type WeaponMotifKey = "hands" | "kisten" | "palka" | "nozh";
 
+/**
+ * Exactly the 4 real lot-drawn categories — do not extend this array.
+ * `weapon-draw-billet.tsx` hardcodes 90°-per-face (`360 / WEAPON_MOTIFS.length`)
+ * cube rotation math and rolls a real-looking lot from `WEAPON_MOTIFS.length`;
+ * adding `krug`/`stenka` here would make that illustrative-but-real-mechanic
+ * widget sometimes "draw" a face with no domain meaning. The homepage lot
+ * cube (6 faces, 2 of them decorative) is a different, purpose-built
+ * component in `features/home/tournament-path/` — it imports `KrugIcon`/
+ * `StenkaIcon` directly alongside these four, not through this constant.
+ */
 export const WEAPON_MOTIFS: { key: WeaponMotifKey; label: string; Icon: ComponentType<GlyphProps> }[] = [
   { key: "hands", label: "Безоружный", Icon: HandsIcon },
   { key: "kisten", label: "Кистень", Icon: KistenIcon },

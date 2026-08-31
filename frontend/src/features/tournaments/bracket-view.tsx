@@ -4,11 +4,11 @@ import { motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Network, Trophy } from "lucide-react";
 import { useState } from "react";
 
-import { CornerMark } from "@/components/brand/corner-mark";
 import { WEAPON_MOTIFS } from "@/components/brand/weapon-glyphs";
 import { Alert, Badge, EmptyState, cn } from "@/components/ui";
 import { Avatar } from "@/components/ui/avatar";
 import { labelOf, matchStage, matchStatus, resultMethod, weaponCategory } from "@/lib/labels";
+import { STOP_SPRING, TURN_EASE } from "@/lib/motion";
 import type {
   BracketRoundView,
   BracketTreeView,
@@ -105,12 +105,10 @@ function SlotRow({
         </span>
       ) : null}
       {roundsWon ? (
-        <span className="font-display shrink-0 text-xs tabular-nums text-[var(--muted)]">
-          {roundsWon}
-        </span>
+        <span className="font-record shrink-0 text-xs text-[var(--muted)]">{roundsWon}</span>
       ) : null}
       {participant?.seed != null ? (
-        <span className="font-display shrink-0 text-xs tabular-nums text-[var(--muted)]">
+        <span className="font-record shrink-0 text-xs text-[var(--muted)]">
           {participant.seed}
         </span>
       ) : null}
@@ -128,11 +126,18 @@ export function BracketMatchCard({
   onEdit,
   featured = false,
   className,
+  justAdvanced = false,
+  settleDelay = 0,
 }: {
   match: MatchView;
   onEdit?: (match: MatchView) => void;
   featured?: boolean;
   className?: string;
+  /** True when this slot was just filled by the previous round's winner —
+   *  gets a one-time "остановка" settle pulse timed to land after that
+   *  round's connector line has finished drawing in. */
+  justAdvanced?: boolean;
+  settleDelay?: number;
 }) {
   const status = matchStatus[match.status] ?? { label: match.status, tone: "neutral" as const };
   const isDecided = Boolean(match.winner_id);
@@ -140,7 +145,10 @@ export function BracketMatchCard({
   const reduceMotion = useReducedMotion();
 
   return (
-    <div
+    <motion.div
+      initial={justAdvanced && !reduceMotion ? { scale: 0.985 } : false}
+      animate={{ scale: 1 }}
+      transition={justAdvanced && !reduceMotion ? { ...STOP_SPRING, delay: settleDelay } : { duration: 0 }}
       className={cn(
         "relative w-64 shrink-0 overflow-hidden rounded-[var(--radius-md)] border bg-[var(--surface)] transition-shadow",
         // A bye is drawn as a quiet, dashed slot: present and legible, but
@@ -163,10 +171,6 @@ export function BracketMatchCard({
           transition={reduceMotion ? { duration: 0 } : { duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
         />
       ) : null}
-      {featured && !isLive && !match.is_bye ? (
-        <CornerMark className="absolute right-2.5 top-2.5 z-10 text-[var(--gold)]" size={16} />
-      ) : null}
-
       <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--surface-muted)] px-3 py-1.5">
         <span className="truncate text-[11px] font-medium uppercase tracking-wide text-[var(--muted)]">
           {labelOf(matchStage, match.stage)}
@@ -228,7 +232,7 @@ export function BracketMatchCard({
           </button>
         </div>
       ) : null}
-    </div>
+    </motion.div>
   );
 }
 
@@ -251,12 +255,17 @@ function RoundConnector({
   fromCount,
   toCount,
   advancing,
+  roundIndex,
 }: {
   fromCount: number;
   toCount: number;
   advancing: boolean[];
+  /** The *source* round's index — offsets this connector's draw-in so the
+   *  tree fills left-to-right instead of every round animating at once. */
+  roundIndex: number;
 }) {
   const reduceMotion = useReducedMotion();
+  const stagger = roundIndex * 0.08;
 
   if (fromCount === 0 || toCount === 0 || fromCount !== toCount * 2) {
     return <div className="w-8 shrink-0 lg:w-10" aria-hidden="true" />;
@@ -306,7 +315,7 @@ function RoundConnector({
                     fill="none"
                     initial={{ pathLength: reduceMotion ? 1 : 0 }}
                     animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: 0.5, ease: TURN_EASE, delay: reduceMotion ? 0 : stagger }}
                   />
                 ) : null}
                 {bottomAccent ? (
@@ -317,7 +326,7 @@ function RoundConnector({
                     fill="none"
                     initial={{ pathLength: reduceMotion ? 1 : 0 }}
                     animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: 0.5, ease: TURN_EASE, delay: reduceMotion ? 0 : stagger }}
                   />
                 ) : null}
                 {barAccent ? (
@@ -329,7 +338,7 @@ function RoundConnector({
                       fill="none"
                       initial={{ pathLength: reduceMotion ? 1 : 0 }}
                       animate={{ pathLength: 1 }}
-                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: reduceMotion ? 0 : 0.15 }}
+                      transition={{ duration: 0.4, ease: TURN_EASE, delay: reduceMotion ? 0 : stagger + 0.15 }}
                     />
                     <motion.path
                       d={`M50 ${midY} H100`}
@@ -338,7 +347,7 @@ function RoundConnector({
                       fill="none"
                       initial={{ pathLength: reduceMotion ? 1 : 0 }}
                       animate={{ pathLength: 1 }}
-                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: reduceMotion ? 0 : 0.35 }}
+                      transition={{ duration: 0.4, ease: TURN_EASE, delay: reduceMotion ? 0 : stagger + 0.35 }}
                     />
                   </>
                 ) : null}
@@ -353,17 +362,45 @@ function RoundConnector({
 
 // ----------------------------------------------------------- round header
 
-function RoundHeader({ round, index }: { round: BracketRoundView; index: number }) {
+function RoundHeader({
+  round,
+  index,
+  featured = false,
+}: {
+  round: BracketRoundView;
+  index: number;
+  featured?: boolean;
+}) {
   return (
     <div className="relative mb-3 h-10 overflow-hidden px-1">
+      {featured ? (
+        // круг — the tournament closing in on itself, once per bracket, behind
+        // the final round's own ghost numeral rather than a repeating pattern.
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-1 -top-3 size-16 rounded-full border border-[var(--gold)]/25"
+        />
+      ) : null}
       <span
         aria-hidden="true"
         className="font-display pointer-events-none absolute -left-0.5 -top-2.5 select-none text-6xl font-bold leading-none text-[var(--border)]"
       >
         {index + 1}
       </span>
-      <h3 className="absolute bottom-0 left-1 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+      <h3 className="absolute bottom-0 left-1 flex items-baseline gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
         {roundLabel(round.key, round.label)}
+        {featured ? (
+          <motion.span
+            aria-hidden="true"
+            className="record-label text-[var(--gold-strong)]"
+            initial={{ clipPath: "inset(0 100% 0 0)" }}
+            whileInView={{ clipPath: "inset(0 0% 0 0)" }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.42, ease: TURN_EASE }}
+          >
+            круг
+          </motion.span>
+        ) : null}
       </h3>
     </div>
   );
@@ -437,6 +474,7 @@ export function BracketView({
             <div className="scroll-x pb-2">
               <div className="flex min-h-64 items-stretch">
                 {rounds.map((round, index) => {
+                  const prevRound = rounds[index - 1];
                   const nextRound = rounds[index + 1];
                   const isFeaturedRound =
                     round.key === "FINAL" || (index === rounds.length - 1 && round.matches.length === 1);
@@ -445,19 +483,26 @@ export function BracketView({
                         nextRound.matches.some((next) => advancedInto(match, next)),
                       )
                     : [];
+                  const arrivedFromPrev = prevRound
+                    ? round.matches.map((match) =>
+                        prevRound.matches.some((prev) => advancedInto(prev, match)),
+                      )
+                    : [];
 
                   return (
                     <div key={round.key} className="flex">
                       <div className="relative flex w-64 flex-col">
                         {isFeaturedRound ? <FeaturedRoundMotif /> : null}
-                        <RoundHeader round={round} index={index} />
+                        <RoundHeader round={round} index={index} featured={isFeaturedRound} />
                         <div className="flex flex-1 flex-col justify-around gap-4 py-1">
-                          {round.matches.map((match) => (
+                          {round.matches.map((match, matchIndex) => (
                             <BracketMatchCard
                               key={match.id}
                               match={match}
                               onEdit={onEditMatch}
                               featured={isFeaturedRound}
+                              justAdvanced={arrivedFromPrev[matchIndex] ?? false}
+                              settleDelay={(index - 1) * 0.08 + 0.5}
                             />
                           ))}
                         </div>
@@ -467,6 +512,7 @@ export function BracketView({
                           fromCount={round.matches.length}
                           toCount={nextRound.matches.length}
                           advancing={advancing}
+                          roundIndex={index}
                         />
                       ) : null}
                     </div>
@@ -488,9 +534,9 @@ export function BracketView({
                   aria-selected={activeIndex === index}
                   onClick={() => setMobileRoundIndex(index)}
                   className={cn(
-                    "whitespace-nowrap rounded-[var(--radius-pill)] border px-3 py-1.5 text-xs font-medium transition-colors",
+                    "whitespace-nowrap rounded-[var(--radius-sm)] border px-3 py-1.5 text-xs font-medium transition-colors",
                     activeIndex === index
-                      ? "border-transparent bg-[var(--accent)] text-white"
+                      ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
                       : "border-[var(--border-strong)] text-[var(--muted)] hover:bg-[var(--surface-muted)]",
                   )}
                 >
@@ -523,7 +569,7 @@ export function BracketView({
 
             <motion.div
               key={activeRound!.key}
-              className="mt-3 space-y-3"
+              className="mt-3 cursor-grab space-y-3 active:cursor-grabbing"
               drag="x"
               dragConstraints={{ left: 0, right: 0 }}
               dragElastic={0.15}

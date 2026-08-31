@@ -2,7 +2,7 @@ import { ScrollText } from "lucide-react";
 
 import { Badge, EmptyState } from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
-import { eventType, labelOf } from "@/lib/labels";
+import { eventTone, eventType, labelOf } from "@/lib/labels";
 import type { CompetitionEventView } from "@/types";
 
 /**
@@ -31,10 +31,12 @@ export function EventsJournal({ events }: { events: CompetitionEventView[] }) {
         return (
           <li
             key={event.id}
-            className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4"
+            className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-4"
           >
             <div className="flex flex-wrap items-center gap-2">
-              <Badge tone="info">{labelOf(eventType, event.event_type)}</Badge>
+              <Badge tone={eventTone[event.event_type] ?? "info"}>
+                {labelOf(eventType, event.event_type)}
+              </Badge>
               <time className="text-xs text-[var(--muted)]" dateTime={event.created_at}>
                 {formatDateTime(event.created_at)}
               </time>

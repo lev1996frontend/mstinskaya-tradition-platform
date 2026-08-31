@@ -12,7 +12,8 @@ import {
   recordRoundScore,
   startBout,
 } from "@/api/tournaments";
-import { Alert, Badge, Button, cn } from "@/components/ui";
+import { Alert, Badge, Button, TwoSided, cn } from "@/components/ui";
+import { Avatar } from "@/components/ui/avatar";
 import { ApiError, ApiUnreachableError } from "@/lib/api";
 import {
   labelOf,
@@ -21,6 +22,7 @@ import {
   roundEndReason,
   weaponCategory,
 } from "@/lib/labels";
+import { stepIn } from "@/lib/motion";
 import type {
   BoutDetailView,
   MatchRoundView,
@@ -61,6 +63,7 @@ function FighterColumn({
   roundsWon,
   required,
   isWinner,
+  isLive,
   sideLabel,
 }: {
   participant: ParticipantView | null;
@@ -68,6 +71,9 @@ function FighterColumn({
   roundsWon: number;
   required: number | null;
   isWinner: boolean;
+  /** The поединок is running and undecided — rings the fighter as "this is
+   *  who the moment is about," the same circle vocabulary as a decided win. */
+  isLive: boolean;
   sideLabel: string;
 }) {
   return (
@@ -77,20 +83,41 @@ function FighterColumn({
         isWinner ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-[var(--border)]",
       )}
     >
-      <p className="record-label text-[var(--iron-muted)]">{sideLabel}</p>
-      <p className="mt-1 flex items-center gap-1.5 truncate font-semibold">
-        {participant?.display_name ?? "—"}
-        {isWinner ? <Trophy className="size-4 shrink-0 text-[var(--accent)]" strokeWidth={2.25} /> : null}
-      </p>
+      <p className="record-label text-[var(--chrome-muted)]">{sideLabel}</p>
+      <div className="mt-1.5 flex items-center gap-2.5">
+        {participant ? (
+          <span
+            className={cn(
+              "rounded-full p-0.5",
+              isWinner
+                ? "ring-2 ring-[var(--accent)]"
+                : isLive
+                  ? "ring-2 ring-[var(--live)]"
+                  : undefined,
+            )}
+          >
+            <Avatar name={participant.display_name} size="sm" />
+          </span>
+        ) : null}
+        <p className="flex min-w-0 items-center gap-1.5 truncate font-semibold">
+          {participant?.display_name ?? "—"}
+          {isWinner ? (
+            <Trophy className="size-4 shrink-0 text-[var(--accent)]" strokeWidth={2.25} />
+          ) : null}
+        </p>
+      </div>
       {participant?.city ? (
-        <p className="truncate text-xs text-[var(--muted)]">{participant.city}</p>
+        <p className="mt-1 truncate text-xs text-[var(--muted)]">{participant.city}</p>
       ) : null}
       <div className="mt-2">
         <WeaponMark weapon={weapon} />
       </div>
-      <p className="font-display mt-2 text-sm tabular-nums text-[var(--muted)]">
-        Соступов: <span className="text-[var(--foreground)]">{roundsWon}</span>
-        {required !== null ? <span> / {required}</span> : null}
+      <p className="mt-2 text-sm text-[var(--muted)]">
+        Соступов:{" "}
+        <span className="font-record text-[var(--foreground)]">
+          {roundsWon}
+          {required !== null ? ` / ${required}` : null}
+        </span>
       </p>
     </div>
   );
@@ -130,7 +157,7 @@ function RoundCard({
         )}
       </div>
 
-      <p className="font-display mt-1.5 text-lg tabular-nums">
+      <p className="font-record mt-1.5 text-lg">
         {round.points_red} : {round.points_blue}
       </p>
 
@@ -145,7 +172,7 @@ function RoundCard({
                 {" — "}
                 {score.label}
               </span>
-              <span className="font-display shrink-0 tabular-nums">
+              <span className="font-record shrink-0">
                 {score.points === null ? "—" : `+${score.points}`}
               </span>
             </li>
@@ -177,7 +204,7 @@ function ScoringPad({
 
   return (
     <div className="min-w-0 flex-1 space-y-1.5">
-      <p className="record-label text-[var(--iron-muted)]">{name}</p>
+      <p className="record-label text-[var(--chrome-muted)]">{name}</p>
       {own.map((action) => (
         <button
           key={action.code}
@@ -192,7 +219,7 @@ function ScoringPad({
           )}
         >
           <span className="min-w-0">{action.label_ru}</span>
-          <span className="font-display shrink-0 tabular-nums text-[var(--muted)]">
+          <span className="font-record shrink-0 text-[var(--muted)]">
             {action.points === null ? (action.ends_bout ? "поединок" : "соступ") : `+${action.points}`}
           </span>
         </button>
@@ -282,7 +309,7 @@ export function BoutDetailPanel({
         role="dialog"
         aria-modal="true"
         aria-labelledby="bout-detail-title"
-        className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-lg)] sm:rounded-[var(--radius-lg)] sm:p-6"
+        className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-lg)] sm:rounded-[var(--radius-lg)] sm:p-6"
         initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 12 }}
         animate={reduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
         exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 12 }}
@@ -290,10 +317,13 @@ export function BoutDetailPanel({
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="record-label text-[var(--iron-muted)]">
+            <p className="record-label text-[var(--chrome-muted)]">
               {labelOf(matchStage, match?.stage ?? null)}
             </p>
-            <h2 id="bout-detail-title" className="font-display text-xl font-semibold tracking-tight">
+            <h2
+              id="bout-detail-title"
+              className="reveal-word font-display text-xl font-semibold tracking-tight"
+            >
               Поединок
             </h2>
           </div>
@@ -311,24 +341,30 @@ export function BoutDetailPanel({
           <p className="mt-6 text-sm text-[var(--muted)]">Загрузка…</p>
         ) : (
           <div className="mt-4 space-y-4">
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <FighterColumn
-                participant={match?.participant_a ?? null}
-                weapon={bout.weapon_red}
-                roundsWon={bout.rounds_won_red}
-                required={bout.required_rounds_red}
-                isWinner={!!match?.winner_id && match.winner_id === redId}
-                sideLabel="Красный"
-              />
-              <FighterColumn
-                participant={match?.participant_b ?? null}
-                weapon={bout.weapon_blue}
-                roundsWon={bout.rounds_won_blue}
-                required={bout.required_rounds_blue}
-                isWinner={!!match?.winner_id && match.winner_id === blueId}
-                sideLabel="Синий"
-              />
-            </div>
+            <TwoSided
+              left={
+                <FighterColumn
+                  participant={match?.participant_a ?? null}
+                  weapon={bout.weapon_red}
+                  roundsWon={bout.rounds_won_red}
+                  required={bout.required_rounds_red}
+                  isWinner={!!match?.winner_id && match.winner_id === redId}
+                  isLive={running && !match?.winner_id}
+                  sideLabel="Красный"
+                />
+              }
+              right={
+                <FighterColumn
+                  participant={match?.participant_b ?? null}
+                  weapon={bout.weapon_blue}
+                  roundsWon={bout.rounds_won_blue}
+                  required={bout.required_rounds_blue}
+                  isWinner={!!match?.winner_id && match.winner_id === blueId}
+                  isLive={running && !match?.winner_id}
+                  sideLabel="Синий"
+                />
+              }
+            />
 
             {bout.win_condition_note ? (
               <p className="flex gap-2 text-xs text-[var(--muted)]">
@@ -356,26 +392,30 @@ export function BoutDetailPanel({
                 {bout.weapon_red ? ` — ${weaponCategory[bout.weapon_red]}` : ""}.
               </Alert>
             ) : canManage && !finished ? (
-              <div className="grid gap-2 sm:grid-cols-2">
-                <LotDice
-                  matchId={matchId}
-                  side="RED"
-                  sideLabel="Красный"
-                  fighterName={redName}
-                  weapon={bout.weapon_red}
-                  disabled={busy || running}
-                  onDrawn={() => void run(async () => {})}
-                />
-                <LotDice
-                  matchId={matchId}
-                  side="BLUE"
-                  sideLabel="Синий"
-                  fighterName={blueName}
-                  weapon={bout.weapon_blue}
-                  disabled={busy || running}
-                  onDrawn={() => void run(async () => {})}
-                />
-              </div>
+              <TwoSided
+                left={
+                  <LotDice
+                    matchId={matchId}
+                    side="RED"
+                    sideLabel="Красный"
+                    fighterName={redName}
+                    weapon={bout.weapon_red}
+                    disabled={busy || running}
+                    onDrawn={() => void run(async () => {})}
+                  />
+                }
+                right={
+                  <LotDice
+                    matchId={matchId}
+                    side="BLUE"
+                    sideLabel="Синий"
+                    fighterName={blueName}
+                    weapon={bout.weapon_blue}
+                    disabled={busy || running}
+                    onDrawn={() => void run(async () => {})}
+                  />
+                }
+              />
             ) : null}
 
             {/* -------------------------------------------------- lifecycle */}
@@ -410,9 +450,15 @@ export function BoutDetailPanel({
             {/* ---------------------------------------------------- scoring */}
             {canManage && running && openSostup && rules ? (
               <div className="space-y-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-muted)]/50 p-3">
-                <p className="text-sm font-semibold">
-                  Соступ {openSostup.round_number} — до {rules.round_target_points} очков
-                </p>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.p
+                    key={openSostup.round_number}
+                    className="text-sm font-semibold"
+                    {...(reduceMotion ? {} : stepIn(6))}
+                  >
+                    Соступ {openSostup.round_number} — до {rules.round_target_points} очков
+                  </motion.p>
+                </AnimatePresence>
                 <div className="flex flex-col gap-3 sm:flex-row">
                   <ScoringPad
                     actions={rules.actions}

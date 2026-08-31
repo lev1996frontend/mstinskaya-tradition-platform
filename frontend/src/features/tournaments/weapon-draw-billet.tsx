@@ -5,11 +5,16 @@ import { motion, useReducedMotion } from "framer-motion";
 
 import { WEAPON_MOTIFS } from "@/components/brand/weapon-glyphs";
 import { Badge, Button, Card } from "@/components/ui";
+import { IMPULSE_SPRING, IMPULSE_TAP, TURN_EASE } from "@/lib/motion";
+
+import { LOT_ANTICIPATION_MS } from "./lot-dice";
 
 const SIZE = 96;
 const HEIGHT = 220;
 const HALF = SIZE / 2;
 const EXTRA_TURNS = 3;
+
+type Phase = "idle" | "anticipate" | "flip";
 
 /**
  * A teaching aid, and explicitly labelled as one.
@@ -25,6 +30,7 @@ const EXTRA_TURNS = 3;
 export function WeaponDrawBillet() {
   const [rotation, setRotation] = useState(0);
   const [faceIndex, setFaceIndex] = useState<number | null>(null);
+  const [phase, setPhase] = useState<Phase>("idle");
   const reduceMotion = useReducedMotion();
 
   const roll = () => {
@@ -34,8 +40,18 @@ export function WeaponDrawBillet() {
     let delta = targetMod - currentMod;
     if (delta <= 0) delta += 360;
     const extraTurns = reduceMotion ? 0 : EXTRA_TURNS * 360;
-    setRotation(rotation + delta + extraTurns);
-    setFaceIndex(nextIndex);
+    // напряжение (a brief compress) before бросок — timed to match the real
+    // жребий's anticipation beat (`lot-dice.tsx`) so the product's two toss
+    // mechanics share one felt rhythm.
+    setPhase("anticipate");
+    window.setTimeout(
+      () => {
+        setRotation(rotation + delta + extraTurns);
+        setFaceIndex(nextIndex);
+        setPhase("flip");
+      },
+      reduceMotion ? 0 : LOT_ANTICIPATION_MS,
+    );
   };
 
   const result = faceIndex === null ? null : WEAPON_MOTIFS[faceIndex];
@@ -69,13 +85,23 @@ export function WeaponDrawBillet() {
         <motion.div
           className="relative h-full w-full"
           style={{ transformStyle: "preserve-3d" }}
-          animate={{ rotateY: rotation }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 1.3, ease: [0.16, 1, 0.3, 1] }}
+          animate={
+            phase === "anticipate"
+              ? { rotateY: rotation, scale: IMPULSE_TAP.scale }
+              : { rotateY: rotation, scale: phase === "flip" ? [IMPULSE_TAP.scale, 1.05, 1] : 1 }
+          }
+          transition={
+            reduceMotion
+              ? { duration: 0 }
+              : phase === "anticipate"
+                ? IMPULSE_SPRING
+                : { duration: 1.3, ease: TURN_EASE }
+          }
         >
           {WEAPON_MOTIFS.map(({ key, Icon }, index) => (
             <div
               key={key}
-              className="absolute inset-0 flex items-center justify-center rounded-[6px] border border-[var(--gold)]/40 bg-[linear-gradient(180deg,var(--gold-soft),var(--surface-muted))]"
+              className="absolute inset-0 flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--gold)]/40 bg-[linear-gradient(180deg,var(--gold-soft),var(--surface-muted))]"
               style={{
                 backfaceVisibility: "hidden",
                 transform: `rotateY(${index * 90}deg) translateZ(${HALF}px)`,

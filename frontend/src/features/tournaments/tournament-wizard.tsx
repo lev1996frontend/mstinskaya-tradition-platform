@@ -306,7 +306,7 @@ export function TournamentWizard() {
                       : "border-[var(--border)] text-[var(--muted)]",
                 )}
               >
-                <span className="font-display tabular-nums">
+                <span className="font-record">
                   {done ? <Check className="size-3.5" strokeWidth={2.5} /> : index + 1}
                 </span>
                 {label}
@@ -437,9 +437,7 @@ export function TournamentWizard() {
                   key={entry.key}
                   className="grid gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] p-2 sm:grid-cols-[1.5rem_1fr_1fr_5rem_2rem] sm:items-center"
                 >
-                  <span className="font-display text-xs tabular-nums text-[var(--muted)]">
-                    {index + 1}
-                  </span>
+                  <span className="font-record text-xs text-[var(--muted)]">{index + 1}</span>
                   <span className="min-w-0">
                     <Input
                       value={entry.name}
@@ -555,7 +553,7 @@ export function TournamentWizard() {
             <PairPreview plan={plan} />
 
             <div className="space-y-2 border-t border-[var(--border)] pt-3">
-              <p className="record-label text-[var(--iron-muted)]">Оружие финала</p>
+              <p className="record-label text-[var(--chrome-muted)]">Оружие финала</p>
               <p className="text-xs text-[var(--muted)]">
                 В финале жребий не бросается — оружие определяется правилами турнира.
               </p>
