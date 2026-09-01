@@ -3,7 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 
 import { MonogramFlip } from "@/components/brand/monogram-flip";
@@ -85,6 +85,23 @@ export function SiteHeader() {
   const reduceMotion = useReducedMotion();
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+  // A full-screen takeover locks page scroll behind it and closes on Escape,
+  // same as any modal-ish overlay — the old accordion needed neither, since
+  // it never covered the page.
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   return (
     <header className="sticky top-0 z-30 border-b-2 border-[var(--rule)] bg-[var(--background)] shadow-[0_3px_0_-2px_var(--rule)]">
@@ -199,63 +216,107 @@ export function SiteHeader() {
         </div>
       </Container>
 
-      <AnimatePresence initial={false}>
+      {/* Full-screen takeover, not a dropdown: reuses the homepage's own
+          numbered-index grammar (`section-index.tsx`'s 01/02/… ruled rows in
+          `font-display`) instead of a small accordion panel, so the site's
+          own "table of contents" pattern carries the primary nav too. */}
+      <AnimatePresence>
         {open ? (
           <motion.div
             key="mobile-menu"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={reduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden border-t border-[var(--rule)] bg-[var(--surface)] lg:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed inset-0 z-40 flex flex-col overflow-y-auto bg-[var(--background)] lg:hidden"
           >
-            <Container className="flex flex-col py-2">
-              {NAV.map((item, index) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  aria-current={isActive(item.href) ? "page" : undefined}
-                  className={cn(
-                    "flex items-baseline gap-3 border-b border-[var(--border)] px-1 py-3 text-sm",
-                    isActive(item.href) && "font-medium text-[var(--accent)]",
-                  )}
-                >
-                  {/* the same numbered-entry grammar as the homepage index */}
-                  <span className="font-record text-[0.65rem] text-[var(--muted)]">
-                    {String(index + 1).padStart(2, "0")}
+            <div className="flex h-16 shrink-0 items-center justify-between border-b-2 border-[var(--rule)] px-4 sm:px-6">
+              <Link href="/" onClick={() => setOpen(false)} className="flex items-center gap-2.5">
+                <MonogramFlip flipped={false} size={20} />
+                <span className="leading-tight">
+                  <span className="font-display block text-[0.9375rem] font-semibold tracking-tight">
+                    Мстинская
                   </span>
-                  {item.label}
-                </Link>
-              ))}
-              <div className="flex items-center gap-2 pt-3">
-                {user ? (
-                  <>
+                  <span className="font-record block text-[0.6rem] uppercase tracking-[0.22em] text-[var(--muted)]">
+                    традиция
+                  </span>
+                </span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Закрыть меню"
+                className="rounded-[var(--radius-sm)] border border-[var(--chrome-line)] p-2 text-[var(--chrome-muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <nav aria-label="Основная навигация" className="flex flex-1 flex-col justify-center px-4 sm:px-6">
+              {NAV.map((item, index) => {
+                const active = isActive(item.href);
+                return (
+                  <motion.div
+                    key={item.href}
+                    initial={reduceMotion ? undefined : { opacity: 0, y: 10 }}
+                    animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25, delay: reduceMotion ? 0 : index * 0.04, ease: [0.16, 1, 0.3, 1] }}
+                  >
                     <Link
-                      href="/profile"
+                      href={item.href}
                       onClick={() => setOpen(false)}
-                      className="rounded-[var(--radius-sm)] px-2 py-2 text-sm hover:bg-[var(--surface-muted)]"
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "group flex items-baseline gap-5 border-b border-[var(--border)] py-5 transition-colors",
+                        active ? "text-[var(--accent)]" : "hover:text-[var(--accent)]",
+                      )}
                     >
-                      Профиль
+                      <span className="font-record text-sm text-[var(--muted)]">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <span className="font-display text-[2rem] font-semibold tracking-tight transition-transform duration-300 group-hover:translate-x-1.5 sm:text-[2.5rem]">
+                        {item.label}
+                      </span>
                     </Link>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOpen(false);
-                        void logout();
-                      }}
-                      className="font-record rounded-[var(--radius-sm)] px-2 py-2 text-left text-[0.7rem] uppercase tracking-[0.1em] text-[var(--muted)] hover:bg-[var(--surface-muted)]"
-                    >
-                      Выйти
-                    </button>
-                  </>
-                ) : (
-                  <ButtonLink href="/login" size="sm" onClick={() => setOpen(false)}>
-                    Войти
-                  </ButtonLink>
-                )}
-              </div>
-            </Container>
+                  </motion.div>
+                );
+              })}
+            </nav>
+
+            <div className="shrink-0 border-t-2 border-[var(--rule)] px-4 py-5 sm:px-6">
+              {loading ? (
+                <span className="font-record text-xs text-[var(--muted)]">…</span>
+              ) : user ? (
+                <div className="flex items-center justify-between gap-3">
+                  <Link
+                    href="/profile"
+                    onClick={() => setOpen(false)}
+                    className="truncate rounded-[var(--radius-sm)] px-2.5 py-2 text-sm font-medium hover:bg-[var(--surface-muted)]"
+                  >
+                    {user.name || user.email}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      void logout();
+                    }}
+                    className="font-record rounded-[var(--radius-sm)] px-2.5 py-2 text-[0.7rem] uppercase tracking-[0.1em] text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
+                  >
+                    Выйти
+                  </button>
+                </div>
+              ) : (
+                <ButtonLink
+                  href="/login"
+                  size="lg"
+                  onClick={() => setOpen(false)}
+                  className="w-full justify-center"
+                >
+                  Войти
+                </ButtonLink>
+              )}
+            </div>
           </motion.div>
         ) : null}
       </AnimatePresence>
