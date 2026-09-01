@@ -123,7 +123,7 @@ export function GearArchive() {
             Экспонат {pad(index)} из {TOTAL}: {item.title}
           </p>
 
-          <div className="overflow-hidden px-6 py-8 sm:px-8 sm:py-10">
+          <div className="overflow-hidden px-6 py-8 sm:px-8 sm:py-8">
             <AnimatePresence mode="wait" initial={false} custom={direction}>
               <motion.div
                 key={index}
@@ -157,7 +157,7 @@ export function GearArchive() {
 
                 <div className="order-2 sm:order-2">
                   <motion.div
-                    className="relative mx-auto aspect-[4/5] w-full max-w-md cursor-grab touch-pan-y overflow-hidden border border-[var(--border)] active:cursor-grabbing"
+                    className="relative mx-auto aspect-[4/5] w-full max-w-[340px] cursor-grab touch-pan-y overflow-hidden border border-[var(--border)] active:cursor-grabbing"
                     drag={reduceMotion ? false : "x"}
                     dragConstraints={{ left: 0, right: 0 }}
                     dragElastic={0.15}
