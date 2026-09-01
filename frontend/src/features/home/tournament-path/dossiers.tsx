@@ -1,5 +1,8 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
+import type { PointerEvent as ReactPointerEvent } from "react";
+
 import { HandsIcon, KistenIcon, NozhIcon, PalkaIcon } from "@/components/brand/weapon-glyphs";
 import { WEAPON_LABELS } from "./bracket-data";
 import { useTournamentPathActions, useTournamentPathState } from "./tournament-path-context";
@@ -51,6 +54,17 @@ const DOSSIERS = [
 export function Dossiers() {
   const state = useTournamentPathState();
   const { declare } = useTournamentPathActions();
+  const reduceMotion = useReducedMotion();
+
+  // Plain pointermove → CSS custom properties, same technique
+  // `helmet-reveal.tsx` uses for its own mask wipe — no React state setter
+  // in the loop, so this doesn't cause a re-render on every pixel of
+  // pointer movement.
+  function handlePointerMove(event: ReactPointerEvent<HTMLElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.style.setProperty("--mx", `${event.clientX - rect.left}px`);
+    event.currentTarget.style.setProperty("--my", `${event.clientY - rect.top}px`);
+  }
 
   return (
     <section id="bojcy" className="border-b border-[var(--border)] bg-[var(--background)]">
@@ -61,18 +75,28 @@ export function Dossiers() {
           <span className="record-label text-[var(--text-4)]">{DOSSIERS.length} участника показаны</span>
         </div>
 
-        <div className="mt-9 grid grid-cols-1 gap-8 sm:grid-cols-3" style={{ perspective: 1400 }}>
+        {/* No `perspective`/`preserve-3d` here — the lift below is a
+            straight-up framer-motion spring, no tilt, so there's no 3D
+            transform needing a perspective context. */}
+        <div className="mt-9 grid grid-cols-1 gap-8 sm:grid-cols-3">
           {DOSSIERS.map((d) => (
-            <article
+            <motion.article
               key={d.name}
               tabIndex={0}
+              onPointerMove={handlePointerMove}
+              whileHover={reduceMotion ? undefined : { y: -10 }}
+              whileFocus={reduceMotion ? undefined : { y: -10 }}
+              transition={{ type: "spring", stiffness: 320, damping: 26 }}
               className="dossier-card group px-[22px] pb-[26px] pt-[22px]"
               style={{
                 background: "var(--surface-paper)",
                 color: "var(--surface-paper-ink)",
-                transformStyle: "preserve-3d",
               }}
             >
+              {/* the pointer-tracked warm highlight — see `.dossier-spotlight`
+                  in globals.css for the radial-gradient itself */}
+              <span aria-hidden="true" className="dossier-spotlight" />
+
               <div className="flex items-start justify-between gap-4 border-b pb-4" style={{ borderColor: "rgba(36,28,21,.28)" }}>
                 <span className="flex flex-col gap-1.5">
                   <span className="font-record text-[0.5rem] uppercase tracking-[0.2em]" style={{ color: "var(--surface-paper-label)" }}>
@@ -136,7 +160,7 @@ export function Dossiers() {
                   );
                 })}
               </div>
-            </article>
+            </motion.article>
           ))}
         </div>
       </div>

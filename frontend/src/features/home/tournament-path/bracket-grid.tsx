@@ -43,7 +43,14 @@ function ColumnBlock({
               type="button"
               onClick={() => cellData.name !== "—" && pick(cellData.name)}
               disabled={cellData.name === "—"}
-              className="step-in relative flex h-[54px] flex-col justify-center gap-0.5 border px-3.5 text-left transition-[background-color,border-color,transform] duration-300 disabled:cursor-default enabled:hover:translate-x-1"
+              // No `hover:translate-x` here anymore: `BracketConnector`'s
+              // lines/arrowheads are positioned with fixed percentage math
+              // that has no idea a cell just shifted, so a 4px nudge closed
+              // the gap and drove the incoming arrowhead into the card's own
+              // left border on hover. A box-shadow ring gives the same "this
+              // one's interactive" feedback without moving the box at all —
+              // nothing for the connector geometry to fall out of sync with.
+              className="step-in relative flex h-[54px] flex-col justify-center gap-0.5 border px-3.5 text-left transition-[background-color,border-color,box-shadow] duration-300 disabled:cursor-default enabled:hover:shadow-[inset_0_0_0_1px_var(--accent)]"
               style={{
                 background: mine ? "#2A1A16" : on || beaten ? "var(--surface)" : "var(--surface-muted)",
                 borderColor: mine ? "var(--accent)" : beaten ? "var(--accent-deep)" : on ? "var(--accent)" : "var(--border)",

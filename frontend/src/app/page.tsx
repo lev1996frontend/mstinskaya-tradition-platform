@@ -4,6 +4,7 @@ import { getBoutRules, listTournaments } from "@/api/tournaments";
 import { Container } from "@/components/ui";
 import { Chronicle } from "@/features/home/chronicle";
 import { Equipment } from "@/features/home/equipment";
+import { GearArchive } from "@/features/home/gear-archive";
 import { Hero } from "@/features/home/hero";
 import { Paintings } from "@/features/home/paintings";
 import { SectionIndex } from "@/features/home/section-index";
@@ -19,11 +20,17 @@ import { TournamentPathProvider } from "@/features/home/tournament-path/tourname
  * Front page of the archive — the "Живой архив" v3 redesign
  * (design_handoff_mstinskaya). Masthead, the real live-tournament bulletin,
  * then the new demo/editorial sections (СТЕНКА → ПОЕДИНОК/СЕТКА/ПРАВИЛА/
- * БОЙЦЫ → СНАРЯЖЕНИЕ → ХРОНИКА → ЖИВОПИСЬ), closing with the new anchor
- * index. ПОЕДИНОК/СЕТКА/БОЙЦЫ share one `TournamentPathProvider` — the
- * "заявленный разряд" state and the fixed demo bracket must stay one source
- * of truth across all three (see `tournament-path/bracket-data.ts`), even
- * though ПРАВИЛА sits between them with no state of its own.
+ * БОЙЦЫ → СНАРЯЖЕНИЕ → АРХИВ ЭКИПИРОВКИ → ХРОНИКА → ЖИВОПИСЬ), closing with
+ * the new anchor index. ПОЕДИНОК/СЕТКА/БОЙЦЫ share one `TournamentPathProvider`
+ * — the "заявленный разряд" state and the fixed demo bracket must stay one
+ * source of truth across all three (see `tournament-path/bracket-data.ts`),
+ * even though ПРАВИЛА sits between them with no state of its own.
+ *
+ * СНАРЯЖЕНИЕ (`Equipment`, real bout-rules data — the four lot-drawn weapon
+ * categories) and АРХИВ ЭКИПИРОВКИ (`GearArchive`, the nine-item опись a
+ * fighter wears regardless of category) sit next to each other on purpose —
+ * two different opись, "чем бьются" then "во что одет", not one merged into
+ * the other.
  *
  * The previous `DirectoryIndex` (real-route ToC) is no longer rendered here:
  * with 12 detailed sections plus the new anchor `SectionIndex`, a second
@@ -39,7 +46,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero />
+      <Hero rules={boutRules} />
 
       {upcoming.length > 0 ? (
         <Container className="py-14 sm:py-20">
@@ -74,6 +81,7 @@ export default async function HomePage() {
       </TournamentPathProvider>
 
       <Equipment rules={boutRules} />
+      <GearArchive />
       <Chronicle />
       <Paintings />
 

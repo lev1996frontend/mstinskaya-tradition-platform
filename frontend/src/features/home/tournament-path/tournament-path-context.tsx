@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from "react";
 import type { ReactNode } from "react";
 
-import { buildLadder, INITIAL_DECLARED, opponentAt, pairIndexOf } from "./bracket-data";
+import { WEAPON_LABELS, buildLadder, INITIAL_DECLARED, opponentAt, pairIndexOf } from "./bracket-data";
 
 export type Phase = "idle" | "declare" | "ready" | "throw" | "pause" | "result" | "bout" | "clash" | "over";
 
@@ -13,6 +13,12 @@ export type TournamentPathState = {
   phase: Phase;
   rx: number;
   ry: number;
+  /** The weapon the throw already landed on, set the moment the throw
+   *  starts — "pause" holds it unrevealed for its own dramatic beat, but the
+   *  cube's own rotation is never waiting on anything past `THROW_LOT_START`.
+   *  Read by `THROW_LOT_RESULT`, which needs no payload of its own because
+   *  of it — see `confirmSpin`'s doc comment below for why. */
+  pendingWeapon: number | null;
   lot: number | null;
   lotCount: number;
   tally: [number, number, number, number];
@@ -32,6 +38,7 @@ const initialState: TournamentPathState = {
   phase: "idle",
   rx: -18,
   ry: 24,
+  pendingWeapon: null,
   lot: null,
   lotCount: 0,
   tally: [0, 0, 0, 0],
@@ -83,9 +90,9 @@ type Action =
   | { type: "DECLARE"; name: string; weapon: number }
   | { type: "DECLARE_MINE"; weapon: number }
   | { type: "PICK"; name: string }
-  | { type: "THROW_LOT_START"; targetRx: number; targetRy: number }
+  | { type: "THROW_LOT_START"; targetRx: number; targetRy: number; weapon: number }
   | { type: "THROW_LOT_SPUN" }
-  | { type: "THROW_LOT_RESULT"; weapon: number }
+  | { type: "THROW_LOT_RESULT" }
   | { type: "START_BOUT" }
   | { type: "CLASH_START" }
   | { type: "CLASH_RESOLVE" };
@@ -147,9 +154,30 @@ function reducer(state: TournamentPathState, action: Action): TournamentPathStat
       };
     case "DECLARE_MINE": {
       if (!state.runFighter) return state;
+      const declared = { ...state.declared, [state.runFighter]: action.weapon };
+      // Сходка (the final, runStep 2): no жребий — a fighter picks their own
+      // разряд outright, so this resolves straight to "result" instead of
+      // "ready" (which would still need a cube throw). User decision
+      // 2026-09-01: circles 1–2 keep жребий-narrowed-by-declare as before.
+      if (state.runStep >= 2) {
+        const tally = [...state.tally] as [number, number, number, number];
+        tally[action.weapon] += 1;
+        return {
+          ...state,
+          declared,
+          phase: "result",
+          lot: action.weapon,
+          lotCount: state.lotCount + 1,
+          tally,
+          journal: logEntry(
+            state,
+            `${state.runFighter} выходит на сходку с разрядом: ${weaponLabelLower(action.weapon)} — без жребия.`,
+          ),
+        };
+      }
       return {
         ...state,
-        declared: { ...state.declared, [state.runFighter]: action.weapon },
+        declared,
         phase: "ready",
         journal: logEntry(state, `${state.runFighter} заявил разряд: ${weaponLabelLower(action.weapon)}.`),
       };
@@ -157,28 +185,32 @@ function reducer(state: TournamentPathState, action: Action): TournamentPathStat
     case "PICK":
       return { ...state, picked: state.picked === action.name ? null : action.name };
     case "THROW_LOT_START": {
+      // Сходка (runStep 2) never throws — see `DECLARE_MINE` above.
       if (
-        ["throw", "pause", "declare", "idle", "bout", "clash", "over"].includes(state.phase) ||
-        !state.runFighter
+        ["throw", "pause", "idle", "bout", "clash", "over"].includes(state.phase) ||
+        !state.runFighter ||
+        state.runStep >= 2
       ) {
         return state;
       }
-      return { ...state, phase: "throw", rx: action.targetRx, ry: action.targetRy };
+      return { ...state, phase: "throw", rx: action.targetRx, ry: action.targetRy, pendingWeapon: action.weapon };
     }
     case "THROW_LOT_SPUN":
       return state.phase === "throw" ? { ...state, phase: "pause" } : state;
     case "THROW_LOT_RESULT": {
-      if (state.phase !== "pause") return state;
+      if (state.phase !== "pause" || state.pendingWeapon === null) return state;
+      const weapon = state.pendingWeapon;
       const tally = [...state.tally] as [number, number, number, number];
-      tally[action.weapon] += 1;
+      tally[weapon] += 1;
       const b = bout(state);
       return {
         ...state,
         phase: "result",
-        lot: action.weapon,
+        lot: weapon,
+        pendingWeapon: null,
         lotCount: state.lotCount + 1,
         tally,
-        journal: logEntry(state, `Жребий: ${weaponLabelLower(action.weapon)} — ${b.label.toLowerCase()}.`),
+        journal: logEntry(state, `Жребий: ${weaponLabelLower(weapon)} — ${b.label.toLowerCase()}.`),
       };
     }
     case "START_BOUT": {
@@ -202,9 +234,15 @@ function reducer(state: TournamentPathState, action: Action): TournamentPathStat
       scores[win] += 1;
       const exchanges = [...state.exchanges, win];
       const round = state.round + 1;
-      const done = exchanges.length >= 3 || scores[win] === 2;
+      // All 3 соступ are always fought — the winner is whoever took more of
+      // the 3, never decided early at 2:0. (User correction 2026-09-01: this
+      // demo used to stop as soon as one side reached 2 wins.)
+      const done = exchanges.length >= 3;
 
-      let journal = logEntry(state, `Обмен ${round}: чистое касание — ${win === 0 ? b.a : b.b}.`);
+      let journal = logEntry(
+        state,
+        `Обмен ${round}: ${roundWinFlavor(state.lot)} — ${win === 0 ? b.a : b.b}.`,
+      );
 
       if (!done) {
         return { ...state, scores, exchanges, round, phase: "bout", journal };
@@ -237,8 +275,36 @@ function reducer(state: TournamentPathState, action: Action): TournamentPathStat
   }
 }
 
+// A fourth hardcoded copy of the weapon labels used to live here (still
+// saying "голыми руками" after `WEAPON_LABELS` itself had already been
+// corrected to "Безоружный") — read from `WEAPON_LABELS` instead so there's
+// exactly one source of truth for this text, not four that can drift apart.
 function weaponLabelLower(index: number): string {
-  return ["голыми руками", "палка", "нож", "кистень"][index]?.toLowerCase() ?? "";
+  return WEAPON_LABELS[index]?.label.toLowerCase() ?? "";
+}
+
+/**
+ * Flavor text for a resolved обмен (exchange) — this demo already treats
+ * every resolved exchange as deciding that round outright (no in-round
+ * point accumulation, per its own "Наглядно" abstraction), which happens to
+ * line up with [[tournament-domain-rules]]'s real scoring: an expressive
+ * head/neck strike (stick or knife) IS worth a clean round win by itself,
+ * unlike a lesser limb/body hit — so "чистый удар в голову" for стick/knife
+ * isn't invented, it's the one real outcome type this flat abstraction can
+ * honestly claim every time. Keyed by `WEAPON_LABELS` index; kistenʹ has no
+ * real-source rules ([[tournament-domain-rules]] flags this explicitly), so
+ * its flavor stays weapon-neutral rather than guessing at technique.
+ */
+const ROUND_WIN_FLAVORS: [string[], string[], string[], string[]] = [
+  ["бросок и удержание", "залом на удержании", "уход с обезоруживанием"],
+  ["чистый удар в голову", "чистый удар в голову — встречен жёстко", "снаряд выбит, ход взят"],
+  ["чистый порез в открытую линию", "укол в шею — чисто", "экспрессивный удар в корпус, засчитан"],
+  ["точное попадание грузом", "дистанция потеряна, удар пришёлся", "обхват перехвачен, снаряд взят"],
+];
+
+function roundWinFlavor(lot: number | null): string {
+  const pool = ROUND_WIN_FLAVORS[lot ?? 0] ?? ROUND_WIN_FLAVORS[0];
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 type TournamentPathActions = {
@@ -249,6 +315,9 @@ type TournamentPathActions = {
   declareMine: (weapon: number) => void;
   pick: (name: string) => void;
   throwLot: () => void;
+  /** Called by `LotCube` off the cube's own `transitionend` — see
+   *  `throwLot`'s doc comment for why this replaced a parallel timer. */
+  confirmSpin: () => void;
   startBout: () => void;
   runRound: () => void;
   /** Scales every timed transition's on-screen duration (0.6–1.6, default 1)
@@ -287,23 +356,52 @@ export function TournamentPathProvider({
   }, []);
 
   const throwLot = useCallback(() => {
+    // "declare" is deliberately throwable, not just "ready": declaring a
+    // category (the small icons in `lot-cube.tsx`) is an optional way to
+    // narrow the жребий to your own guess, never a prerequisite — offline,
+    // a fighter can just throw the cube straight away. `pool` below already
+    // falls back to a fully random weapon when nobody has declared. Сходка
+    // (runStep 2) is the one exception: no жребий there at all — a fighter
+    // picks their own разряд outright via `declareMine`.
     if (
-      ["throw", "pause", "declare", "idle", "bout", "clash", "over"].includes(state.phase) ||
-      !state.runFighter
+      ["throw", "pause", "idle", "bout", "clash", "over"].includes(state.phase) ||
+      !state.runFighter ||
+      state.runStep >= 2
     ) {
       return;
     }
     const b = bout(state);
     const pool = [state.declared[b.a], state.declared[b.b]].filter((x) => x !== undefined);
     const weapon = pool.length ? pool[Math.floor(Math.random() * pool.length)] : Math.floor(Math.random() * 4);
-    const spinMs = 1150 / ritualSpeed;
     const base = FACE_ROT[weapon];
     const targetRx = base[0] + 360 * 2 + Math.round(state.rx / 360) * 360;
     const targetRy = base[1] + 360 * 3 + Math.round(state.ry / 360) * 360;
-    dispatch({ type: "THROW_LOT_START", targetRx, targetRy });
-    schedule(() => dispatch({ type: "THROW_LOT_SPUN" }), spinMs);
-    schedule(() => dispatch({ type: "THROW_LOT_RESULT", weapon }), spinMs + 320 / ritualSpeed);
-  }, [state, ritualSpeed, schedule]);
+    // No timer scheduling "spun" here anymore — a `setTimeout` matched to the
+    // CSS transition's own duration can drift from when the cube actually
+    // finishes turning (main-thread jank, a slow device), which is exactly
+    // the "result already showing while the cube still visibly spins" bug
+    // reported 2026-09-01. `LotCube` calls `confirmSpin()` off the real
+    // `transitionend` event instead, so "spun" fires when the cube truly is.
+    dispatch({ type: "THROW_LOT_START", targetRx, targetRy, weapon });
+  }, [state]);
+
+  // Fired by `LotCube`'s `onTransitionEnd` once the cube's own CSS rotation
+  // genuinely finishes — see `throwLot`'s comment above for why this isn't a
+  // timer anymore.
+  const confirmSpin = useCallback(() => {
+    dispatch({ type: "THROW_LOT_SPUN" });
+  }, []);
+
+  // The dramatic beat between the cube settling and the result revealing —
+  // unlike the spin above, this one has no independent visual to drift out
+  // of sync with, so a timer is fine; it only starts once "pause" is
+  // actually entered (via `confirmSpin`, real event-driven), not in
+  // parallel with the spin itself.
+  useEffect(() => {
+    if (state.phase !== "pause") return;
+    const id = setTimeout(() => dispatch({ type: "THROW_LOT_RESULT" }), 320 / ritualSpeed);
+    return () => clearTimeout(id);
+  }, [state.phase, ritualSpeed]);
 
   const runRound = useCallback(() => {
     if (state.phase === "clash") return;
@@ -320,11 +418,12 @@ export function TournamentPathProvider({
       declareMine: (weapon) => dispatch({ type: "DECLARE_MINE", weapon }),
       pick: (name) => dispatch({ type: "PICK", name }),
       throwLot,
+      confirmSpin,
       startBout: () => dispatch({ type: "START_BOUT" }),
       runRound,
       ritualSpeed,
     }),
-    [throwLot, runRound, ritualSpeed],
+    [throwLot, confirmSpin, runRound, ritualSpeed],
   );
 
   return (

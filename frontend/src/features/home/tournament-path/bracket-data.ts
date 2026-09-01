@@ -14,8 +14,12 @@ import type { WeaponMotifKey } from "@/components/brand/weapon-glyphs";
  * — the whole reason this file exists separately from either component.
  */
 
+/** Label for `hands` matches `WEAPON_MOTIFS` (`weapon-glyphs.tsx`) and
+ *  `HANDS` (`lib/labels.ts`) — "Безоружный", not "Голыми руками"; this file
+ *  used to disagree with those two, which is its own kind of "can never
+ *  disagree about who is fighting whom" bug. */
 export const WEAPON_LABELS: { key: WeaponMotifKey; label: string }[] = [
-  { key: "hands", label: "Голыми руками" },
+  { key: "hands", label: "Безоружный" },
   { key: "palka", label: "Палка" },
   { key: "nozh", label: "Нож" },
   { key: "kisten", label: "Кистень" },

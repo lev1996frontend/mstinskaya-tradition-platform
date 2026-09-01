@@ -57,7 +57,12 @@ function SidePanel({ side, mirror }: { side: Side; mirror: boolean }) {
         <h2 className="font-display text-[2rem] font-semibold leading-[1.02] tracking-tight sm:text-[3.25rem]">
           {side.title}
         </h2>
-        <p className="text-sm leading-relaxed text-[var(--muted)]">{side.text}</p>
+        {/* min-h reserves 2 lines regardless of actual wrap — Стенка's text
+            wraps to 2 lines here, Круг's to 1, and without this the shorter
+            side's list/photo below climbed ~23px higher than the other's,
+            visibly misaligning a layout that's otherwise identical on both
+            sides. */}
+        <p className="min-h-[46px] text-sm leading-relaxed text-[var(--muted)]">{side.text}</p>
       </div>
 
       <ul className="divide-y divide-[var(--border)] border border-[var(--border)] bg-[var(--surface-muted)]">

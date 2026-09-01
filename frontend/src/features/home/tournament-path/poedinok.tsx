@@ -88,7 +88,9 @@ export function Poedinok() {
     ph === "idle"
       ? "Выберите бойца выше — и круг соберётся."
       : ph === "declare"
-        ? "Заявите разряд на эту сходку. Противник заявляет свой, и жребий выберет один из двух: удобного снаряда не бывает."
+        ? state.runStep >= 2
+          ? "Сходка — разряд на неё выбираете сами, без жребия: любой из четырёх."
+          : "Заявите разряд, если хотите сузить жребий до своей заявки, или сразу бросьте плиту: удобного снаряда всё равно не бывает."
         : ph === "over"
           ? `Счёт ${state.scores[0]}:${state.scores[1]}. Результат уходит в журнал и в сетку: пройденные противники отмечаются красным.`
           : ph === "bout" || ph === "clash"
@@ -100,9 +102,7 @@ export function Poedinok() {
   const primaryLabel =
     ph === "idle"
       ? "Выберите бойца"
-      : ph === "declare"
-        ? "Заявите разряд"
-        : ph === "result"
+      : ph === "result"
           ? "Свести бойцов"
           : ph === "over"
             ? state.runOver
@@ -206,7 +206,15 @@ export function Poedinok() {
           </div>
         </div>
 
-        <div className="mt-11 grid grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(240px,320px)_minmax(0,1fr)]">
+        {/* `perspective` sits here, on the row both fighter cards and the lot
+            cube share, rather than on each card individually — one vanishing
+            point at the row's center, so the two tilted cards read as facing
+            each other/the cube instead of each tilting in its own isolated
+            3D space. */}
+        <div
+          className="mt-11 grid grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(240px,320px)_minmax(0,1fr)]"
+          style={{ perspective: 1400 }}
+        >
           <FighterCard
             side="left"
             name={bout.a}
@@ -237,13 +245,20 @@ export function Poedinok() {
             </h2>
             <p className="mt-4 max-w-xl text-base leading-relaxed text-[var(--text-3)]">{lotText}</p>
             <div className="mt-8 flex flex-wrap items-center gap-4">
-              <button
-                type="button"
-                onClick={primaryAction}
-                className="font-record bg-[var(--accent)] px-7 py-4 text-[0.75rem] uppercase tracking-[0.16em] text-[var(--background)] transition-transform hover:brightness-110 active:translate-y-0.5 active:scale-[.985]"
-              >
-                {primaryLabel}
-              </button>
+              {/* Сходка's "declare" phase has no жребий to throw — the weapon
+                  icons above (in `LotCube`) are the only control, so this
+                  button (which would otherwise still say/do "Бросить
+                  жребий" for nothing) is suppressed rather than left as a
+                  dead end. */}
+              {ph === "declare" && state.runStep >= 2 ? null : (
+                <button
+                  type="button"
+                  onClick={primaryAction}
+                  className="font-record bg-[var(--accent)] px-7 py-4 text-[0.75rem] uppercase tracking-[0.16em] text-[var(--background)] transition-transform hover:brightness-110 active:translate-y-0.5 active:scale-[.985]"
+                >
+                  {primaryLabel}
+                </button>
+              )}
               <span className="record-label text-[var(--text-4)]">Броски: {String(state.lotCount).padStart(2, "0")}</span>
               <span className="flex items-center gap-2">
                 {fightRounds.map((round, i) => (

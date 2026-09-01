@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useMotionValue, useReducedMotion, useSpring } from "framer-motion";
+
+import { GearMaskIllustration } from "@/components/brand/gear-mask-illustration";
+import { EQUIPMENT_ITEMS } from "@/features/home/equipment-items";
+
+const MASK_ITEM = EQUIPMENT_ITEMS.find((item) => item.title === "Маска")!;
+const GORGET_ITEM = EQUIPMENT_ITEMS.find((item) => item.title === "Горжет")!;
 
 const FINE_POINTER_QUERY = "(hover: hover) and (pointer: fine)";
 
@@ -24,28 +30,41 @@ function getFinePointerServerSnapshot(): boolean {
 }
 
 /**
- * The tradition's actual protective headgear: a padded mask with a wire-mesh
- * grille over the whole face (closer to a HEMA/fencing mask than a
- * motorcycle-visor helmet — see iteration-1 follow-up notes, this replaces
- * an earlier hinged-visor version that didn't match reference photos).
+ * The tradition's actual protective headgear — redrawn 2026-09-01 (third
+ * pass, against real reference photos: `mstinskaya-gear-references/mask-
+ * reference-{front,side,crowd}.png`) as ONE continuous silhouette — helmet,
+ * face mesh, and neck gorget — rather than two spatially separated blocks.
+ * The references show the gorget sitting almost flush against the mesh's own
+ * lower edge, not a couple of centimetres below it, so `GearMaskIllustration`
+ * now draws all three as named groups (`#helmet`/`#face-grid`/`#neck-guard`/
+ * `#details`) inside one shared viewBox — still visually distinct through
+ * fill/texture (fabric vs. wire mesh vs. fabric collar), not through spatial
+ * gap. Each still gets its own callout label above/below the single
+ * illustration so a viewer can name the pieces at a glance.
  *
- * Interaction: "wiping condensation off a mirror" — the pointer clears a
- * soft-edged circular patch of the mesh/haze as it moves, via a CSS
- * `mask-image` radial-gradient recentered on every pointermove. This is a
- * continuous tracking effect, not a boolean open/closed toggle, so it can't
- * be meaningfully replicated by focus/tap the way a hinge could:
- * `(hover: hover) and (pointer: fine)` gates whether the reveal wires up at
- * all (mirrors the capability check the now-removed custom cursor used).
- * Touch/keyboard users get a fixed, legible partial-haze rendering instead.
+ * Self-contained "specimen plate" (border, four `.tick` corners, its own
+ * bottom caption bar) — the same archival-illustration framing as
+ * `clash-card.tsx`/`hero-clash.tsx`'s `EquipmentPlate`.
  *
- * The pointermove listener here is scoped to this component's own container
- * (not window-wide) and only calls `motionValue.set(...)`, never a React
- * state setter — this sidesteps the render-thrashing that caused the custom
- * cursor to be removed.
+ * Interaction, three small pieces:
+ * - "Wiping condensation off a mirror" on the face-grid mesh only — the
+ *   pointer clears a soft-edged circular patch via a CSS `mask-image`
+ *   radial-gradient recentred on every pointermove.
+ * - A capped ±1.5deg rotateX/rotateY tilt on the whole illustration, driven
+ *   by the same pointer position — tight, per an explicit "no strong 3D" note.
+ * - A plain CSS `hover:scale` on the OUTER wrapper so the gorget visibly
+ *   reacts along with the helmet on hover (they're one illustration now, so
+ *   this is automatic rather than a separate concern).
+ * `(hover: hover) and (pointer: fine)` gates the wipe/tilt; touch/keyboard
+ * users get a fixed, legible partial-haze rendering instead (the hover scale
+ * still applies via `:focus-within` for keyboard users, since it's plain CSS).
+ *
+ * The pointermove listener only calls `motionValue.set(...)`, never a React
+ * state setter — this sidesteps the render-thrashing that caused an earlier
+ * custom-cursor version of this effect to be removed.
  */
 export function HelmetReveal() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const maskId = useId();
   const reduceMotion = useReducedMotion();
   const interactive = useSyncExternalStore(
     subscribeFinePointer,
@@ -61,6 +80,15 @@ export function HelmetReveal() {
   const springX = useSpring(mx, springConfig);
   const springY = useSpring(my, springConfig);
 
+  // Exhibit tilt: a museum-case parallax, capped tight (±MAX_TILT_DEG) so it
+  // reads as the object slightly turning toward the viewer, never a 3D-card
+  // gimmick — "максимум 1–2 градуса rotation, никакого сильного 3D".
+  const MAX_TILT_DEG = 1.5;
+  const rx = useMotionValue(0);
+  const ry = useMotionValue(0);
+  const springRX = useSpring(rx, springConfig);
+  const springRY = useSpring(ry, springConfig);
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el || !interactive) return;
@@ -71,11 +99,19 @@ export function HelmetReveal() {
     const unsubY = springY.on("change", (value) => {
       el.style.setProperty("--my", `${value}px`);
     });
+    const unsubRX = springRX.on("change", (value) => {
+      el.style.setProperty("--rx", `${value}deg`);
+    });
+    const unsubRY = springRY.on("change", (value) => {
+      el.style.setProperty("--ry", `${value}deg`);
+    });
     return () => {
       unsubX();
       unsubY();
+      unsubRX();
+      unsubRY();
     };
-  }, [interactive, springX, springY]);
+  }, [interactive, springX, springY, springRX, springRY]);
 
   const wireUpReveal = interactive && !reduceMotion;
 
@@ -84,6 +120,10 @@ export function HelmetReveal() {
     const rect = event.currentTarget.getBoundingClientRect();
     mx.set(event.clientX - rect.left);
     my.set(event.clientY - rect.top);
+    const offsetX = (event.clientX - rect.left) / rect.width - 0.5;
+    const offsetY = (event.clientY - rect.top) / rect.height - 0.5;
+    ry.set(offsetX * 2 * MAX_TILT_DEG);
+    rx.set(offsetY * -2 * MAX_TILT_DEG);
     setHovering(true);
   }
 
@@ -91,101 +131,69 @@ export function HelmetReveal() {
     if (!wireUpReveal) return;
     mx.set(-100);
     my.set(-100);
+    rx.set(0);
+    ry.set(0);
     setHovering(false);
   }
 
   // Reduced-motion or coarse-pointer users: no tracking at all, just a fixed
-  // legible face with a faint static mesh texture on top (simpler and more
-  // honest than snapping a "reveal" to a pointer that isn't really moving).
+  // legible mesh with a faint static texture.
   const staticFallback = !wireUpReveal;
 
   return (
-    <div
-      ref={containerRef}
-      className="relative mx-auto hidden aspect-[3/4] w-56 shrink-0 select-none lg:block"
-      onPointerMove={handlePointerMove}
-      onPointerLeave={handlePointerLeave}
-      style={
-        {
-          "--mx": "-100px",
-          "--my": "-100px",
-        } as CSSProperties
-      }
-    >
-      {/* face — static, sits beneath the mesh at all times */}
-      <svg
-        viewBox="0 0 100 130"
-        className="absolute inset-0 h-full w-full text-[var(--muted)]"
-        aria-hidden="true"
-      >
-        <path
-          d="M50 34 C34 34 26 48 26 66 C26 92 37 110 50 114 C63 110 74 92 74 66 C74 48 66 34 50 34 Z"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          fill="none"
-          opacity="0.8"
-        />
-        <path d="M38 62 L44 62 M56 62 L62 62" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        <path d="M45 82 Q50 86 55 82" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" fill="none" />
-      </svg>
+    <div className="relative overflow-hidden border border-[var(--border-strong)] bg-[var(--surface-muted)] p-5">
+      <span aria-hidden="true" className="tick" style={{ top: 10, left: 10, borderTop: "1.5px solid var(--gold)", borderLeft: "1.5px solid var(--gold)" }} />
+      <span aria-hidden="true" className="tick" style={{ top: 10, right: 10, borderTop: "1.5px solid var(--gold)", borderRight: "1.5px solid var(--gold)" }} />
+      <span aria-hidden="true" className="tick" style={{ bottom: 10, left: 10, borderBottom: "1.5px solid var(--gold)", borderLeft: "1.5px solid var(--gold)" }} />
+      <span aria-hidden="true" className="tick" style={{ bottom: 10, right: 10, borderBottom: "1.5px solid var(--gold)", borderRight: "1.5px solid var(--gold)" }} />
 
-      {/* padded shell outline — always fully visible, doesn't hide the face,
-          just frames it (dome top + jaw padding from the reference photos) */}
-      <svg
-        viewBox="0 0 100 130"
-        className="pointer-events-none absolute inset-0 h-full w-full text-[var(--accent)]"
-        aria-hidden="true"
-      >
-        <path
-          d="M50 6 C26 6 15 26 15 50 L15 88 C15 106 30 120 50 120 C70 120 85 106 85 88 L85 50 C85 26 74 6 50 6 Z"
-          stroke="currentColor"
-          strokeWidth="2"
-          fill="none"
-          opacity="0.9"
-        />
-        <path
-          d="M30 104 C36 112 43 116 50 116 C57 116 64 112 70 104"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          fill="none"
-          opacity="0.55"
-        />
-      </svg>
+      {/* outer wrapper — plain CSS hover/focus scale on the whole exhibit */}
+      <div className="mx-auto flex w-52 flex-col items-center transition-transform duration-300 ease-out hover:scale-[1.03] focus-within:scale-[1.03]">
+        <CalloutLabel text={MASK_ITEM.title} description={MASK_ITEM.desc} />
+        <div
+          ref={containerRef}
+          className="relative mt-2 aspect-[100/130] w-52 select-none"
+          onPointerMove={handlePointerMove}
+          onPointerLeave={handlePointerLeave}
+          style={
+            {
+              perspective: 700,
+              "--mx": "-100px",
+              "--my": "-100px",
+              "--rx": "0deg",
+              "--ry": "0deg",
+            } as CSSProperties
+          }
+        >
+          <div className="h-full w-full" style={{ transform: "rotateX(var(--rx)) rotateY(var(--ry))" }}>
+            <GearMaskIllustration hovering={hovering} staticFallback={staticFallback} />
+          </div>
+        </div>
+        <div className="mt-2 w-full">
+          <CalloutLabel text={GORGET_ITEM.title} description={GORGET_ITEM.desc} />
+        </div>
+      </div>
 
-      {/* mesh grille + haze — covers the face oval; a mask-image radial
-          gradient cuts a soft "wiped" patch centered on the pointer,
-          revealing the face beneath more clearly right there */}
-      <svg
-        viewBox="0 0 100 130"
-        className="pointer-events-none absolute inset-0 h-full w-full text-[var(--accent)]"
-        aria-hidden="true"
-        style={
-          staticFallback
-            ? { opacity: 0.7 }
-            : {
-                maskImage: `radial-gradient(circle 60px at var(--mx) var(--my), transparent 0%, transparent 55%, black 100%)`,
-                WebkitMaskImage: `radial-gradient(circle 60px at var(--mx) var(--my), transparent 0%, transparent 55%, black 100%)`,
-                opacity: hovering ? 1 : 0.92,
-                transition: "opacity 0.2s ease",
-              }
-        }
-      >
-        <defs>
-          <pattern id={maskId} width="4.2" height="4.2" patternUnits="userSpaceOnUse">
-            <path d="M0 4.2 L4.2 0" stroke="currentColor" strokeWidth="0.5" />
-            <path d="M0 0 L4.2 4.2" stroke="currentColor" strokeWidth="0.5" />
-          </pattern>
-          <clipPath id={`${maskId}-clip`}>
-            <path d="M50 34 C34 34 26 48 26 66 C26 92 37 110 50 114 C63 110 74 92 74 66 C74 48 66 34 50 34 Z" />
-          </clipPath>
-        </defs>
-        <g clipPath={`url(#${maskId}-clip)`}>
-          {/* haze backing so the face reads as dim/obscured, not fully hidden */}
-          <rect x="20" y="30" width="60" height="90" fill="var(--surface)" opacity="0.6" />
-          {/* fine wire mesh weave */}
-          <rect x="20" y="30" width="60" height="90" fill={`url(#${maskId})`} opacity="0.75" />
-        </g>
-      </svg>
+      <div className="mt-5 flex items-baseline justify-between border-t border-[var(--border)] pt-3">
+        <span className="record-label text-[var(--gold)]">Ил. 01</span>
+        <span className="record-label text-[var(--muted)]">Защитное снаряжение</span>
+      </div>
+    </div>
+  );
+}
+
+/** A thin technical callout: label + a marker dot on a trailing hairline
+ *  ("МАСКА ────●"), then one short description line reusing `equipment-
+ *  items.ts`'s own copy verbatim (never invented). */
+function CalloutLabel({ text, description }: { text: string; description: string }) {
+  return (
+    <div className="flex w-full flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <span className="record-label text-[var(--gold)]">{text}</span>
+        <span aria-hidden="true" className="h-px flex-1 bg-[var(--gold)]" style={{ opacity: 0.4 }} />
+        <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full border border-[var(--gold)]" style={{ opacity: 0.75 }} />
+      </div>
+      <p className="text-[0.6875rem] leading-snug text-[var(--text-3)]">{description}</p>
     </div>
   );
 }

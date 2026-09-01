@@ -440,19 +440,27 @@ body::after {
   animation: impact 500ms steps(2, end);
 }
 
-/* дрожь (cam) — scene shake while the lot is spinning. */
+/* дрожь (cam) — scene shake while the lot is spinning. Four offsets instead
+   of one back-and-forth pair, and a wider throw (2px read as barely more
+   than a flicker), so it actually reads as a tremor at a glance. */
 @keyframes cam {
   0%,
   100% {
     transform: translate(0, 0);
   }
+  25% {
+    transform: translate(-4px, 3px);
+  }
   50% {
-    transform: translate(2px, -2px);
+    transform: translate(4px, -3px);
+  }
+  75% {
+    transform: translate(-3px, -4px);
   }
 }
 
 .cam {
-  animation: cam 280ms steps(2, end) infinite;
+  animation: cam 220ms steps(1, end) infinite;
 }
 
 /* The lot cube's 3D stage (`lot-cube.tsx`) is a fixed 300px box — its rings
@@ -550,6 +558,30 @@ body::after {
   animation: lunge-b 760ms ease-in-out;
 }
 
+/* выпад, компактный (lunge-a-sm / lunge-b-sm) — same clash, scaled down for
+   the header logo's `size-9` badge, where a 34px throw would send the seals
+   past the nav links. Same 760ms so `.lunge-a`/`.lunge-a-sm` stay
+   interchangeable as the "this is the clash's own duration" signal. */
+@keyframes lunge-a-sm {
+  50% {
+    transform: translateX(13px) rotateY(-6deg);
+  }
+}
+
+@keyframes lunge-b-sm {
+  50% {
+    transform: translateX(-13px) rotateY(6deg);
+  }
+}
+
+.lunge-a-sm {
+  animation: lunge-a-sm 760ms ease-in-out;
+}
+
+.lunge-b-sm {
+  animation: lunge-b-sm 760ms ease-in-out;
+}
+
 /* вспышка (flash) — impact flash overlay. */
 @keyframes flash {
   0%,
@@ -563,6 +595,108 @@ body::after {
 
 .flash {
   animation: flash 600ms ease-out;
+}
+
+/* сшибка (strike-ring) — impact ring for a two-seal clash: paired with
+   `.lunge-a`/`.lunge-b` above (the fighters' own lunge-together) and `.flash`
+   for the bloom at the meeting point. Values (gold, 0.3→2.6, thinning border)
+   match the "Живая сшибка" prototype's own `ringPulse` exactly — this is a
+   direct port, not a re-derivation, so it's kept byte-for-byte rather than
+   normalized to this file's usual round numbers. Used by `clash-card.tsx`'s
+   plate and the header logo's matching duel in `monogram-flip.tsx`. */
+@keyframes strike-ring {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.9;
+    border-width: 3px;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+    border-width: 0.5px;
+  }
+}
+
+.strike-ring {
+  animation: strike-ring 650ms cubic-bezier(0.2, 0.8, 0.3, 1);
+  border: 3px solid var(--gold);
+  border-radius: 50%;
+}
+
+/* свечение (seal-glow) — the "Знаки традиции" row's own two seals light up
+   in sync with the clash plate staged above them, so the struck pair reads
+   as the *same* two marks, not an unrelated animation floating past them.
+   A hold plateau (25%–65%, not one instantaneous peak) so it reads clearly
+   at a glance rather than as a flicker. */
+@keyframes seal-glow {
+  0%,
+  100% {
+    filter: none;
+  }
+  25%,
+  65% {
+    filter: drop-shadow(0 0 8px var(--gold)) brightness(1.4);
+  }
+}
+
+.seal-glow {
+  animation: seal-glow 1400ms ease-in-out;
+}
+
+/* всплытие (pop-in) — the clash plate's matchup caption and result line
+   settling into place. Ported from the same prototype as `.strike-ring`. */
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.pop-in {
+  animation: pop-in 260ms ease-out both;
+}
+
+/* уголки (tick) — the clash plate's four corner brackets, reading as a
+   specimen-plate frame rather than a plain bordered box. Position each of
+   the four with an inline `top`/`right`/`bottom`/`left` pair plus the two
+   matching `border-*` sides (see `clash-card.tsx`). */
+.tick {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--gold);
+  opacity: 0.75;
+}
+
+/* волна (mask-ripple) — a stone-dropped-in-water ring expanding outward
+   from `fighter-card.tsx`'s waiting-state `MaskGlyph`, looping. Three rings
+   share the class at staggered `animation-delay`s so a new one sets off
+   before the last fades, reading as continuous rather than a single pulse. */
+@keyframes mask-ripple {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+
+.mask-ripple {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  translate: -50% -50%;
+  border-radius: 9999px;
+  border: 1px solid var(--gold);
+  animation: mask-ripple 2800ms ease-out infinite;
 }
 
 /* буква (letter) — kinetic per-letter name reveal. Apply with an inline
@@ -601,20 +735,41 @@ body::after {
   animation: dust 900ms ease-out;
 }
 
-/* картотека (dossier tilt) — case-file cards lift and tilt toward the
-   viewer on hover/focus, completing the `perspective`/`preserve-3d` rig
-   already set on the card grid in `dossiers.tsx`. */
+/* картотека (dossier spotlight) — third redesign of this hover effect in one
+   session (tilt+corner-curl, then a stack-peek sheet, both didn't land — see
+   [[hero-redesign-exploration]] and [[poedinok-lot-throw-flow]] for why).
+   This one drops any metaphor that can misalign or read as a stray box: a
+   soft warm highlight tracks the pointer (`--mx`/`--my`, set in
+   `dossiers.tsx`, same plain-pointermove technique `helmet-reveal.tsx` uses
+   for its own mask wipe) under a `radial-gradient`, and the lift itself is
+   framer-motion's `whileHover`/`whileFocus` spring (in `dossiers.tsx`), not
+   a CSS `transition` — only `box-shadow` stays a CSS transition here since
+   framer-motion doesn't drive it. `overflow: hidden` clips the glow to the
+   card's own square edges. */
 .dossier-card {
+  position: relative;
+  overflow: hidden;
   box-shadow: 0 18px 40px -30px rgba(0, 0, 0, 0.9);
-  transition:
-    transform 400ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 400ms ease;
+  transition: box-shadow 380ms ease;
 }
 
 .dossier-card:hover,
 .dossier-card:focus-within {
-  transform: translateY(-6px) rotateX(2deg) rotateY(-4deg);
   box-shadow: 0 26px 48px -24px rgba(0, 0, 0, 0.85);
+}
+
+.dossier-spotlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 300ms ease;
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), rgba(176, 122, 53, 0.24), transparent 70%);
+}
+
+.dossier-card:hover .dossier-spotlight,
+.dossier-card:focus-within .dossier-spotlight {
+  opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

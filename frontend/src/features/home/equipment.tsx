@@ -16,8 +16,10 @@ const ru = new Intl.NumberFormat("ru-RU");
 
 /** One factual, non-invented line per category: armed/unarmed from `armed`,
  *  plus the real staging note where it applies (нож/палка share one staging
- *  concern in the source rules) — never fabricated equipment materials. */
-function describe(weapon: WeaponRulesView["weapons"][number], rules: WeaponRulesView): string {
+ *  concern in the source rules) — never fabricated equipment materials.
+ *  Exported so `hero-clash.tsx`'s "Знаки традиции" row can show the same
+ *  honest one-liner on hover instead of inventing its own description. */
+export function describeWeaponRule(weapon: WeaponRulesView["weapons"][number], rules: WeaponRulesView): string {
   if (!weapon.armed) {
     return `«${weapon.label_ru}» — безоружный разряд: сходка идёт без какого-либо снаряда, одним приёмом.`;
   }
@@ -138,7 +140,7 @@ function EquipmentList({ rules }: { rules: WeaponRulesView }) {
                   {weapon.armed ? "Вооружённый разряд" : "Без оружия"} · приёмов: {ru.format(actionCount)}
                 </span>
               </div>
-              <p className="mt-2 text-sm leading-[1.6] text-[var(--text-3)]">{describe(weapon, rules)}</p>
+              <p className="mt-2 text-sm leading-[1.6] text-[var(--text-3)]">{describeWeaponRule(weapon, rules)}</p>
             </div>
           </div>
         );

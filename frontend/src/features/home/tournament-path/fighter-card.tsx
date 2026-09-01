@@ -3,21 +3,9 @@
 import { WEAPON_LABELS } from "./bracket-data";
 import { KineticName } from "./kinetic-name";
 import { HandsIcon, KistenIcon, NozhIcon, PalkaIcon } from "@/components/brand/weapon-glyphs";
+import { MaskGlyph } from "@/components/brand/mask-glyph";
 
 const FACE_ICONS = { hands: HandsIcon, palka: PalkaIcon, nozh: NozhIcon, kisten: KistenIcon } as const;
-
-/**
- * Scene photo is deliberately generic documentary stock, not a per-fighter
- * portrait — same reasoning as the dossier cards in `dossiers.tsx`: there is
- * no open-licensed photo of a specific named fighter, so the frame is dressed
- * with the tradition's own documentary photography rather than implying a
- * likeness that doesn't exist.
- */
-const SCENE_PHOTO = {
-  left: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Lob_Kulachni_boi.jpg/1920px-Lob_Kulachni_boi.jpg",
-  right:
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Lob_Stenka_na_stenku.jpg/1920px-Lob_Stenka_na_stenku.jpg",
-} as const;
 
 export function FighterCard({
   side,
@@ -41,41 +29,58 @@ export function FighterCard({
   const BadgeIcon = badge ? FACE_ICONS[badge.key] : null;
 
   return (
-    <div
-      className={`flex flex-col gap-4 ${isLeft ? "items-end" : "items-start"}`}
-      style={{ perspective: 1200 }}
-    >
+    // `perspective` lives on the shared grid row in `poedinok.tsx`, not here —
+    // this wrapper just needs `preserve-3d` to let that one vanishing point
+    // reach the tilted card two levels down, so both cards read as facing a
+    // single center (the lot cube) instead of each tilting in its own
+    // independent 3D space.
+    <div className={`flex flex-col gap-4 ${isLeft ? "items-end" : "items-start"}`} style={{ transformStyle: "preserve-3d" }}>
       <div
         className={`relative aspect-[4/3] w-full max-w-[22rem] overflow-hidden border border-[var(--iron)] ${
           clashing ? (isLeft ? "lunge-a" : "lunge-b") : ""
         }`}
-        style={{ transformStyle: "preserve-3d", transform: `rotateY(${isLeft ? 9 : -9}deg)` }}
+        style={{
+          transformStyle: "preserve-3d",
+          transform: `rotateY(${isLeft ? 16 : -16}deg)`,
+          background: "var(--surface-muted)",
+        }}
       >
-        <img
-          src={SCENE_PHOTO[side]}
-          alt=""
-          loading="lazy"
-          className="absolute inset-0 size-full object-cover"
-          style={{ filter: "grayscale(.5) sepia(.22) contrast(1.1) brightness(.72)" }}
-        />
-        <span
-          aria-hidden="true"
-          className="absolute inset-0"
-          style={{
-            background: `linear-gradient(${isLeft ? "90deg" : "270deg"}, rgba(16,14,12,.75), transparent 60%)`,
-          }}
-        />
         {badge && BadgeIcon ? (
-          <span
-            className={`record-label absolute bottom-2.5 inline-flex items-center gap-2 px-2.5 py-1.5 text-[var(--gold)] ${
-              isLeft ? "right-3" : "left-3"
-            }`}
-            style={{ background: "rgba(16,14,12,.8)" }}
-          >
-            <BadgeIcon size={14} />
-            {badge.label}
+          <>
+            {/* No photo — there is no open-licensed picture of a specific named
+                fighter, and a stock "scene" shot risked implying a likeness that
+                doesn't exist. The declared weapon's own glyph, faint and
+                oversized, stands in as the frame's content instead — same "no
+                fabricated faces" rule the dossier cards in `dossiers.tsx` follow. */}
+            <span aria-hidden="true" className="absolute inset-0 grid place-items-center text-[var(--border-strong)]">
+              <BadgeIcon size={104} />
+            </span>
+            <span
+              className={`record-label absolute bottom-2.5 inline-flex items-center gap-2 px-2.5 py-1.5 text-[var(--gold)] ${
+                isLeft ? "right-3" : "left-3"
+              }`}
+              style={{ background: "rgba(16,14,12,.8)" }}
+            >
+              <BadgeIcon size={14} />
+              {badge.label}
+            </span>
+          </>
+        ) : (
+          // No weapon declared yet — the mask, same "not chosen → mask"
+          // convention as the homepage hero's illustration
+          // (`helmet-reveal.tsx`), with ripples reading as "still waiting on
+          // the жребий" rather than the card just sitting inert.
+          <span aria-hidden="true" className="absolute inset-0 grid place-items-center">
+            <span style={{ position: "relative", width: 168, height: 168 }}>
+              <span className="mask-ripple" style={{ animationDelay: "0ms" }} />
+              <span className="mask-ripple" style={{ animationDelay: "930ms" }} />
+              <span className="mask-ripple" style={{ animationDelay: "1860ms" }} />
+              <span className="absolute inset-0 grid place-items-center">
+                <MaskGlyph size={112} />
+              </span>
+            </span>
           </span>
-        ) : null}
+        )}
       </div>
 
       <div className={isLeft ? "text-right" : "text-left"}>

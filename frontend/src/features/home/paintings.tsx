@@ -75,7 +75,7 @@ export function Paintings() {
       <Container wide className="space-y-14">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-3">
-            <p className="record-label text-[var(--gold)]">Л. 10 · Живописный ряд</p>
+            <p className="record-label text-[var(--gold)]">Л. 11 · Живописный ряд</p>
             <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-[3rem]">Как это писали</h2>
           </div>
           <p className="max-w-sm text-sm leading-relaxed text-[var(--muted)] sm:text-right">

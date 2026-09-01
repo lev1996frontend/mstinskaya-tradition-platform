@@ -83,6 +83,27 @@ export function StenkaIcon({ className, size = 24 }: GlyphProps) {
   );
 }
 
+/**
+ * The protective mask, in the same single-color line-art family as the four
+ * weapon glyphs above — used wherever a fighter's category hasn't been
+ * declared/drawn yet (`fighter-card.tsx`'s empty slot, mirroring
+ * `helmet-reveal.tsx`'s own "no weapon chosen yet → mask" convention on the
+ * homepage hero). Not a weapon motif itself, so deliberately kept out of
+ * `WEAPON_MOTIFS`/`WeaponMotifKey`.
+ */
+export function MaskIcon({ className, size = 24 }: GlyphProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
+      <path
+        d="M12 4 C8.4 4 6.2 6.8 6.2 10.6 C6.2 15.4 8.6 18.6 12 19.6 C15.4 18.6 17.8 15.4 17.8 10.6 C17.8 6.8 15.6 4 12 4 Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <path d="M7.4 9.4 H16.6 M7.4 12.2 H16.6 M7.6 15 H16.4" stroke="currentColor" strokeWidth="1" opacity="0.65" />
+    </svg>
+  );
+}
+
 export type WeaponMotifKey = "hands" | "kisten" | "palka" | "nozh";
 
 /**
@@ -95,9 +116,30 @@ export type WeaponMotifKey = "hands" | "kisten" | "palka" | "nozh";
  * component in `features/home/tournament-path/` — it imports `KrugIcon`/
  * `StenkaIcon` directly alongside these four, not through this constant.
  */
-export const WEAPON_MOTIFS: { key: WeaponMotifKey; label: string; Icon: ComponentType<GlyphProps> }[] = [
-  { key: "hands", label: "Безоружный", Icon: HandsIcon },
-  { key: "kisten", label: "Кистень", Icon: KistenIcon },
-  { key: "palka", label: "Палка", Icon: PalkaIcon },
-  { key: "nozh", label: "Нож", Icon: NozhIcon },
+/**
+ * `genitive` is the form after «против» in `clash-card.tsx`'s matchup
+ * caption ("Нож против Палки", not the ungrammatical "Нож против Палка") —
+ * «против» always governs the genitive case in Russian, regardless of which
+ * motif is doing the grammatical governing (`b`, the second slot).
+ */
+export const WEAPON_MOTIFS: { key: WeaponMotifKey; label: string; genitive: string; Icon: ComponentType<GlyphProps> }[] = [
+  { key: "hands", label: "Безоружный", genitive: "безоружного", Icon: HandsIcon },
+  { key: "kisten", label: "Кистень", genitive: "кистеня", Icon: KistenIcon },
+  { key: "palka", label: "Палка", genitive: "палки", Icon: PalkaIcon },
+  { key: "nozh", label: "Нож", genitive: "ножа", Icon: NozhIcon },
 ];
+
+/**
+ * "Живая сшибка" opponent picker for the click-to-clash animation
+ * (`clash-card.tsx`, `hero-clash.tsx`, `monogram-flip.tsx`). Decorative
+ * pairing only, not a real draw rule. The design canvas's own auto-cycling
+ * prototype (`ClashPreview.dc.html`) used a fixed 4-step sequence
+ * (hands→nozh, nozh→palka, palka→hands, kistenʹ→kistenʹ) — picking uniformly
+ * at random over all four motifs (including the clicked one itself, so a
+ * mirrored duel like kistenʹ-vs-kistenʹ can still come up) covers that same
+ * set of pairings plus every other combination, so every trigger can land on
+ * a different matchup instead of the same handful repeating.
+ */
+export function randomWeaponMotif(): WeaponMotifKey {
+  return WEAPON_MOTIFS[Math.floor(Math.random() * WEAPON_MOTIFS.length)].key;
+}

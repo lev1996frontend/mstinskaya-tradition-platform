@@ -29,6 +29,11 @@ type Phase = "idle" | "anticipate" | "flip";
  */
 export function WeaponDrawBillet() {
   const [rotation, setRotation] = useState(0);
+  // The face the current/next flip is headed to — drives the *visual*
+  // rotation (via `rotation` above) as soon as the flip starts. `faceIndex`
+  // below is separate on purpose: it drives the "Выпало: …" text, and only
+  // gets set once the flip actually finishes turning, not when it starts.
+  const [pendingIndex, setPendingIndex] = useState<number | null>(null);
   const [faceIndex, setFaceIndex] = useState<number | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const reduceMotion = useReducedMotion();
@@ -47,7 +52,7 @@ export function WeaponDrawBillet() {
     window.setTimeout(
       () => {
         setRotation(rotation + delta + extraTurns);
-        setFaceIndex(nextIndex);
+        setPendingIndex(nextIndex);
         setPhase("flip");
       },
       reduceMotion ? 0 : LOT_ANTICIPATION_MS,
@@ -81,7 +86,24 @@ export function WeaponDrawBillet() {
         </p>
       </div>
 
-      <div className="mx-auto shrink-0" style={{ width: SIZE, height: HEIGHT, perspective: 700 }}>
+      {/* Clickable too, not just the "Покрутить для примера" button below —
+          matches the homepage Поединок demo's own lot cube (`lot-cube.tsx`),
+          where the die itself has always been the primary target. `role`/
+          `tabIndex`/`onKeyDown` since a `motion.div` isn't natively
+          focusable or triggerable from the keyboard the way a `<button>` is. */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={roll}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          roll();
+        }}
+        aria-label="Покрутить брусок для примера"
+        className="mx-auto shrink-0 cursor-pointer"
+        style={{ width: SIZE, height: HEIGHT, perspective: 700 }}
+      >
         <motion.div
           className="relative h-full w-full"
           style={{ transformStyle: "preserve-3d" }}
@@ -97,6 +119,12 @@ export function WeaponDrawBillet() {
                 ? IMPULSE_SPRING
                 : { duration: 1.3, ease: TURN_EASE }
           }
+          onAnimationComplete={() => {
+            // Fires for the "anticipate" compress too — only the flip's own
+            // completion should reveal the result text.
+            if (phase !== "flip" || pendingIndex === null) return;
+            setFaceIndex(pendingIndex);
+          }}
         >
           {WEAPON_MOTIFS.map(({ key, Icon }, index) => (
             <div

@@ -9,7 +9,8 @@ import Link from "next/link";
  * same page. Deliberately a different shape: numbered ruled rows that step
  * via `padding-left` on hover, not `directory-index.tsx`'s arrow-translate —
  * two indexes that read as two different documents, not one component reused
- * with new copy.
+ * with new copy. АРХИВ (`#arhiv-ekipirovki`, `gear-archive.tsx`) added
+ * alongside СНАРЯЖЕНИЕ — pushed every later index down by one.
  */
 const SECTIONS: { href: string; index: string; title: string; text: string }[] = [
   {
@@ -31,26 +32,32 @@ const SECTIONS: { href: string; index: string; title: string; text: string }[] =
     text: "Опись четырёх разрядов лота традиции — от безоружного боя до кистеня.",
   },
   {
-    href: "#pravila",
+    href: "#arhiv-ekipirovki",
     index: "04",
+    title: "Архив",
+    text: "Девять предметов обязательного комплекта, один за другим — от маски до шароваров.",
+  },
+  {
+    href: "#pravila",
+    index: "05",
     title: "Правила",
     text: "Регламент состязания — коротким квизом вместо страницы текста.",
   },
   {
     href: "#bojcy",
-    index: "05",
+    index: "06",
     title: "Бойцы",
     text: "Личные дела участников: клуб, разряд, послужной список.",
   },
   {
     href: "#hronika",
-    index: "06",
+    index: "07",
     title: "Хроника",
     text: "Документальные снимки состязаний прошлых лет.",
   },
   {
     href: "#zhivopis",
-    index: "07",
+    index: "08",
     title: "Живопись",
     text: "Кулачный бой в живописи и архивной графике — от начала XIX века до наших дней.",
   },

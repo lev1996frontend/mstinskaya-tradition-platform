@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 
 import { MonogramFlip } from "@/components/brand/monogram-flip";
-import { WEAPON_MOTIFS, type WeaponMotifKey } from "@/components/brand/weapon-glyphs";
+import { WEAPON_MOTIFS, randomWeaponMotif, type WeaponMotifKey } from "@/components/brand/weapon-glyphs";
 import { ButtonLink, Container, cn } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
 import { IMPULSE_TAP } from "@/lib/motion";
@@ -22,8 +22,8 @@ const NAV = [
 
 /**
  * Weapon assigned to each nav item's dice-roll reverse face. Hand-picked
- * rather than cycled by index: "Голыми руками" is the longest label by far,
- * so it goes on "Клубы" (the shortest own-label, but a middle item with a
+ * rather than cycled by index: "Безоружный" is the longest of the four
+ * weapon labels, so it goes on "Клубы" (the shortest own-label, but a middle item with a
  * full nav-width of clearance on both sides) instead of an edge item, where
  * it would overhang past the logo or off the header entirely.
  */
@@ -81,6 +81,8 @@ export function SiteHeader() {
   const { user, loading, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [logoActive, setLogoActive] = useState(false);
+  const [logoStruck, setLogoStruck] = useState(false);
+  const [logoOpponent, setLogoOpponent] = useState<WeaponMotifKey>("kisten");
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const reduceMotion = useReducedMotion();
 
@@ -113,8 +115,18 @@ export function SiteHeader() {
           onMouseLeave={() => setLogoActive(false)}
           onFocus={() => setLogoActive(true)}
           onBlur={() => setLogoActive(false)}
+          onClick={() => {
+            setLogoOpponent(randomWeaponMotif());
+            setLogoStruck(true);
+          }}
         >
-          <MonogramFlip flipped={logoActive} size={20} />
+          <MonogramFlip
+            flipped={logoActive}
+            struck={logoStruck}
+            opponent={logoOpponent}
+            onStrikeEnd={() => setLogoStruck(false)}
+            size={20}
+          />
           {/* The wordmark states the three type roles in miniature: display
               serif name over a stamped record caption. */}
           <span className="leading-tight">
@@ -209,9 +221,9 @@ export function SiteHeader() {
             onClick={() => setOpen((value) => !value)}
             aria-expanded={open}
             aria-label="Меню"
-            className="rounded-[var(--radius-sm)] border border-[var(--chrome-line)] p-2 text-[var(--chrome-muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            className="rounded-[var(--radius-sm)] border border-[var(--chrome-line)] p-2.5 text-[var(--chrome-muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
           >
-            {open ? <X className="size-4" /> : <Menu className="size-4" />}
+            {open ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
         </div>
       </Container>
@@ -228,7 +240,12 @@ export function SiteHeader() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={reduceMotion ? { duration: 0 } : { duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-0 z-40 flex flex-col overflow-y-auto bg-[var(--background)] lg:hidden"
+            // `h-dvh` (dynamic viewport height), not just `inset-0`/implicit
+            // 100%: on real mobile browsers the address bar shows/hides as
+            // you scroll, and a plain `vh`-based full-screen overlay visibly
+            // jumps/resizes as that happens — `dvh` tracks the *current*
+            // visual viewport instead of the largest possible one.
+            className="fixed inset-x-0 top-0 z-40 flex h-dvh flex-col overflow-y-auto bg-[var(--background)] lg:hidden"
           >
             <div className="flex h-16 shrink-0 items-center justify-between border-b-2 border-[var(--rule)] px-4 sm:px-6">
               <Link href="/" onClick={() => setOpen(false)} className="flex items-center gap-2.5">
@@ -246,9 +263,9 @@ export function SiteHeader() {
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Закрыть меню"
-                className="rounded-[var(--radius-sm)] border border-[var(--chrome-line)] p-2 text-[var(--chrome-muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                className="rounded-[var(--radius-sm)] border border-[var(--chrome-line)] p-3 text-[var(--chrome-muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
               >
-                <X className="size-4" />
+                <X className="size-6" />
               </button>
             </div>
 

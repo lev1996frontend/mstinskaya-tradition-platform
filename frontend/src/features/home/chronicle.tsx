@@ -63,7 +63,7 @@ export function Chronicle() {
     <section id="hronika" className="border-b-2 border-[var(--rule)] bg-[var(--surface-muted)] py-16 sm:py-20">
       <Container wide>
         <div className="mb-10 flex items-center gap-4">
-          <span className="record-label shrink-0 text-[var(--gold)]">Л. 09 · Хроника</span>
+          <span className="record-label shrink-0 text-[var(--gold)]">Л. 10 · Хроника</span>
           <span aria-hidden="true" className="h-px flex-1 bg-[var(--rule)] opacity-70" />
         </div>
 
