@@ -65,12 +65,12 @@ export function Dossiers() {
           {DOSSIERS.map((d) => (
             <article
               key={d.name}
-              className="group px-[22px] pb-[26px] pt-[22px] transition-transform duration-500"
+              tabIndex={0}
+              className="dossier-card group px-[22px] pb-[26px] pt-[22px]"
               style={{
                 background: "var(--surface-paper)",
                 color: "var(--surface-paper-ink)",
                 transformStyle: "preserve-3d",
-                boxShadow: "0 18px 40px -30px rgba(0,0,0,.9)",
               }}
             >
               <div className="flex items-start justify-between gap-4 border-b pb-4" style={{ borderColor: "rgba(36,28,21,.28)" }}>

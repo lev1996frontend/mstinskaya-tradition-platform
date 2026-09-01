@@ -455,20 +455,18 @@ body::after {
   animation: cam 280ms steps(2, end) infinite;
 }
 
-/* поток (flow) — the hero ring's slow continuous rotation. Pure CSS: no
-   interaction, safe on a server-rendered element. */
-@keyframes flow {
-  to {
-    transform: rotate(360deg);
+/* The lot cube's 3D stage (`lot-cube.tsx`) is a fixed 300px box — its rings
+   and cube faces are positioned/sized in px tied to that geometry, so on the
+   narrowest phones it's scaled down as one unit instead of resizing any
+   single ring, which would pull the concentric circles out of registration. */
+@media (max-width: 380px) {
+  .lot-cube-stage {
+    transform: scale(0.82);
   }
 }
 
-.flow {
-  animation: flow 90s linear infinite;
-}
-
-/* кен (ken/drift) — slow background-photo zoom+drift. Pure CSS for the same
-   reason as `flow`: continuous, non-interactive, server-renderable. */
+/* кен (ken/drift) — slow background-photo zoom+drift. Pure CSS: continuous,
+   non-interactive, safe on a server-rendered element. */
 @keyframes ken {
   from {
     transform: scale(1.04) translate(0, 0);
@@ -601,6 +599,22 @@ body::after {
 
 .dust {
   animation: dust 900ms ease-out;
+}
+
+/* картотека (dossier tilt) — case-file cards lift and tilt toward the
+   viewer on hover/focus, completing the `perspective`/`preserve-3d` rig
+   already set on the card grid in `dossiers.tsx`. */
+.dossier-card {
+  box-shadow: 0 18px 40px -30px rgba(0, 0, 0, 0.9);
+  transition:
+    transform 400ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 400ms ease;
+}
+
+.dossier-card:hover,
+.dossier-card:focus-within {
+  transform: translateY(-6px) rotateX(2deg) rotateY(-4deg);
+  box-shadow: 0 26px 48px -24px rgba(0, 0, 0, 0.85);
 }
 
 @media (prefers-reduced-motion: reduce) {

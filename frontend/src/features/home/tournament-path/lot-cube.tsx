@@ -42,7 +42,10 @@ export function LotCube() {
 
   return (
     <div className="grid place-items-center gap-[22px]">
-      <div className="relative grid place-items-center" style={{ width: 300, height: 300, perspective: 900 }}>
+      <div
+        className={`lot-cube-stage relative grid place-items-center ${state.phase === "throw" ? "cam" : ""}`}
+        style={{ width: 300, height: 300, perspective: 900 }}
+      >
         <span
           aria-hidden="true"
           className="absolute rounded-full border border-[var(--border)]"

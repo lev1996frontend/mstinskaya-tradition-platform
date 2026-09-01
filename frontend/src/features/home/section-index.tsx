@@ -72,7 +72,10 @@ export function SectionIndex() {
           <span className="col-span-2 text-sm leading-relaxed text-[var(--muted)] sm:col-span-1">
             {section.text}
           </span>
-          <span aria-hidden="true" className="hidden text-[var(--accent)] sm:block">
+          <span
+            aria-hidden="true"
+            className="hidden text-[var(--accent)] transition-transform group-hover:translate-x-1 sm:block"
+          >
             →
           </span>
         </Link>

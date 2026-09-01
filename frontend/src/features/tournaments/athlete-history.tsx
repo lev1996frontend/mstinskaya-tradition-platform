@@ -33,7 +33,7 @@ export function AthleteHistory({ history }: { history: AthleteParticipationView[
         <li key={entry.participant_id}>
           <Link
             href={`/tournaments/${entry.tournament_id}/competitions/${entry.competition_id}`}
-            className="group flex flex-col gap-2 border-b border-[var(--border)] py-4 transition-[border-color,transform] hover:translate-x-0.5 hover:border-b-[var(--accent)] sm:flex-row sm:items-center sm:justify-between"
+            className="flex flex-col gap-2 border-b border-[var(--border)] py-4 transition-[border-color,transform] hover:translate-x-0.5 hover:border-b-[var(--accent)] sm:flex-row sm:items-center sm:justify-between"
           >
             <div className="min-w-0">
               <p className="flex items-center gap-2 font-medium">
