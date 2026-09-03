@@ -11,11 +11,11 @@ import { Paintings } from "@/features/home/paintings";
 import { SectionIndex } from "@/features/home/section-index";
 import { StenkaKrug } from "@/features/home/stenka-krug";
 import { TournamentGrid } from "@/features/home/tournament-grid";
-import { BracketGrid } from "@/features/home/tournament-path/bracket-grid";
-import { Dossiers } from "@/features/home/tournament-path/dossiers";
-import { Poedinok } from "@/features/home/tournament-path/poedinok";
-import { RulesQuiz } from "@/features/home/tournament-path/rules-quiz";
-import { TournamentPathProvider } from "@/features/home/tournament-path/tournament-path-context";
+import { BracketGrid } from "@/features/tournaments/tournament-path/bracket-grid";
+import { Dossiers } from "@/features/tournaments/tournament-path/dossiers";
+import { Poedinok } from "@/features/tournaments/tournament-path/poedinok";
+import { RulesQuiz } from "@/features/tournaments/tournament-path/rules-quiz";
+import { TournamentPathProvider } from "@/features/tournaments/tournament-path/tournament-path-context";
 
 /**
  * Front page of the archive — the "Живой архив" v3 redesign

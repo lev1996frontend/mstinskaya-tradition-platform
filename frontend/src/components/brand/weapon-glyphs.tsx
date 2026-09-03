@@ -113,7 +113,7 @@ export type WeaponMotifKey = "hands" | "kisten" | "palka" | "nozh";
  * adding `krug`/`stenka` here would make that illustrative-but-real-mechanic
  * widget sometimes "draw" a face with no domain meaning. The homepage lot
  * cube (6 faces, 2 of them decorative) is a different, purpose-built
- * component in `features/home/tournament-path/` — it imports `KrugIcon`/
+ * component in `features/tournaments/tournament-path/` — it imports `KrugIcon`/
  * `StenkaIcon` directly alongside these four, not through this constant.
  */
 /**
