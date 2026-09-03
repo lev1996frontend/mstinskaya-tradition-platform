@@ -72,6 +72,17 @@ function logEntry(state: TournamentPathState, text: string): JournalEntry[] {
   return [{ time: clock(state.journal.length), text }, ...state.journal].slice(0, 4);
 }
 
+/** Whether the lot cube can currently be thrown — an allow-list (only
+ *  `declare`/`ready`) rather than a block-list, so a new phase added later
+ *  is excluded by default instead of silently becoming throwable (the
+ *  block-list version of this used to omit "result", letting a player
+ *  re-throw after already seeing the outcome). Сходка (runStep 2) never
+ *  throws — see `DECLARE_MINE`. Shared by the reducer and `throwLot` below
+ *  so the two can't drift apart on what counts as throwable. */
+function canThrowLot(state: TournamentPathState): boolean {
+  return (state.phase === "declare" || state.phase === "ready") && !!state.runFighter && state.runStep < 2;
+}
+
 function bout(state: TournamentPathState) {
   const fighter = state.runFighter;
   const step = fighter ? Math.min(state.runStep, 2) : 0;
@@ -185,14 +196,7 @@ function reducer(state: TournamentPathState, action: Action): TournamentPathStat
     case "PICK":
       return { ...state, picked: state.picked === action.name ? null : action.name };
     case "THROW_LOT_START": {
-      // Сходка (runStep 2) never throws — see `DECLARE_MINE` above.
-      if (
-        ["throw", "pause", "idle", "bout", "clash", "over"].includes(state.phase) ||
-        !state.runFighter ||
-        state.runStep >= 2
-      ) {
-        return state;
-      }
+      if (!canThrowLot(state)) return state;
       return { ...state, phase: "throw", rx: action.targetRx, ry: action.targetRy, pendingWeapon: action.weapon };
     }
     case "THROW_LOT_SPUN":
@@ -241,7 +245,7 @@ function reducer(state: TournamentPathState, action: Action): TournamentPathStat
 
       let journal = logEntry(
         state,
-        `Обмен ${round}: ${roundWinFlavor(state.lot)} — ${win === 0 ? b.a : b.b}.`,
+        `Соступ ${round}: ${roundWinFlavor(state.lot)} — ${win === 0 ? b.a : b.b}.`,
       );
 
       if (!done) {
@@ -284,8 +288,8 @@ function weaponLabelLower(index: number): string {
 }
 
 /**
- * Flavor text for a resolved обмен (exchange) — this demo already treats
- * every resolved exchange as deciding that round outright (no in-round
+ * Flavor text for a resolved соступ (round) — this demo already treats
+ * every resolved соступ as deciding that round outright (no in-round
  * point accumulation, per its own "Наглядно" abstraction), which happens to
  * line up with [[tournament-domain-rules]]'s real scoring: an expressive
  * head/neck strike (stick or knife) IS worth a clean round win by itself,
@@ -360,16 +364,8 @@ export function TournamentPathProvider({
     // category (the small icons in `lot-cube.tsx`) is an optional way to
     // narrow the жребий to your own guess, never a prerequisite — offline,
     // a fighter can just throw the cube straight away. `pool` below already
-    // falls back to a fully random weapon when nobody has declared. Сходка
-    // (runStep 2) is the one exception: no жребий there at all — a fighter
-    // picks their own разряд outright via `declareMine`.
-    if (
-      ["throw", "pause", "idle", "bout", "clash", "over"].includes(state.phase) ||
-      !state.runFighter ||
-      state.runStep >= 2
-    ) {
-      return;
-    }
+    // falls back to a fully random weapon when nobody has declared.
+    if (!canThrowLot(state)) return;
     const b = bout(state);
     const pool = [state.declared[b.a], state.declared[b.b]].filter((x) => x !== undefined);
     const weapon = pool.length ? pool[Math.floor(Math.random() * pool.length)] : Math.floor(Math.random() * 4);
@@ -450,4 +446,4 @@ export function useCurrentBout() {
   return bout(state);
 }
 
-export { pairIndexOf };
+export { canThrowLot, pairIndexOf };

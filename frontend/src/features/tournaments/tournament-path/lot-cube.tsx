@@ -2,7 +2,7 @@
 
 import { HandsIcon, KistenIcon, KrugIcon, NozhIcon, PalkaIcon, StenkaIcon } from "@/components/brand/weapon-glyphs";
 import { cubeThrowCss } from "@/lib/motion";
-import { useTournamentPathActions, useTournamentPathState } from "./tournament-path-context";
+import { canThrowLot, useTournamentPathActions, useTournamentPathState } from "./tournament-path-context";
 import { CUBE_FACE_KEYS, WEAPON_LABELS } from "./bracket-data";
 
 const FACE_ICONS = {
@@ -28,10 +28,11 @@ const FACE_TRANSFORMS = [
 
 const PHASE_HINT: Partial<Record<string, string>> = {
   idle: "Выберите бойца",
-  // Same hint as "ready" — declaring below is an optional narrowing, not a
-  // prerequisite; the cube is already throwable in this phase (see
-  // `tournament-path-context.tsx`'s `throwLot`).
-  declare: "Готов к жребию — нажмите на плиту",
+  // Spells out both paths — throw straight away, or narrow the жребий by
+  // declaring below first — since a first-time visitor otherwise has no cue
+  // that the icon row underneath does anything. "ready" already has its
+  // declare done, so it drops back to the single remaining action.
+  declare: "Нажмите на плиту — бросьте жребий, или выберите разряд вручную ниже",
   ready: "Готов к жребию — нажмите на плиту",
   result: "Разряд определён",
   bout: "Идёт бой",
@@ -54,6 +55,11 @@ export function LotCube() {
   // sized up accordingly, rather than leaving a cube that would still throw
   // (misleadingly, since the copy around it now says "без жребия").
   const showCube = !(isFinal && state.phase === "declare");
+  // Once a throw has landed (or any later phase), the plate stops
+  // responding — otherwise clicking it again silently re-rolls the already
+  // revealed разряд, letting a player keep re-throwing until they get the
+  // weapon they want.
+  const throwable = canThrowLot(state);
 
   return (
     <div className="grid place-items-center gap-[22px]">
@@ -94,6 +100,12 @@ export function LotCube() {
           <button
             type="button"
             onClick={throwLot}
+            // `aria-disabled` + `pointer-events-none` below, not the native
+            // `disabled` attribute: disabling a button whose children carry
+            // `transform-style: preserve-3d` collapses every face's own
+            // rotated box to zero width in Chromium, i.e. the whole cube
+            // silently vanishes the moment it stops being throwable.
+            aria-disabled={!throwable}
             onTransitionEnd={(event) => {
               // The result used to reveal off a `setTimeout` matched to
               // `spinMs` — close enough in a quick check, but a timer can
@@ -106,12 +118,12 @@ export function LotCube() {
               confirmSpin();
             }}
             aria-label="Бросить жребий"
-            className="relative cursor-pointer border-none bg-transparent p-0"
+            className={`relative border-none bg-transparent p-0 ${throwable ? "cursor-pointer" : "pointer-events-none cursor-default opacity-60"}`}
             style={{
               width: 132,
               height: 132,
               transformStyle: "preserve-3d",
-              transition: cubeThrowCss(spinMs),
+              transition: `${cubeThrowCss(spinMs)}, opacity 300ms ease`,
               transform: `rotateX(${state.rx}deg) rotateY(${state.ry}deg)`,
             }}
           >
