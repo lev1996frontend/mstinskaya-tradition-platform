@@ -11,7 +11,6 @@ import { Dossiers } from "@/features/tournaments/tournament-path/dossiers";
 import { Poedinok } from "@/features/tournaments/tournament-path/poedinok";
 import { RulesQuiz } from "@/features/tournaments/tournament-path/rules-quiz";
 import { TournamentPathProvider } from "@/features/tournaments/tournament-path/tournament-path-context";
-import { WeaponDrawBillet } from "@/features/tournaments/weapon-draw-billet";
 import { plural } from "@/lib/format";
 import type { Tournament, TournamentStatus } from "@/types";
 
@@ -78,8 +77,6 @@ export default async function TournamentsPage() {
             <TournamentGrid tournaments={sorted} />
           </>
         )}
-
-        <WeaponDrawBillet />
       </Container>
 
       {/* Interactive walkthrough of one fighter's run through a bracket —

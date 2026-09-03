@@ -70,7 +70,7 @@ export function Dossiers() {
     <section id="bojcy" className="border-b border-[var(--border)] bg-[var(--background)]">
       <div className="mx-auto w-full max-w-[88rem] px-6 py-20 sm:px-10 sm:py-24">
         <div className="flex items-center gap-5">
-          <span className="record-label text-[var(--gold)]">Л. 07 · Личные дела</span>
+          <span className="record-label text-[var(--gold)]">Личные дела</span>
           <span aria-hidden="true" className="h-px flex-1 bg-[var(--border)]" />
           <span className="record-label text-[var(--text-4)]">{DOSSIERS.length} участника показаны</span>
         </div>

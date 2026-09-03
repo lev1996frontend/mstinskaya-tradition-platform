@@ -28,7 +28,7 @@ const WEAPON_DESCRIPTIONS = [
 ];
 
 /**
- * The homepage's interactive centerpiece — play a fixed 8-person demo
+ * The interactive centerpiece of `/tournaments` — play a fixed 8-person demo
  * bracket as one fighter. Confirmed product decision: this stays a
  * frontend-only illustration, not wired to the real tournament backend
  * (which has no "declare a category before the draw" or "clash" concept —
@@ -145,7 +145,7 @@ export function Poedinok() {
 
       <div className="relative mx-auto w-full max-w-[88rem] px-6 py-20 sm:px-10 sm:py-24">
         <div className="flex items-center gap-5">
-          <span className="record-label text-[var(--gold)]">Л. 04 · Поединок · {bout.label}</span>
+          <span className="record-label text-[var(--gold)]">Поединок · {bout.label}</span>
           <span aria-hidden="true" className="h-px flex-1 bg-[var(--border)]" />
           <Badge>Наглядно</Badge>
           <span className="record-label" style={{ color: phaseTone }}>
@@ -155,8 +155,8 @@ export function Poedinok() {
 
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--text-3)]">
           Это демонстрация одного пути по турнирной сетке, не настоящий поединок. Настоящий жребий
-          бросается в карточке боя судьёй и сразу пишется сервером в журнал — см. список турниров
-          выше.
+          бросается в карточке боя судьёй и сразу пишется сервером в журнал — см. настоящий список
+          турниров на этой странице.
         </p>
 
         <div className="mt-9 grid grid-cols-1 items-end gap-12 border-b border-[var(--border)] pb-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)]">

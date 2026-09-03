@@ -1,7 +1,7 @@
 import type { WeaponMotifKey } from "@/components/brand/weapon-glyphs";
 
 /**
- * Demo data for the ПОЕДИНОК/СЕТКА homepage walkthrough — ported verbatim
+ * Demo data for the ПОЕДИНОК/СЕТКА `/tournaments` walkthrough — ported verbatim
  * (names, clubs, pairing structure) from the design_handoff_mstinskaya v3
  * prototype. Deliberately not backend-sourced: this is a single frontend-only
  * narrative device (a visitor plays one fixed 8-person bracket as one

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
 
 /**
  * Ported verbatim from the design handoff — these 4 statements were already
@@ -59,7 +59,7 @@ export function RulesQuiz() {
       <div className="mx-auto w-full max-w-[88rem] px-6 py-20 sm:px-10 sm:py-24">
         <div className="flex flex-wrap items-end justify-between gap-10 border-b border-[var(--border)] pb-5">
           <div>
-            <span className="record-label text-[var(--gold)]">Л. 06 · Регламент</span>
+            <span className="record-label text-[var(--gold)]">Регламент</span>
             <h2 className="font-display m-0 mt-3.5 text-[3rem] font-bold tracking-tight">Что по правилам?</h2>
           </div>
           <span className="record-label max-w-sm text-right leading-relaxed text-[var(--text-4)]">

@@ -87,8 +87,9 @@ export function WeaponDrawBillet() {
       </div>
 
       {/* Clickable too, not just the "Покрутить для примера" button below —
-          matches the homepage Поединок demo's own lot cube (`lot-cube.tsx`),
-          where the die itself has always been the primary target. `role`/
+          matches this same page's Поединок demo and its own lot cube
+          (`lot-cube.tsx`), where the die itself has always been the primary
+          target. `role`/
           `tabIndex`/`onKeyDown` since a `motion.div` isn't natively
           focusable or triggerable from the keyboard the way a `<button>` is. */}
       <div

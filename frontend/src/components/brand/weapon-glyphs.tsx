@@ -11,7 +11,7 @@
  * `features/tournaments/weapon-mark.tsx` for the domain-typed bridge) — this
  * list must never be imported as if it were that type, since it also carries
  * `krug`/`stenka` below, which are decorative-only (header nav backs, the
- * homepage lot cube's two non-outcome faces) and have no domain meaning.
+ * `/tournaments` lot cube's two non-outcome faces) and have no domain meaning.
  */
 import type { ComponentType } from "react";
 
@@ -111,7 +111,7 @@ export type WeaponMotifKey = "hands" | "kisten" | "palka" | "nozh";
  * `weapon-draw-billet.tsx` hardcodes 90°-per-face (`360 / WEAPON_MOTIFS.length`)
  * cube rotation math and rolls a real-looking lot from `WEAPON_MOTIFS.length`;
  * adding `krug`/`stenka` here would make that illustrative-but-real-mechanic
- * widget sometimes "draw" a face with no domain meaning. The homepage lot
+ * widget sometimes "draw" a face with no domain meaning. The `/tournaments` lot
  * cube (6 faces, 2 of them decorative) is a different, purpose-built
  * component in `features/tournaments/tournament-path/` — it imports `KrugIcon`/
  * `StenkaIcon` directly alongside these four, not through this constant.

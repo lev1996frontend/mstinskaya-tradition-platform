@@ -50,7 +50,9 @@ notice instead of crashing.
 
 The tournament screens are the deepest part of the app:
 
-- `/tournaments` — list, live events sorted first
+- `/tournaments` — list, live events sorted first, followed by an interactive
+  tournament-walkthrough demo (Поединок/Сетка/Правила-квиз/Бойцы) that plays
+  out one fighter's run through a fixed bracket
 - `/tournaments/[id]` — event overview, disciplines, categories, documents
 - `/tournaments/[id]/competitions/[competitionId]` — the working screen, with tabs
   for participants, teams, standings, bracket, matches and the change journal

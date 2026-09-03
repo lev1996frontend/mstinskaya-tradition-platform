@@ -303,7 +303,7 @@ export function BracketGrid() {
       <div className="mx-auto w-full max-w-[88rem] px-6 py-20 sm:px-10 sm:py-24">
         <div className="flex flex-wrap items-end justify-between gap-10 border-b border-[var(--border)] pb-5">
           <div>
-            <span className="record-label text-[var(--gold)]">Л. 05 · Путь</span>
+            <span className="record-label text-[var(--gold)]">Путь</span>
             <h2 className="font-display m-0 mt-3.5 text-[3rem] font-bold tracking-tight">Карта состязания</h2>
           </div>
           <div className="flex flex-col items-end gap-3.5">
