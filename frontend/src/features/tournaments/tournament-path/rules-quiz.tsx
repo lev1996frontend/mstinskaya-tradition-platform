@@ -102,8 +102,9 @@ export function RulesQuiz() {
                 <button
                   type="button"
                   onClick={next}
-                  className="mt-6 bg-[var(--foreground)] px-6 py-3.5 font-record text-[0.6875rem] uppercase tracking-[0.16em] text-[var(--background)] transition-opacity hover:opacity-90"
+                  className="btn-primary relative mt-6 bg-[var(--foreground)] px-6 py-3.5 font-record text-[0.6875rem] uppercase tracking-[0.16em] text-[var(--background)] transition-[transform,opacity] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:-translate-y-px hover:scale-[1.012] hover:opacity-90 active:translate-y-0.5 active:scale-[.985]"
                 >
+                  <span aria-hidden="true" className="btn-stamp-ring" />
                   Следующий вопрос →
                 </button>
               </div>

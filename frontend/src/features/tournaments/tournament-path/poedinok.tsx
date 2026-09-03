@@ -249,8 +249,9 @@ export function Poedinok() {
                 <button
                   type="button"
                   onClick={primaryAction}
-                  className="font-record bg-[var(--accent)] px-7 py-4 text-[0.75rem] uppercase tracking-[0.16em] text-[var(--background)] transition-transform hover:brightness-110 active:translate-y-0.5 active:scale-[.985]"
+                  className="btn-primary relative font-record bg-[var(--accent)] px-7 py-4 text-[0.75rem] uppercase tracking-[0.16em] text-[var(--background)] transition-[transform,filter] duration-[var(--duration-fast)] ease-[var(--ease-out)] hover:-translate-y-px hover:scale-[1.012] hover:brightness-110 active:translate-y-0.5 active:scale-[.985]"
                 >
+                  <span aria-hidden="true" className="btn-stamp-ring" />
                   {primaryLabel}
                 </button>
               )}
