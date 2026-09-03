@@ -67,7 +67,7 @@ export function RulesQuiz() {
           </span>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 items-start gap-12 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="mt-10 grid grid-cols-1 items-stretch gap-12 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div className="border border-[var(--border)] bg-[var(--surface-muted)] p-10 sm:p-[42px]">
             <span className="record-label text-[var(--text-4)]">
               Вопрос {String(index + 1).padStart(2, "0")} из {String(QUIZ.length).padStart(2, "0")}
@@ -110,7 +110,7 @@ export function RulesQuiz() {
             )}
           </div>
 
-          <aside className="border border-[var(--border)] bg-[var(--surface-muted)] p-6">
+          <aside className="flex flex-col border border-[var(--border)] bg-[var(--surface-muted)] p-6 sm:p-[42px]">
             <span className="record-label text-[var(--text-4)]">Ваш счёт</span>
             <p className="font-record mt-3.5 text-[2.75rem] leading-none text-[var(--foreground)]">
               {String(score).padStart(2, "0")}
@@ -125,7 +125,7 @@ export function RulesQuiz() {
             </p>
             <Link
               href="/rules"
-              className="record-label mt-4 inline-block text-[var(--accent)] hover:underline"
+              className="record-label mt-auto inline-block pt-4 text-[var(--accent)] hover:underline"
             >
               Полный регламент →
             </Link>

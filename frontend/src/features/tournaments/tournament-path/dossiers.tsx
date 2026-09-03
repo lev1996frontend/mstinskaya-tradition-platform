@@ -87,7 +87,7 @@ export function Dossiers() {
               whileHover={reduceMotion ? undefined : { y: -10 }}
               whileFocus={reduceMotion ? undefined : { y: -10 }}
               transition={{ type: "spring", stiffness: 320, damping: 26 }}
-              className="dossier-card group px-[22px] pb-[26px] pt-[22px]"
+              className="dossier-card px-[22px] pb-[26px] pt-[22px]"
               style={{
                 background: "var(--surface-paper)",
                 color: "var(--surface-paper-ink)",
@@ -115,7 +115,7 @@ export function Dossiers() {
                 </span>
               </div>
 
-              <p className="font-display m-0 mt-5 text-[2rem] font-bold leading-none tracking-tight transition-[letter-spacing] duration-300 group-hover:tracking-[0.02em]">
+              <p className="font-display m-0 mt-5 text-[2rem] font-bold leading-none tracking-tight">
                 {d.name}
               </p>
               <p className="mt-2 font-record text-[0.625rem] uppercase tracking-[0.18em]" style={{ color: "var(--surface-paper-label)" }}>
