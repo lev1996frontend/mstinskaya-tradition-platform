@@ -6,6 +6,11 @@ import { ApiOfflineNotice } from "@/components/api-status";
 import { ButtonLink, Container, EmptyState, PageHeader } from "@/components/ui";
 import { TournamentGrid } from "@/features/home/tournament-grid";
 import { DirectionalTransition } from "@/features/transitions/directional-transition";
+import { BracketGrid } from "@/features/tournaments/tournament-path/bracket-grid";
+import { Dossiers } from "@/features/tournaments/tournament-path/dossiers";
+import { Poedinok } from "@/features/tournaments/tournament-path/poedinok";
+import { RulesQuiz } from "@/features/tournaments/tournament-path/rules-quiz";
+import { TournamentPathProvider } from "@/features/tournaments/tournament-path/tournament-path-context";
 import { WeaponDrawBillet } from "@/features/tournaments/weapon-draw-billet";
 import { plural } from "@/lib/format";
 import type { Tournament, TournamentStatus } from "@/types";
@@ -76,6 +81,22 @@ export default async function TournamentsPage() {
 
         <WeaponDrawBillet />
       </Container>
+
+      {/* Interactive walkthrough of one fighter's run through a bracket —
+          lives here, not on the landing page, so it sits next to the real
+          tournament list it explains. Rendered outside `Container` on
+          purpose: these four sections lay themselves out full-bleed
+          (own `mx-auto max-w-[88rem]` wrappers), the same way they did on
+          the homepage before this moved. Поединок/Сетка/Правила-квиз/Бойцы
+          share one `TournamentPathProvider` — the "заявленный разряд" state
+          and the fixed demo bracket must stay one source of truth across
+          all four. */}
+      <TournamentPathProvider>
+        <Poedinok />
+        <BracketGrid />
+        <RulesQuiz />
+        <Dossiers />
+      </TournamentPathProvider>
     </DirectionalTransition>
   );
 }

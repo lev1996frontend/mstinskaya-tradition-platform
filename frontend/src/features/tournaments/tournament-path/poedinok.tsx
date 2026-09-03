@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-
 import { Badge } from "@/components/ui";
 import { CLUBS, RUN_FIGHTERS, WEAPON_LABELS, buildLadder } from "./bracket-data";
 import { FighterCard } from "./fighter-card";
@@ -157,11 +155,8 @@ export function Poedinok() {
 
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--text-3)]">
           Это демонстрация одного пути по турнирной сетке, не настоящий поединок. Настоящий жребий
-          бросается в карточке боя судьёй и сразу пишется сервером в журнал — см.{" "}
-          <Link href="/tournaments" className="underline decoration-[var(--border-strong)] hover:text-[var(--accent)]">
-            страницу турниров
-          </Link>
-          .
+          бросается в карточке боя судьёй и сразу пишется сервером в журнал — см. список турниров
+          выше.
         </p>
 
         <div className="mt-9 grid grid-cols-1 items-end gap-12 border-b border-[var(--border)] pb-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)]">

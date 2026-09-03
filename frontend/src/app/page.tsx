@@ -11,34 +11,29 @@ import { Paintings } from "@/features/home/paintings";
 import { SectionIndex } from "@/features/home/section-index";
 import { StenkaKrug } from "@/features/home/stenka-krug";
 import { TournamentGrid } from "@/features/home/tournament-grid";
-import { BracketGrid } from "@/features/tournaments/tournament-path/bracket-grid";
-import { Dossiers } from "@/features/tournaments/tournament-path/dossiers";
-import { Poedinok } from "@/features/tournaments/tournament-path/poedinok";
-import { RulesQuiz } from "@/features/tournaments/tournament-path/rules-quiz";
-import { TournamentPathProvider } from "@/features/tournaments/tournament-path/tournament-path-context";
 
 /**
  * Front page of the archive — the "Живой архив" v3 redesign
  * (design_handoff_mstinskaya). Masthead, the real live-tournament bulletin,
  * then БУЗА (design_handoff_buza_river — the tradition's origin story,
  * collapsed by default and opened only by the river-boat button in the
- * header; see `features/home/buza-context.tsx`), then the new demo/editorial
- * sections (СТЕНКА → ПОЕДИНОК/СЕТКА/ПРАВИЛА/БОЙЦЫ → СНАРЯЖЕНИЕ → АРХИВ
- * ЭКИПИРОВКИ → ХРОНИКА → ЖИВОПИСЬ), closing with the new anchor index.
- * ПОЕДИНОК/СЕТКА/БОЙЦЫ share one `TournamentPathProvider`
- * — the "заявленный разряд" state and the fixed demo bracket must stay one
- * source of truth across all three (see `tournament-path/bracket-data.ts`),
- * even though ПРАВИЛА sits between them with no state of its own.
+ * header; see `features/home/buza-context.tsx`), then the editorial sections
+ * (СТЕНКА/КРУГ → СНАРЯЖЕНИЕ → АРХИВ ЭКИПИРОВКИ → ХРОНИКА → ЖИВОПИСЬ), closing
+ * with the anchor index. The interactive tournament walkthrough (Поединок/
+ * Сетка/Правила-квиз/Бойцы) that used to live here moved to `/tournaments`
+ * (see `app/tournaments/page.tsx`) — it explains how a real tournament run
+ * plays out, which reads better next to the real tournament list than on the
+ * landing page.
  *
  * СНАРЯЖЕНИЕ (`Equipment`, real bout-rules data — the four lot-drawn weapon
  * categories) and АРХИВ ЭКИПИРОВКИ (`GearArchive`, the nine-item опись a
  * fighter wears regardless of category) sit next to each other on purpose —
- * two different opись, "чем бьются" then "во что одет", not one merged into
+ * two different опись, "чем бьются" then "во что одет", not one merged into
  * the other.
  *
  * The previous `DirectoryIndex` (real-route ToC) is no longer rendered here:
- * with 12 detailed sections plus the new anchor `SectionIndex`, a second
- * "here are five more pages" block read as redundant, and all five routes
+ * with the remaining detailed sections plus the anchor `SectionIndex`, a
+ * second "here are five more pages" block read as redundant, and all routes
  * stay one click away via the header nav. The component itself is left
  * untouched in `features/home/directory-index.tsx` rather than deleted.
  */
@@ -78,13 +73,6 @@ export default async function HomePage() {
       <Buza />
 
       <StenkaKrug />
-
-      <TournamentPathProvider>
-        <Poedinok />
-        <BracketGrid />
-        <RulesQuiz />
-        <Dossiers />
-      </TournamentPathProvider>
 
       <Equipment rules={boutRules} />
       <GearArchive />
