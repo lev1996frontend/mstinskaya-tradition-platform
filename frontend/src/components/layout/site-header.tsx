@@ -19,6 +19,7 @@ const NAV = [
   { href: "/athletes", label: "Спортсмены" },
   { href: "/clubs", label: "Клубы" },
   { href: "/rules", label: "Правила" },
+  { href: "/equipment", label: "Снаряжение" },
   { href: "/education", label: "Обучение" },
 ];
 
@@ -34,6 +35,7 @@ const NAV_WEAPON: Record<string, WeaponMotifKey> = {
   "/athletes": "hands",
   "/clubs": "nozh",
   "/rules": "palka",
+  "/equipment": "hands",
   "/education": "kisten",
 };
 
