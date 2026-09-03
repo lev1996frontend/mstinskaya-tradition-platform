@@ -623,6 +623,42 @@ body::after {
   border-radius: 50%;
 }
 
+/* тиснение (stamp-ring) — the scroll-to-top control's hover: a small ink
+   ring presses out from the arrow, same gesture as the "Допуск" stamps on
+   the dossier cards, so hovering reads as pressing a mark rather than a
+   plain colour change. Retriggers on every hover-enter since `animation`
+   only applies under `:hover` — see `.dossier-spotlight` above for the same
+   restart-on-enter trick. */
+@keyframes stamp-ring {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.75;
+    border-width: 2px;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+    border-width: 0.5px;
+  }
+}
+
+.scroll-top-ring {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.scroll-top-btn:hover .scroll-top-ring,
+.scroll-top-btn:focus-visible .scroll-top-ring {
+  animation: stamp-ring 520ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
 /* свечение (seal-glow) — the "Знаки традиции" row's own two seals light up
    in sync with the clash plate staged above them, so the struck pair reads
    as the *same* two marks, not an unrelated animation floating past them.
