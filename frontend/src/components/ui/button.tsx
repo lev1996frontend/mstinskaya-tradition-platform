@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import type { ComponentProps, ReactNode } from "react";
 
 import { cn } from "./cn";
+import { IMPULSE_SPRING, STOP_SPRING } from "@/lib/motion";
 
 /**
  * Interactive button primitives live in their own client file (motion needs a
@@ -19,11 +20,11 @@ export type ButtonSize = "sm" | "md" | "lg";
 // pressed on a form, not a rounded SaaS pill. Depth is a 1px printed offset
 // (border-b) rather than a drop shadow.
 const buttonBase =
-  "inline-flex items-center justify-center gap-2 rounded-[var(--radius-sm)] font-medium tracking-[0.01em] transition-colors disabled:cursor-not-allowed disabled:opacity-55";
+  "relative inline-flex items-center justify-center gap-2 rounded-[var(--radius-sm)] font-medium tracking-[0.01em] transition-[background-color,border-color,box-shadow,color] duration-[var(--duration-fast)] ease-[var(--ease-out)] disabled:cursor-not-allowed disabled:opacity-55";
 
 const buttonVariants: Record<ButtonVariant, string> = {
   primary:
-    "border-b-2 border-[var(--accent-strong)] bg-[var(--accent)] text-white hover:bg-[var(--accent-strong)]",
+    "btn-primary border-b-2 border-[var(--accent-strong)] bg-[var(--accent)] text-white shadow-[0_1px_0_rgba(0,0,0,0.5)] hover:bg-[var(--accent-strong)] hover:shadow-[0_10px_20px_-12px_rgba(176,42,32,0.45)]",
   secondary:
     "border border-[var(--chrome-line)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--chrome-muted)] hover:bg-[var(--surface-muted)]",
   ghost: "text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]",
@@ -35,6 +36,22 @@ const buttonSizes: Record<ButtonSize, string> = {
   md: "px-3.5 py-2 text-sm",
   lg: "px-5 py-2.5 text-[0.9375rem]",
 };
+
+// тиснение: the button lifts a hair on hover and (primary only) an ink-ring
+// presses out from its edge in --gold — the same "stamp, not colour swap"
+// gesture as the dossier cards and the scroll-to-top arrow (see
+// .btn-stamp-ring in globals.css), extended here to the primary CTAs.
+const liftVariants = { hover: { y: -1, scale: 1.012, transition: STOP_SPRING } };
+const iconHoverVariants = { hover: { scale: 1.15, transition: IMPULSE_SPRING } };
+
+function IconSlot({ icon, reduceMotion }: { icon: ReactNode; reduceMotion: boolean | null }) {
+  if (reduceMotion) return <>{icon}</>;
+  return (
+    <motion.span className="inline-flex" variants={iconHoverVariants}>
+      {icon}
+    </motion.span>
+  );
+}
 
 type IconProps = {
   icon?: ReactNode;
@@ -74,14 +91,17 @@ export function Button({
   const reduceMotion = useReducedMotion();
   return (
     <motion.button
+      whileHover={reduceMotion ? undefined : "hover"}
       whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+      variants={reduceMotion ? undefined : liftVariants}
       transition={{ duration: 0.12 }}
       className={cn(buttonBase, buttonVariants[variant], buttonSizes[size], className)}
       {...props}
     >
-      {icon && iconPosition === "start" ? icon : null}
+      {variant === "primary" && !reduceMotion ? <span aria-hidden="true" className="btn-stamp-ring" /> : null}
+      {icon && iconPosition === "start" ? <IconSlot icon={icon} reduceMotion={reduceMotion} /> : null}
       {children}
-      {icon && iconPosition === "end" ? icon : null}
+      {icon && iconPosition === "end" ? <IconSlot icon={icon} reduceMotion={reduceMotion} /> : null}
     </motion.button>
   );
 }
@@ -103,14 +123,17 @@ export function ButtonLink({
   const reduceMotion = useReducedMotion();
   return (
     <MotionLink
+      whileHover={reduceMotion ? undefined : "hover"}
       whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+      variants={reduceMotion ? undefined : liftVariants}
       transition={{ duration: 0.12 }}
       className={cn(buttonBase, buttonVariants[variant], buttonSizes[size], className)}
       {...props}
     >
-      {icon && iconPosition === "start" ? icon : null}
+      {variant === "primary" && !reduceMotion ? <span aria-hidden="true" className="btn-stamp-ring" /> : null}
+      {icon && iconPosition === "start" ? <IconSlot icon={icon} reduceMotion={reduceMotion} /> : null}
       {children}
-      {icon && iconPosition === "end" ? icon : null}
+      {icon && iconPosition === "end" ? <IconSlot icon={icon} reduceMotion={reduceMotion} /> : null}
     </MotionLink>
   );
 }

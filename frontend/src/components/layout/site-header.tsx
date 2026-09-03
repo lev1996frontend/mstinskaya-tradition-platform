@@ -9,7 +9,7 @@ import { MonogramFlip } from "@/components/brand/monogram-flip";
 import { MenuToggleGlyph } from "@/components/brand/menu-glyph";
 import { WEAPON_MOTIFS, randomWeaponMotif, type WeaponMotifKey } from "@/components/brand/weapon-glyphs";
 import { RiverStrip } from "@/components/layout/river-strip";
-import { ButtonLink, Container, cn } from "@/components/ui";
+import { Button, ButtonLink, Container, cn } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
 import { IMPULSE_TAP, TURN_EASE, stepIn } from "@/lib/motion";
 import { useFocusTrap } from "@/lib/use-focus-trap";
@@ -212,13 +212,9 @@ export function SiteHeader() {
               >
                 {user.name || user.email}
               </Link>
-              <button
-                type="button"
-                onClick={() => void logout()}
-                className="font-record rounded-[var(--radius-sm)] px-2.5 py-2 text-[0.7rem] uppercase tracking-[0.1em] text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
-              >
+              <Button type="button" variant="ghost" size="sm" onClick={() => void logout()}>
                 Выйти
-              </button>
+              </Button>
             </>
           ) : (
             <ButtonLink href="/login" size="sm">
@@ -347,16 +343,17 @@ export function SiteHeader() {
                   >
                     {user.name || user.email}
                   </Link>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setOpen(false);
                       void logout();
                     }}
-                    className="font-record rounded-[var(--radius-sm)] px-2.5 py-2 text-[0.7rem] uppercase tracking-[0.1em] text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
                   >
                     Выйти
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <ButtonLink
