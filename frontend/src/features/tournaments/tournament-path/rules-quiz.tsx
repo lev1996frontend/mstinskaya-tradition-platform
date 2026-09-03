@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 /**
  * Ported verbatim from the design handoff — these 4 statements were already
@@ -122,6 +123,12 @@ export function RulesQuiz() {
             <p className="mt-6 text-[0.8125rem] leading-relaxed text-[var(--text-4)]">
               Судейская аттестация идёт по той же логике, но по полной редакции правил и с разбором видео.
             </p>
+            <Link
+              href="/rules"
+              className="record-label mt-4 inline-block text-[var(--accent)] hover:underline"
+            >
+              Полный регламент →
+            </Link>
           </aside>
         </div>
       </div>
