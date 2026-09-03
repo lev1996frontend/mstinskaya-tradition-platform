@@ -236,6 +236,42 @@ body::after {
   scrollbar-width: thin;
 }
 
+/* Site-wide scrollbar in the material system's own bronze-metal register
+   (--iron at rest, --gold on hover — same two tones as the declare-button
+   borders and lot-cube frame) instead of the OS default, so it reads as
+   part of the archive rather than browser chrome. Square, not rounded —
+   this palette's rules/plates never round their corners, and a pill-shaped
+   thumb would be the one rounded thing on the page. Two APIs, no shared
+   standard yet: `scrollbar-color`/`-width` cover Firefox, the
+   `::-webkit-scrollbar` pseudo-elements cover Chromium/Safari — both point
+   at the same two tokens so neither browser's version reads as unstyled. */
+:root {
+  scrollbar-width: thin;
+  scrollbar-color: var(--iron) var(--background);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--iron);
+  border: 2px solid var(--background);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--gold);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--background);
+}
+
 /* ------------------------------------------------------------ type roles */
 
 /* Editorial display face — headings and hero only, never body copy. */
@@ -657,6 +693,32 @@ body::after {
 .scroll-top-btn:hover .scroll-top-ring,
 .scroll-top-btn:focus-visible .scroll-top-ring {
   animation: stamp-ring 520ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+/* тиснение (btn-stamp-ring) — same gesture as .scroll-top-ring above, sized
+   to the button's own box (inset -3px) instead of a fixed circle, and in
+   --gold rather than --accent since the primary button is already filled
+   with --accent — a gold ring reads as a seal pressed onto the record
+   rather than a repeat of the fill colour. Hover-only animation is gated to
+   fine pointers (see .river-symbol below) so a tap on mobile — where the CTA
+   is the main action, not an incidental hover — can't leave it stuck. */
+.btn-stamp-ring {
+  position: absolute;
+  inset: -3px;
+  border: 1.5px solid var(--gold);
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover .btn-stamp-ring {
+    animation: stamp-ring 480ms cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+}
+
+.btn-primary:focus-visible .btn-stamp-ring {
+  animation: stamp-ring 480ms cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 
 /* свечение (seal-glow) — the "Знаки традиции" row's own two seals light up
