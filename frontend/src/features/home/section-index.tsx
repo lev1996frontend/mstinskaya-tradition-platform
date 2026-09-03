@@ -4,60 +4,37 @@ import Link from "next/link";
  * Homepage anchor index (README section 11) — a sibling to
  * `directory-index.tsx`, not a replacement: that one links to real routes
  * (/tournaments, /rules, …), this one links to in-page anchors built across
- * this section and two others (СЕТКА/ПОЕДИНОК in `tournament-path/`,
- * СНАРЯЖЕНИЕ in `equipment.tsx`, ПРАВИЛА/БОЙЦЫ elsewhere) landing on this
- * same page. Deliberately a different shape: numbered ruled rows that step
- * via `padding-left` on hover, not `directory-index.tsx`'s arrow-translate —
- * two indexes that read as two different documents, not one component reused
- * with new copy. АРХИВ (`#arhiv-ekipirovki`, `gear-archive.tsx`) added
- * alongside СНАРЯЖЕНИЕ — pushed every later index down by one.
+ * this section and one other (СНАРЯЖЕНИЕ in `equipment.tsx`, АРХИВ in
+ * `gear-archive.tsx`) landing on this same page. Deliberately a different
+ * shape: numbered ruled rows that step via `padding-left` on hover, not
+ * `directory-index.tsx`'s arrow-translate — two indexes that read as two
+ * different documents, not one component reused with new copy.
+ *
+ * Поединок/Сетка/Правила/Бойцы used to anchor here too — they moved to
+ * `/tournaments` (see `app/tournaments/page.tsx`) and are no longer listed.
  */
 const SECTIONS: { href: string; index: string; title: string; text: string }[] = [
   {
-    href: "#poedinok",
-    index: "01",
-    title: "Поединок",
-    text: "Прохождение турнира за одного бойца — жребий и до трёх сшибок в каждом круге.",
-  },
-  {
-    href: "#setka",
-    index: "02",
-    title: "Сетка",
-    text: "Карта состязания от первого круга до сходки, с текущим положением бойца.",
-  },
-  {
     href: "#snaryazhenie",
-    index: "03",
+    index: "01",
     title: "Снаряжение",
     text: "Опись четырёх разрядов лота традиции — от безоружного боя до кистеня.",
   },
   {
     href: "#arhiv-ekipirovki",
-    index: "04",
+    index: "02",
     title: "Архив",
     text: "Девять предметов обязательного комплекта, один за другим — от маски до шароваров.",
   },
   {
-    href: "#pravila",
-    index: "05",
-    title: "Правила",
-    text: "Регламент состязания — коротким квизом вместо страницы текста.",
-  },
-  {
-    href: "#bojcy",
-    index: "06",
-    title: "Бойцы",
-    text: "Личные дела участников: клуб, разряд, послужной список.",
-  },
-  {
     href: "#hronika",
-    index: "07",
+    index: "03",
     title: "Хроника",
     text: "Документальные снимки состязаний прошлых лет.",
   },
   {
     href: "#zhivopis",
-    index: "08",
+    index: "04",
     title: "Живопись",
     text: "Кулачный бой в живописи и архивной графике — от начала XIX века до наших дней.",
   },
