@@ -60,7 +60,7 @@ function ChroniclePhotoFrame({ photo }: { photo: ChroniclePhoto }) {
 
 export function Chronicle() {
   return (
-    <section id="hronika" className="border-b-2 border-[var(--rule)] bg-[var(--surface-muted)] py-16 sm:py-20">
+    <section id="hronika" className="wood-grain border-b-2 border-[var(--rule)] bg-[var(--surface-muted)] py-16 sm:py-20">
       <Container wide>
         <div className="mb-10 flex items-center gap-4">
           <span className="record-label shrink-0 text-[var(--gold)]">Л. 10 · Хроника</span>

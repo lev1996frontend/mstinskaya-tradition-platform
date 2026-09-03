@@ -71,7 +71,10 @@ function CreditPlaque({ children }: { children: ReactNode }) {
 
 export function Paintings() {
   return (
-    <section id="zhivopis" className="border-b-2 border-[var(--rule)] bg-[var(--background-deep)] py-16 sm:py-20">
+    <section
+      id="zhivopis"
+      className="weave-deep border-b-2 border-[var(--rule)] bg-[var(--background-deep)] py-16 sm:py-20"
+    >
       <Container wide className="space-y-14">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-3">

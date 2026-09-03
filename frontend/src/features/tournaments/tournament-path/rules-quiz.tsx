@@ -55,7 +55,7 @@ export function RulesQuiz() {
   }
 
   return (
-    <section id="pravila" className="border-b border-[var(--border)] bg-[var(--background-deep)]">
+    <section id="pravila" className="weave-deep border-b border-[var(--border)] bg-[var(--background-deep)]">
       <div className="mx-auto w-full max-w-[88rem] px-6 py-20 sm:px-10 sm:py-24">
         <div className="flex flex-wrap items-end justify-between gap-10 border-b border-[var(--border)] pb-5">
           <div>
@@ -68,7 +68,7 @@ export function RulesQuiz() {
         </div>
 
         <div className="mt-10 grid grid-cols-1 items-stretch gap-12 lg:grid-cols-[minmax(0,1fr)_300px]">
-          <div className="border border-[var(--border)] bg-[var(--surface-muted)] p-10 sm:p-[42px]">
+          <div className="border border-[var(--border)] bg-[var(--surface-muted)] p-6 sm:p-[42px]">
             <span className="record-label text-[var(--text-4)]">
               Вопрос {String(index + 1).padStart(2, "0")} из {String(QUIZ.length).padStart(2, "0")}
             </span>
@@ -81,14 +81,14 @@ export function RulesQuiz() {
                 <button
                   type="button"
                   onClick={() => answer(true)}
-                  className="flex-1 border border-[var(--iron)] bg-transparent px-5 py-5 font-record text-xs uppercase tracking-[0.18em] transition-colors hover:border-[var(--gold)] hover:bg-[var(--surface)]"
+                  className="flex-1 border border-[var(--iron)] bg-transparent px-2.5 py-5 font-record text-xs uppercase tracking-[0.18em] transition-colors hover:border-[var(--gold)] hover:bg-[var(--surface)]"
                 >
                   Разрешено
                 </button>
                 <button
                   type="button"
                   onClick={() => answer(false)}
-                  className="flex-1 border border-[var(--iron)] bg-transparent px-5 py-5 font-record text-xs uppercase tracking-[0.18em] transition-colors hover:border-[var(--accent)] hover:bg-[var(--surface)]"
+                  className="flex-1 border border-[var(--iron)] bg-transparent px-2.5 py-5 font-record text-xs uppercase tracking-[0.18em] transition-colors hover:border-[var(--accent)] hover:bg-[var(--surface)]"
                 >
                   Запрещено
                 </button>

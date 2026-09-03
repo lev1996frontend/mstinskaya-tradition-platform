@@ -45,14 +45,14 @@ export default async function HomePage() {
       {upcoming.length > 0 ? (
         <Container className="py-14 sm:py-20">
           <section aria-labelledby="bulletin-heading" className="space-y-6">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <h2
                 id="bulletin-heading"
                 className="font-display shrink-0 text-2xl font-semibold tracking-tight"
               >
                 Ближайшие турниры
               </h2>
-              <span aria-hidden="true" className="h-px flex-1 bg-[var(--rule)] opacity-70" />
+              <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-[var(--rule)] opacity-70" />
               <Link
                 href="/tournaments"
                 className="record-label shrink-0 text-[var(--accent)] hover:underline"

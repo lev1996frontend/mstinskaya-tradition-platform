@@ -385,17 +385,17 @@ export function BracketGrid() {
               both sides — Назад/Следующий stay pinned to the edges instead
               of everything huddling together whenever the buttons' own text
               leaves little slack for `justify-between` to distribute. */}
-          <div className="flex items-center gap-4 border-t border-[var(--border)] px-5 py-4">
+          <div className="flex items-center gap-2 border-t border-[var(--border)] px-3 py-4">
             <button
               type="button"
               onClick={() => stepRound(-1)}
               disabled={mobileRound === 0}
               aria-label="Предыдущий раунд"
-              className="record-label shrink-0 border border-[var(--border-strong)] px-4 py-2.5 text-[var(--muted)] transition-colors hover:border-[var(--gold)] hover:text-[var(--gold)] disabled:pointer-events-none disabled:opacity-30"
+              className="record-label shrink-0 border border-[var(--border-strong)] px-2.5 py-2.5 text-[var(--muted)] transition-colors hover:border-[var(--gold)] hover:text-[var(--gold)] disabled:pointer-events-none disabled:opacity-30"
             >
               ← Назад
             </button>
-            <div className="flex flex-1 items-center justify-center gap-1.5" role="tablist" aria-label="Раунды">
+            <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5" role="tablist" aria-label="Раунды">
               {columns.map((column, i) => (
                 <button
                   key={column.label}
@@ -417,7 +417,7 @@ export function BracketGrid() {
               onClick={() => stepRound(1)}
               disabled={mobileRound === columns.length - 1}
               aria-label="Следующий раунд"
-              className="record-label shrink-0 border border-[var(--border-strong)] px-4 py-2.5 text-[var(--muted)] transition-colors hover:border-[var(--gold)] hover:text-[var(--gold)] disabled:pointer-events-none disabled:opacity-30"
+              className="record-label shrink-0 border border-[var(--border-strong)] px-2.5 py-2.5 text-[var(--muted)] transition-colors hover:border-[var(--gold)] hover:text-[var(--gold)] disabled:pointer-events-none disabled:opacity-30"
             >
               Следующий →
             </button>

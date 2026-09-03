@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Container, cn } from "@/components/ui";
-import { useBuza } from "@/features/home/buza-context";
+import { useBuza, type BuzaVersion } from "@/features/home/buza-context";
 
 /**
  * "Буза" — the tradition's origin story (design_handoff_buza_river),
@@ -17,7 +17,7 @@ import { useBuza } from "@/features/home/buza-context";
  * CLAUDE.md's guardrail on that) — it's the platform's own origin lore, in
  * the same documentary voice as `stenka-krug.tsx`'s illustrative rosters.
  */
-const ETYMOLOGY_CHIPS: { key: string; label: string; text: string }[] = [
+const ETYMOLOGY_CHIPS: { key: BuzaVersion; label: string; text: string }[] = [
   {
     key: "drink",
     label: "Напиток",
@@ -77,8 +77,10 @@ const LINEAGE: { year: string; text: string }[] = [
 ];
 
 export function Buza() {
-  const { open } = useBuza();
-  const [etymologySelected, setEtymologySelected] = useState<string | null>(null);
+  /* The selected reading lives in the shared context, not in local state: the
+     river's bays (`river-spine.tsx`) open this section *on* a reading, and the
+     chips below have to show that choice rather than contradict it. */
+  const { open, version: etymologySelected, setVersion: setEtymologySelected } = useBuza();
   const [ritualStepActive, setRitualStepActive] = useState(0);
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -95,7 +97,7 @@ export function Buza() {
     <section
       ref={sectionRef}
       id="buza"
-      className="border-b-2 border-[var(--rule)] bg-[var(--background-deep)] py-16 sm:py-20"
+      className="weave-deep border-b-2 border-[var(--rule)] bg-[var(--background-deep)] py-16 sm:py-20"
     >
       <Container wide>
         <div className="mb-10 flex items-center gap-4">
@@ -128,7 +130,7 @@ export function Buza() {
                         <button
                           key={chip.key}
                           type="button"
-                          onClick={() => setEtymologySelected((current) => (current === chip.key ? null : chip.key))}
+                          onClick={() => setEtymologySelected(selected ? null : chip.key)}
                           aria-pressed={selected}
                           className={cn(
                             "record-label cursor-pointer border px-4 py-2 transition-colors",

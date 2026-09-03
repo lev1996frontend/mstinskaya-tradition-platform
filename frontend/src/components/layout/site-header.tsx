@@ -238,8 +238,18 @@ export function SiteHeader() {
 
       {/* River strip only exists to open the "Буза" section, which only
           lives on the homepage — showing it elsewhere would be a control
-          with nothing to open. */}
-      {pathname === "/" ? <RiverStrip /> : null}
+          with nothing to open.
+
+          Hidden past ~1400px, where the margin river's own three bays take
+          over the same three symbols (`components/layout/river-spine.tsx`
+          mirrors this breakpoint). Below it there is no margin wide enough to
+          hold a bay, so the strip stays — the symbols are always in exactly
+          one place, never two. */}
+      {pathname === "/" ? (
+        <div className="min-[1400px]:hidden">
+          <RiverStrip />
+        </div>
+      ) : null}
 
       {/* Full-screen takeover, not a dropdown: reuses the site's own
           numbered-index grammar (01/02/… ruled rows in `font-display`, the

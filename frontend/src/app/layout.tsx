@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Alegreya, Commissioner, IBM_Plex_Mono } from "next/font/google";
 
+import { RiverSpine } from "@/components/layout/river-spine";
 import { ScrollToTop } from "@/components/layout/scroll-to-top";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -62,6 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SmoothScroll>
           <AuthProvider>
             <BuzaProvider>
+              <RiverSpine />
               <SiteHeader />
               <main className="flex-1">{children}</main>
               <SiteFooter />

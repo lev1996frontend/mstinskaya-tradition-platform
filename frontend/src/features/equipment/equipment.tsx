@@ -33,7 +33,7 @@ export function Equipment({ rules }: { rules: WeaponRulesView | null }) {
   return (
     <section
       id="snaryazhenie"
-      className="border-y border-[var(--border)] bg-[var(--background-deep)] py-16 sm:py-20"
+      className="weave-deep border-y border-[var(--border)] bg-[var(--background-deep)] py-16 sm:py-20"
     >
       <Container wide>
         <div className="flex flex-col gap-4 border-b border-[var(--border)] pb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-10">

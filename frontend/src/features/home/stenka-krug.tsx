@@ -99,7 +99,7 @@ function SidePanel({ side, mirror }: { side: Side; mirror: boolean }) {
 
 export function StenkaKrug() {
   return (
-    <section id="stenka" className="border-b-2 border-[var(--rule)] bg-[var(--surface)] py-16 sm:py-20">
+    <section id="stenka" className="wood-grain border-b-2 border-[var(--rule)] bg-[var(--surface)] py-16 sm:py-20">
       <Container wide>
         <div className="mb-10 flex items-center gap-4">
           <span className="record-label shrink-0 text-[var(--gold)]">Л. 03 · Стенка / круг</span>

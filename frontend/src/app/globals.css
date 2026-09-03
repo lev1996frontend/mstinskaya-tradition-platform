@@ -204,6 +204,35 @@ body {
 }
 
 /*
+ * Свет архива — the one light source in the room, and the reason the coal
+ * ground reads as a lit surface instead of a hex value.
+ *
+ * Two fixed layers, no animation and no parallax (same discipline as the
+ * grain below): a warm ochre spill entering from above the page, and a
+ * vignette letting the ground fall away at the far corners. Deliberately NOT
+ * a "gradient blob" — there is no floating coloured shape, only a single
+ * directional falloff and an edge falloff, which is what a table under one
+ * lamp actually looks like.
+ *
+ * It sits on top of the section grounds rather than under them because every
+ * section paints its own opaque colour (`bg-[var(--background-deep)]` and
+ * friends), so a body-level gradient would never be seen. Alphas are kept low
+ * for exactly that reason — this passes over content, so it must never be
+ * strong enough to mute text. Below the grain (z 70) and below the header
+ * (z 30 sticky) is deliberate: chrome stays unlit-looking and legible.
+ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  background-image:
+    radial-gradient(150% 62% at 50% -8%, rgba(176, 122, 53, 0.085), transparent 58%),
+    radial-gradient(118% 100% at 50% 42%, transparent 66%, rgba(6, 5, 4, 0.26) 100%);
+}
+
+/*
  * Paper grain. A fixed, non-interactive fractal-noise overlay: the one piece
  * of "texture" applied to the whole page, and it earns its place — it is
  * what stops large flat wood/charcoal fields from reading as a flat digital
@@ -351,6 +380,86 @@ body::after {
     color-mix(in srgb, var(--rule) 32%, transparent) 1.625rem,
     color-mix(in srgb, var(--rule) 32%, transparent) calc(1.625rem + 1px)
   );
+}
+
+/*
+ * Плетёнка, слепое тиснение (weave-deep) — the same interlace motif
+ * `components/brand/interlace-pattern.tsx` draws in the hero, at ~3.6× the
+ * tile and a fifth of the strength: blind embossing on the archive's own
+ * board rather than a pattern you are meant to look at. Reserved for the
+ * `--background-deep` sections, so the weave marks a register (the deep
+ * ground) instead of wallpapering the site — the hero keeps the SVG version
+ * as the one place the motif is legible enough to read as a motif.
+ *
+ * Drawn with two repeating gradients rather than the SVG because the motif
+ * is, geometrically, exactly that: the diamond's edges and both of its
+ * diagonals all lie at ±45°, so two line families reproduce the whole tile.
+ * That in turn lets this be a plain class on a section — a CSS background
+ * needs none of the `relative`/`overflow-hidden` plumbing the SVG version
+ * requires at every call site.
+ *
+ * `z-index: -1` inside an `isolation: isolate` stacking context puts the
+ * weave above the section's own background colour and below its content, so
+ * it can never wash over running text — and `isolate` keeps that negative
+ * layer from escaping behind an ancestor's background.
+ */
+.weave-deep {
+  position: relative;
+  isolation: isolate;
+}
+
+.weave-deep::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  /* 0.05, not the 0.028 of a first pass: `--gold` is a dark ochre and
+     `--background-deep` is nearly black, so under 4% the weave fell below the
+     page grain's own noise floor and simply wasn't there. */
+  opacity: 0.05;
+  background-image:
+    repeating-linear-gradient(45deg, var(--gold) 0 1px, transparent 1px 56px),
+    repeating-linear-gradient(-45deg, var(--gold) 0 1px, transparent 1px 56px);
+  /* Same diagonal falloff as the hero's own weave: an even field reads as
+     wallpaper, a falloff reads as a woven ground. */
+  -webkit-mask-image: linear-gradient(to bottom left, black 0%, rgba(0, 0, 0, 0.35) 45%, transparent 78%);
+  mask-image: linear-gradient(to bottom left, black 0%, rgba(0, 0, 0, 0.35) 45%, transparent 78%);
+}
+
+/*
+ * Дерево (wood-grain) — the token file has called the surfaces "wood-toned"
+ * since the first pass, but that was only ever a claim about four hex values.
+ * This makes it true: anisotropic fractal noise (low frequency across, high
+ * frequency down) reads as grain running the length of a wide board.
+ *
+ * Section grounds only, never cards. At card scale the streaks stop reading
+ * as one continuous board and start reading as noise on a box — the whole
+ * point is that a section is a single sawn surface. Scrolls with the section
+ * rather than being fixed like the page grain, because a board is a thing on
+ * the page, not a film over the lens.
+ */
+.wood-grain {
+  position: relative;
+  isolation: isolate;
+}
+
+.wood-grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  /* Tuned down twice from a first pass at 0.5: anisotropic turbulence gets
+     legible as *stripes* long before it gets legible as grain, and striping a
+     whole section reads as a broken gradient, not as a board. The x frequency
+     is also up from 0.012 so the fibres break and wander instead of running
+     the full width as parallel rules. */
+  opacity: 0.22;
+  /* soft-light keeps the surface's average lightness where the token put it
+     and spends the texture on local variation instead of tinting the ground. */
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.026 0.55' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='420' height='420' filter='url(%23w)'/%3E%3C/svg%3E");
 }
 
 /*
@@ -933,30 +1042,135 @@ body::after {
   }
 }
 
-/* раскол (wax-crack-a / wax-crack-b) — the wax seal's two clipped halves
-   (`river-wax-seal.tsx`) parting once its patina is fully scratched away.
-   One-way and held (`both`), unlike `.lunge-a`/`.lunge-b` above (which
-   return to origin) — a broken seal doesn't snap back together. */
-@keyframes wax-crack-a {
-  100% {
-    transform: translate(-7px, 2px) rotate(-16deg);
-    opacity: 0.88;
+/* Ширина поля (river-rail) — the margin river's own box, sized to the page
+   gutter at each width so a 1px line never crosses a text column.
+
+   Written here rather than as Tailwind width utilities because the bayed rail
+   needs a *custom* breakpoint (~1400px, where `Container wide` finally leaves
+   room for a bay) that has to beat `xl:`'s width — and Tailwind orders an
+   arbitrary `min-[1400px]:` variant *before* the named `xl:`, so the narrower
+   rule won and the rail stayed 40px. `.is-bayed` outranks the base class on
+   specificity instead, which no longer depends on source order at all. */
+.river-rail {
+  width: 1.5rem;
+}
+
+@media (min-width: 1280px) {
+  .river-rail {
+    width: 2.5rem;
   }
 }
 
-@keyframes wax-crack-b {
-  100% {
-    transform: translate(7px, 2px) rotate(16deg);
-    opacity: 0.88;
+@media (min-width: 1536px) {
+  .river-rail {
+    width: 3.5rem;
   }
 }
 
-.wax-crack-a {
-  animation: wax-crack-a 480ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+@media (min-width: 1400px) {
+  .river-rail.is-bayed {
+    width: 4rem;
+  }
 }
 
-.wax-crack-b {
-  animation: wax-crack-b 480ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+/* затон (river-berth) — a symbol moored in one of the margin river's bays
+   (`components/layout/river-spine.tsx`). Same rest/hover dimming as the header
+   strip's own symbols (`.river-symbol` above), and gated to fine pointers for
+   the same reason: on touch there is no hover to reveal them with, and the
+   rail is hidden below `lg` anyway. */
+@media (hover: hover) and (pointer: fine) {
+  .river-berth {
+    /* Higher than the header strip's own 0.45: one of these three is the boat
+       carrying the reader's position, so it has to stay legible at rest rather
+       than waiting to be hovered. */
+    opacity: 0.72;
+    transition: opacity 200ms ease;
+  }
+
+  .river-berth:hover,
+  .river-berth:focus-visible {
+    opacity: 1;
+  }
+}
+
+/* The bay's name, stated only when asked. Sits outside the rail's own width on
+   purpose — the rail is 64px and this is a two-line plate — which is safe
+   because the rail has no `overflow: hidden` and the label is inert. */
+.river-berth-label {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  text-align: left;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 180ms ease;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--foreground);
+  padding: 6px 9px;
+  box-shadow: var(--shadow-md);
+}
+
+.river-berth:hover .river-berth-label,
+.river-berth:focus-visible .river-berth-label {
+  opacity: 1;
+}
+
+/* держать удар (shield-brace / shield-guard) — the river shield's click
+   reaction (`river-wax-seal.tsx`). Replaces `.wax-crack-a`/`.wax-crack-b`,
+   which split the seal into two halves that parted and stayed parted: a
+   shield that shatters is a one-shot prop, and this one has to survive being
+   hit on every visit. So the blow is absorbed, not fatal — `.shield-brace`
+   gives ground along the strike axis, overshoots coming back and returns to
+   origin (unlike the crack, which was one-way and held).
+
+   `.shield-guard` is the separate, held half: the raised stance the shield
+   keeps for as long as "Буза" is open. Split across two elements on purpose —
+   the recoil animation and the guard both write `transform`, and the last one
+   to run would silently drop the other. */
+@keyframes shield-brace {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  18% {
+    transform: translate(3px, 1px) scale(0.93);
+  }
+
+  45% {
+    transform: translate(-1px, 0) scale(1.03);
+  }
+
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+.shield-brace {
+  animation: shield-brace 420ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+.shield-guard {
+  transition:
+    transform 260ms cubic-bezier(0.2, 0.8, 0.3, 1),
+    filter 260ms ease;
+}
+
+.shield-guard-raised {
+  transform: translateY(-2px) scale(1.06);
+  filter: brightness(1.12) drop-shadow(0 3px 6px rgb(0 0 0 / 0.45));
+}
+
+/* A shield holding the guard shouldn't also be dimmed at rest. `.river-symbol`
+   above idles every symbol at 0.55 and only lifts that on hover, which
+   swallowed the raised pose the moment the pointer moved away — the one state
+   that has to stay readable without a pointer on it, since it's the strip's
+   tell that "Буза" is open. Two classes, so it outranks `.river-symbol`
+   without `!important`. */
+.river-symbol.shield-on-guard {
+  opacity: 1;
 }
 
 /* черпак (mug-tip) — the river mug's click flourish, a quick pour-tip

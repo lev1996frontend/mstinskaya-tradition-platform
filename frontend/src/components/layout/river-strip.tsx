@@ -32,11 +32,11 @@ const ZONE_WIDTH_PERCENT = 100 / 3;
 export function RiverStrip() {
   return (
     <div
-      className="relative h-11 overflow-hidden border-t border-[#241c15]"
+      className="relative h-14 overflow-hidden border-t border-[#241c15]"
       style={{ background: "linear-gradient(180deg, #100e0c, #161310)" }}
     >
       <svg
-        viewBox="0 0 1440 44"
+        viewBox="0 0 1440 56"
         preserveAspectRatio="none"
         aria-hidden="true"
         className="absolute inset-0 h-full w-full"

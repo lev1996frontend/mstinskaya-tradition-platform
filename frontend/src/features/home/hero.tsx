@@ -35,7 +35,10 @@ import { HeroClashProvider, HeroIllustration, HeroIllustrationToggle, HeroTradit
  */
 export function Hero() {
   return (
-    <section id="krug" className="relative overflow-hidden border-b-2 border-[var(--rule)] bg-[var(--surface)]">
+    <section
+      id="krug"
+      className="wood-grain relative overflow-hidden border-b-2 border-[var(--rule)] bg-[var(--surface)]"
+    >
       <InterlacePattern className="text-[var(--accent)]" />
 
       <Container wide className="relative">
