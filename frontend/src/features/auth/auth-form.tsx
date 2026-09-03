@@ -36,7 +36,14 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
-    setError(null);
+    // No `setError(null)` here: clearing it immediately unmounts the Alert
+    // the instant you click retry, then remounts it once the new attempt
+    // resolves — a mount/unmount pair on every single click, which is what
+    // made everything below the card (starting with "Нет аккаунта?") visibly
+    // jump on each press. Leaving the previous error in place until the new
+    // result is known (cleared on success below, replaced on failure in the
+    // catch block) means a retry only ever changes the Alert's text, never
+    // removes and re-adds the element, so nothing below it moves.
     try {
       if (mode === "login") {
         await login(email.trim(), password);
