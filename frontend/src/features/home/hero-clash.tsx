@@ -1,11 +1,10 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 
 import { Seal } from "@/components/brand/seal";
 import { WEAPON_MOTIFS, randomWeaponMotif, type WeaponMotifKey } from "@/components/brand/weapon-glyphs";
-import { useRouter } from "next/navigation";
-
 import { CLASH_RESULT_LINES, ClashCard } from "@/features/home/clash-card";
 import { EQUIPMENT_ITEMS } from "@/features/home/equipment-items";
 

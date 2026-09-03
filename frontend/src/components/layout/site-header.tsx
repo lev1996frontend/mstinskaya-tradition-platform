@@ -245,10 +245,11 @@ export function SiteHeader() {
           with nothing to open. */}
       {pathname === "/" ? <RiverStrip /> : null}
 
-      {/* Full-screen takeover, not a dropdown: reuses the homepage's own
-          numbered-index grammar (`section-index.tsx`'s 01/02/… ruled rows in
-          `font-display`) instead of a small accordion panel, so the site's
-          own "table of contents" pattern carries the primary nav too. */}
+      {/* Full-screen takeover, not a dropdown: reuses the site's own
+          numbered-index grammar (01/02/… ruled rows in `font-display`, the
+          same pattern `directory-index.tsx` uses for its real-route ToC)
+          instead of a small accordion panel, so the "table of contents"
+          pattern carries the primary nav too. */}
       <AnimatePresence>
         {open ? (
           <motion.div

@@ -27,8 +27,10 @@ import { TournamentGrid } from "@/features/home/tournament-grid";
  * The previous `DirectoryIndex` (real-route ToC) is no longer rendered here —
  * all routes stay one click away via the header nav — and the component
  * itself is left untouched in `features/home/directory-index.tsx` rather
- * than deleted. `SectionIndex` (the in-page anchor ToC) is gone the same
- * way, left untouched in `features/home/section-index.tsx`.
+ * than deleted. `SectionIndex` (the in-page anchor ToC) went further: once
+ * the sections it indexed had all moved to `/tournaments`/`/equipment`, it
+ * was pure dead code pointing at anchors that no longer existed, so it was
+ * deleted outright rather than kept unrendered.
  */
 export default async function HomePage() {
   const tournaments = await listTournaments();
