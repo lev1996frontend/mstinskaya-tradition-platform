@@ -1,11 +1,9 @@
 import Link from "next/link";
 
-import { getBoutRules, listTournaments } from "@/api/tournaments";
+import { listTournaments } from "@/api/tournaments";
 import { Container } from "@/components/ui";
 import { Buza } from "@/features/home/buza";
 import { Chronicle } from "@/features/home/chronicle";
-import { Equipment } from "@/features/equipment/equipment";
-import { GearArchive } from "@/features/equipment/gear-archive";
 import { Hero } from "@/features/home/hero";
 import { Paintings } from "@/features/home/paintings";
 import { StenkaKrug } from "@/features/home/stenka-krug";
@@ -16,33 +14,24 @@ import { TournamentGrid } from "@/features/home/tournament-grid";
  * (design_handoff_mstinskaya). Masthead, the real live-tournament bulletin,
  * then БУЗА (design_handoff_buza_river — the tradition's origin story,
  * collapsed by default and opened only by the river-boat button in the
- * header; see `features/home/buza-context.tsx`), then the editorial sections
- * (СТЕНКА/КРУГ → СНАРЯЖЕНИЕ → АРХИВ ЭКИПИРОВКИ → ХРОНИКА → ЖИВОПИСЬ). The
- * interactive tournament walkthrough (Поединок/Сетка/Правила-квиз/Бойцы)
- * that used to live here moved to `/tournaments`
- * (see `app/tournaments/page.tsx`) — it explains how a real tournament run
- * plays out, which reads better next to the real tournament list than on the
- * landing page.
+ * header; see `features/home/buza-context.tsx`), then the remaining
+ * editorial sections (СТЕНКА/КРУГ → ХРОНИКА → ЖИВОПИСЬ).
  *
- * СНАРЯЖЕНИЕ (`Equipment`, real bout-rules data — the four lot-drawn weapon
- * categories) and АРХИВ ЭКИПИРОВКИ (`GearArchive`, the nine-item опись a
- * fighter wears regardless of category) sit next to each other on purpose —
- * two different опись, "чем бьются" then "во что одет", not one merged into
- * the other.
+ * Two blocks that used to live here moved out to their own routes: the
+ * interactive tournament walkthrough (Поединок/Сетка/Правила-квиз/Бойцы) to
+ * `/tournaments` (see `app/tournaments/page.tsx`), and Снаряжение/Архив
+ * экипировки to `/equipment` (see `app/equipment/page.tsx`) — both explain
+ * or catalog something with its own dedicated page now, which reads better
+ * there than on the landing page.
  *
  * The previous `DirectoryIndex` (real-route ToC) is no longer rendered here —
  * all routes stay one click away via the header nav — and the component
  * itself is left untouched in `features/home/directory-index.tsx` rather
- * than deleted.
- *
- * `SectionIndex` (the in-page anchor ToC) is gone from here too, ahead of
- * the IA-restructure spec's own Stage 3: once Поединок/Сетка/Правила/Бойцы
- * moved to `/tournaments`, it sat below every section it listed — no longer
- * navigation, just a recap of what a reader had already scrolled past. Left
- * untouched in `features/home/section-index.tsx`, same as `DirectoryIndex`.
+ * than deleted. `SectionIndex` (the in-page anchor ToC) is gone the same
+ * way, left untouched in `features/home/section-index.tsx`.
  */
 export default async function HomePage() {
-  const [tournaments, boutRules] = await Promise.all([listTournaments(), getBoutRules()]);
+  const tournaments = await listTournaments();
   const upcoming = tournaments
     .filter((tournament) => tournament.status !== "ARCHIVED")
     .slice(0, 3);
@@ -78,8 +67,6 @@ export default async function HomePage() {
 
       <StenkaKrug />
 
-      <Equipment rules={boutRules} />
-      <GearArchive />
       <Chronicle />
       <Paintings />
     </>
