@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { Alegreya, Commissioner, IBM_Plex_Mono } from "next/font/google";
 
+import { ScrollToTop } from "@/components/layout/scroll-to-top";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { AuthProvider } from "@/features/auth/auth-context";
-import { IrisTransitionProvider } from "@/features/transitions/iris-transition";
+import { BuzaProvider } from "@/features/home/buza-context";
+import { SmoothScroll } from "@/features/transitions/smooth-scroll";
 
 import "./globals.css";
 
@@ -57,13 +59,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${commissioner.variable} ${alegreya.variable} ${plexMono.variable}`}
     >
       <body className="flex min-h-dvh flex-col">
-        <IrisTransitionProvider>
+        <SmoothScroll>
           <AuthProvider>
-            <SiteHeader />
-            <main className="flex-1">{children}</main>
-            <SiteFooter />
+            <BuzaProvider>
+              <SiteHeader />
+              <main className="flex-1">{children}</main>
+              <SiteFooter />
+              <ScrollToTop />
+            </BuzaProvider>
           </AuthProvider>
-        </IrisTransitionProvider>
+        </SmoothScroll>
       </body>
     </html>
   );

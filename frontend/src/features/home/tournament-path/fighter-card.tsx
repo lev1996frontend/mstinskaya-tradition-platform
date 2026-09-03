@@ -3,7 +3,7 @@
 import { WEAPON_LABELS } from "./bracket-data";
 import { KineticName } from "./kinetic-name";
 import { HandsIcon, KistenIcon, NozhIcon, PalkaIcon } from "@/components/brand/weapon-glyphs";
-import { MaskGlyph } from "@/components/brand/mask-glyph";
+import { GearMaskIllustration } from "@/components/brand/gear-mask-illustration";
 
 const FACE_ICONS = { hands: HandsIcon, palka: PalkaIcon, nozh: NozhIcon, kisten: KistenIcon } as const;
 
@@ -76,7 +76,9 @@ export function FighterCard({
               <span className="mask-ripple" style={{ animationDelay: "930ms" }} />
               <span className="mask-ripple" style={{ animationDelay: "1860ms" }} />
               <span className="absolute inset-0 grid place-items-center">
-                <MaskGlyph size={112} />
+                <span className="relative" style={{ width: 112, height: 112 * 1.3 }}>
+                  <GearMaskIllustration hovering={false} staticFallback />
+                </span>
               </span>
             </span>
           </span>

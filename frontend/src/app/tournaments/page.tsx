@@ -5,6 +5,7 @@ import { listTournamentsWithStatus } from "@/api/tournaments";
 import { ApiOfflineNotice } from "@/components/api-status";
 import { ButtonLink, Container, EmptyState, PageHeader } from "@/components/ui";
 import { TournamentGrid } from "@/features/home/tournament-grid";
+import { DirectionalTransition } from "@/features/transitions/directional-transition";
 import { WeaponDrawBillet } from "@/features/tournaments/weapon-draw-billet";
 import { plural } from "@/lib/format";
 import type { Tournament, TournamentStatus } from "@/types";
@@ -42,37 +43,39 @@ export default async function TournamentsPage() {
   const sorted = sortTournaments(tournaments);
 
   return (
-    <Container className="space-y-8 py-10">
-      <PageHeader
-        eyebrow="Соревнования"
-        title="Турниры"
-        description="Полный список событий: от регистрации до итоговых результатов. Внутри каждого турнира — дисциплины с участниками, командами, сеткой и таблицей."
-        actions={
-          <ButtonLink href="/tournaments/new" icon={<Plus className="size-4" strokeWidth={2.5} />}>
-            Создать турнир
-          </ButtonLink>
-        }
-      />
+    <DirectionalTransition>
+      <Container className="space-y-8 py-10">
+        <PageHeader
+          eyebrow="Соревнования"
+          title="Турниры"
+          description="Полный список событий: от регистрации до итоговых результатов. Внутри каждого турнира — дисциплины с участниками, командами, сеткой и таблицей."
+          actions={
+            <ButtonLink href="/tournaments/new" icon={<Plus className="size-4" strokeWidth={2.5} />}>
+              Создать турнир
+            </ButtonLink>
+          }
+        />
 
-      {sorted.length === 0 ? (
-        <div className="space-y-4">
-          {offline ? <ApiOfflineNotice /> : null}
-          <EmptyState
-            title="Турниров пока нет"
-            icon={<Trophy className="size-5" strokeWidth={1.75} />}
-            description="Список появится, как только организатор создаст первое событие."
-          />
-        </div>
-      ) : (
-        <>
-          <p className="text-sm text-[var(--muted)]">
-            {plural(sorted.length, "турнир", "турнира", "турниров")}
-          </p>
-          <TournamentGrid tournaments={sorted} />
-        </>
-      )}
+        {sorted.length === 0 ? (
+          <div className="space-y-4">
+            {offline ? <ApiOfflineNotice /> : null}
+            <EmptyState
+              title="Турниров пока нет"
+              icon={<Trophy className="size-5" strokeWidth={1.75} />}
+              description="Список появится, как только организатор создаст первое событие."
+            />
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-[var(--muted)]">
+              {plural(sorted.length, "турнир", "турнира", "турниров")}
+            </p>
+            <TournamentGrid tournaments={sorted} />
+          </>
+        )}
 
-      <WeaponDrawBillet />
-    </Container>
+        <WeaponDrawBillet />
+      </Container>
+    </DirectionalTransition>
   );
 }

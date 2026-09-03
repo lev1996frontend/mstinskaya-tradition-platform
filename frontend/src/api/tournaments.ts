@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { apiListOrEmpty, apiListWithOffline, apiRequest, apiRequestOrNull } from "@/lib/api";
 import type {
   AthleteParticipationView,
@@ -35,8 +37,9 @@ export const listTournaments = () => apiListOrEmpty<Tournament>("/api/v1/tournam
 export const listTournamentsWithStatus = () =>
   apiListWithOffline<Tournament>("/api/v1/tournaments");
 
-export const getTournament = (id: string) =>
-  apiRequestOrNull<Tournament>(`/api/v1/tournaments/${id}`);
+export const getTournament = cache((id: string) =>
+  apiRequestOrNull<Tournament>(`/api/v1/tournaments/${id}`),
+);
 
 export const listCategories = (tournamentId: string) =>
   apiListOrEmpty<TournamentCategory>(`/api/v1/tournaments/${tournamentId}/categories`);

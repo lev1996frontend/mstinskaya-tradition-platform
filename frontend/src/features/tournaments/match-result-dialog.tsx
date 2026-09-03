@@ -11,6 +11,7 @@ import { formatDateTime } from "@/lib/format";
 import { resultMethod } from "@/lib/labels";
 import { IMPULSE_SPRING, IMPULSE_TAP } from "@/lib/motion";
 import { RESULT_METHOD_ICONS } from "@/lib/result-method-icons";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 import type { MatchView, ResultMethod } from "@/types";
 
 /**
@@ -120,6 +121,8 @@ export function MatchResultDialog({
     dialogRef.current?.querySelector<HTMLElement>("select, input, button")?.focus();
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
+
+  useFocusTrap(dialogRef, true);
 
   const sides = [match.participant_a, match.participant_b].filter(
     (side): side is NonNullable<typeof side> => Boolean(side),

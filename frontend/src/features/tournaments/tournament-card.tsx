@@ -1,10 +1,7 @@
-"use client";
-
 import Link from "next/link";
-import type { MouseEvent } from "react";
+import { ViewTransition } from "react";
 
 import { Card, cn } from "@/components/ui";
-import { useIrisTransition } from "@/features/transitions/iris-transition";
 import { formatDateRange, formatPlace } from "@/lib/format";
 import type { Tournament } from "@/types";
 
@@ -17,18 +14,7 @@ export function TournamentCard({
   tournament: Tournament;
   featured?: boolean;
 }) {
-  const triggerIris = useIrisTransition();
   const href = `/tournaments/${tournament.id}`;
-
-  function handleClick(event: MouseEvent<HTMLAnchorElement>) {
-    // Plain left-click only — let ctrl/cmd/middle-click open in a new tab/
-    // window as normal instead of hijacking navigation.
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-      return;
-    }
-    event.preventDefault();
-    triggerIris(event.clientX, event.clientY, href);
-  }
 
   return (
     <Card
@@ -38,18 +24,20 @@ export function TournamentCard({
     >
       <Link
         href={href}
-        onClick={handleClick}
+        transitionTypes={["nav-forward"]}
         className={cn("flex h-full flex-col gap-3 p-5", featured && "sm:p-7")}
       >
         <div className="flex items-start justify-between gap-3">
-          <h3
-            className={cn(
-              "min-w-0 text-balance font-semibold leading-snug",
-              featured && "font-display text-2xl",
-            )}
-          >
-            {tournament.title}
-          </h3>
+          <ViewTransition name={`tournament-title-${tournament.id}`} share="text-morph" default="none">
+            <h3
+              className={cn(
+                "min-w-0 text-balance font-semibold leading-snug",
+                featured && "font-display text-2xl",
+              )}
+            >
+              {tournament.title}
+            </h3>
+          </ViewTransition>
           <TournamentStatusBadge status={tournament.status} />
         </div>
 

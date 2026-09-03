@@ -6,9 +6,7 @@ import { Seal } from "@/components/brand/seal";
 import { WEAPON_MOTIFS, randomWeaponMotif, type WeaponMotifKey } from "@/components/brand/weapon-glyphs";
 import { CLASH_RESULT_LINES, ClashCard } from "@/features/home/clash-card";
 import { EQUIPMENT_ITEMS } from "@/features/home/equipment-items";
-import { describeWeaponRule } from "@/features/home/equipment";
 import { selectExhibit } from "@/lib/gear-archive-link";
-import type { WeaponRulesView } from "@/types";
 
 type Clash = { a: WeaponMotifKey; b: WeaponMotifKey; nonce: number; result: string };
 type IllustrationMode = "mask" | "equipment";
@@ -93,18 +91,15 @@ export function HeroIllustration({ mask }: { mask: ReactNode }) {
 
 /** The switch between `mode`'s two illustration states — the mask's own
  *  hover reveal stays the idle default; this is the only way to reach the
- *  опись. Rendered by `hero.tsx` inside a footer strip docked directly onto
- *  the plate's own border (sharing its left/right/bottom edge), so it reads
- *  as part of the specimen card rather than a link floating in the page's
- *  own whitespace below it. Unstyled beyond color/hover here on purpose —
- *  the docked strip supplies the padding and border. */
+ *  опись. Rendered by `hero.tsx` bare below the plate, no wrapping bar —
+ *  just the button, right-aligned by its parent. */
 export function HeroIllustrationToggle() {
   const { mode, toggleMode } = useClashStage();
   return (
     <button
       type="button"
       onClick={toggleMode}
-      className="record-label text-[var(--accent)] transition-colors hover:text-[var(--accent-deep)]"
+      className="record-label inline-block text-[var(--accent)] transition-transform duration-200 ease-out hover:scale-110 hover:brightness-125 focus-visible:scale-110 focus-visible:brightness-125"
     >
       {mode === "mask" ? "Показать снаряжение →" : "← Показать маску"}
     </button>
@@ -121,21 +116,18 @@ export function HeroIllustrationToggle() {
  *
  * Hover/focus (not click — click stays the existing сшибка trigger) makes
  * that one seal grow and the row's other three dim, catalogue-style, and
- * reveals a one-line description underneath. The description is never
- * invented copy: it's `rules` (the same `GET /api/v1/bout-rules` payload
- * `equipment.tsx`'s "Чем бьются" section renders further down the page,
- * threaded down from `page.tsx` → `Hero`) run through the same
- * `describeWeaponRule` used there, so a знак here and its full entry later
- * on the page always say the same true thing. `rules` can be `null` (API
- * unreachable) — the description slot just stays empty, same graceful
- * degradation `equipment.tsx` already has for that case.
+ * reveals a one-line description underneath. This is the equipment glossary
+ * line from `WEAPON_MOTIFS.description` (what the snaryad physically is) —
+ * a deliberately different job from `equipment.tsx`'s own `describeWeaponRule`
+ * (competition-rule staging notes further down the page); the two aren't
+ * meant to say the same thing, so this no longer threads `rules` down from
+ * `page.tsx` → `Hero` just to look one up.
  */
-export function HeroTraditionSeals({ rules }: { rules: WeaponRulesView | null }) {
+export function HeroTraditionSeals() {
   const { clash, trigger } = useClashStage();
   const [hoveredKey, setHoveredKey] = useState<WeaponMotifKey | null>(null);
 
-  const hoveredRule = rules?.weapons.find((weapon) => weapon.code === hoveredKey?.toUpperCase());
-  const description = hoveredRule && rules ? describeWeaponRule(hoveredRule, rules) : null;
+  const description = WEAPON_MOTIFS.find((motif) => motif.key === hoveredKey)?.description ?? null;
 
   return (
     <div className="border border-[var(--border)]">
@@ -157,20 +149,40 @@ export function HeroTraditionSeals({ rules }: { rules: WeaponRulesView | null })
               onFocus={() => setHoveredKey(key)}
               onBlur={() => setHoveredKey((current) => (current === key ? null : current))}
               aria-label={`Знак «${label}» — сшибка`}
-              className="group flex flex-col items-center gap-2 px-4 py-5 text-center transition-colors duration-200 hover:bg-[var(--surface-muted)]"
-              style={{ opacity: dimmed ? 0.45 : 1 }}
+              // The dimmed-sibling opacity used to be a raw inline style with
+              // no transition of its own — `transition-colors` doesn't cover
+              // `opacity`, so the other three seals snapped straight from
+              // 1 to 0.45 the instant one was hovered, reading as a jarring
+              // jump around the hovered seal even though nothing actually
+              // moved (confirmed via `getBoundingClientRect` — the hover
+              // scale itself never reflows anything). Named in the transition
+              // property list, not `transition-all`. The dim itself was also
+              // dropped from 0.45 to 0.7 — a hover effect this frequent
+              // (tens of times/day) should read as near-imperceptible, and a
+              // 12%-scale seal next to three seals halving their opacity all
+              // at once was the "jumping" — not a bug, just too much
+              // simultaneous motion for a hover state.
+              className="group flex flex-col items-center gap-2 px-4 py-5 text-center transition-[color,background-color,opacity] duration-200 hover:bg-[var(--surface-muted)]"
+              style={{ opacity: dimmed ? 0.7 : 1 }}
             >
               <span className="record-label text-[var(--text-4)]">{String(index + 1).padStart(2, "0")}</span>
               {/* `tone="gold"` here, not the shared component's usual "iron" —
                   iron (`var(--iron)` #4a3a28) barely registered against this
                   section's own dark ground, "не очень заметно" per the user;
                   gold reads clearly without competing with the accent-red
-                  clash/glow states. */}
-              <span className="inline-block transition-transform duration-200" style={{ transform: hovered ? "scale(1.12)" : "scale(1)" }}>
-                <Seal key={glowing ? clash!.nonce : "rest"} size={38} tone="gold" className={glowing ? "seal-glow" : undefined}>
-                  <Icon size={17} />
-                </Seal>
-              </span>
+                  clash/glow states.
+                  No wrapping scale span anymore — the seal itself is always
+                  at rest size; `accented` fades in a bolder retrace of its
+                  own ring instead (see `Seal`'s own doc comment for why). */}
+              <Seal
+                key={glowing ? clash!.nonce : "rest"}
+                size={38}
+                tone="gold"
+                accented={hovered}
+                className={glowing ? "seal-glow" : undefined}
+              >
+                <Icon size={17} />
+              </Seal>
               <span className="record-label text-[var(--muted)] transition-colors group-hover:text-[var(--foreground)]">{label}</span>
             </button>
           );
@@ -179,7 +191,7 @@ export function HeroTraditionSeals({ rules }: { rules: WeaponRulesView | null })
 
       {/* Reserved height even when empty, so hovering a seal never nudges
           the row (and anything below it) up/down the page. */}
-      <p className="min-h-[2.75rem] border-t border-[var(--border)] px-5 py-2.5 text-[0.8125rem] leading-snug text-[var(--text-3)] transition-opacity duration-200" style={{ opacity: description ? 1 : 0 }}>
+      <p className="min-h-[2.75rem] border-t border-[var(--border)] px-5 py-2.5 text-[0.8125rem] leading-snug text-[var(--muted)] transition-opacity duration-200" style={{ opacity: description ? 1 : 0 }}>
         {description ?? " "}
       </p>
     </div>

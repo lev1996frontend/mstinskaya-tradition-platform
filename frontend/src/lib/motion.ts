@@ -45,8 +45,17 @@ export function stepIn(offset = 8): { initial: { opacity: number; y: number }; a
 /** тень (throw) — the lot cube's spin-to-result transition. Two full turns
  *  get added on top of the target face angle by the caller so every throw
  *  visibly spins, never snaps; divide `spinMs` by `ritualSpeed` (0.6–1.6). */
+const THROW_EASE = [0.16, 0.86, 0.24, 1] as const;
+
 export function cubeThrow(spinMs: number): Transition {
-  return { duration: spinMs / 1000, ease: [0.16, 0.86, 0.24, 1] };
+  return { duration: spinMs / 1000, ease: THROW_EASE };
+}
+
+/** Same throw curve as `cubeThrow`, as a plain CSS `transition` value — for
+ *  the lot cube's raw inline `style.transition` (a plain DOM button, not a
+ *  `motion.button`), so the two never drift apart into different curves. */
+export function cubeThrowCss(spinMs: number, property = "transform"): string {
+  return `${property} ${spinMs}ms cubic-bezier(${THROW_EASE.join(",")})`;
 }
 
 /** дрожь (cam) — scene shake while the cube is spinning, framer-motion form

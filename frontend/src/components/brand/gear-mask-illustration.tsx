@@ -10,8 +10,9 @@ import { useId } from "react";
 // -ish top, bulging sides at ear level, NOT a smooth round dome) with a
 // framed rectangular mesh grille inset into its face opening (visibly
 // FRAMED by black material on all sides, not touching the helmet's own
-// outline — an elongated rounded rectangle, never a circle), and a wide,
-// soft, rectangular fabric gorget sitting flush under it. Decoration
+// outline — an elongated rounded rectangle, never a circle), and a narrower
+// fabric gorget sitting below it, wrapping the neck rather than the head.
+// Decoration
 // (mesh weave, the thin red trim, the gold frame line) is deliberately
 // minimal and added last — the black silhouette is what has to read as
 // "real protective gear" on its own, before any of that.
@@ -21,8 +22,13 @@ const FACE_GRID_OUTER_PATH =
   "M31 27 C28 27 26 29 26 33 L26 73 C26 78 30 80 34 80 L66 80 C70 80 74 78 74 73 L74 33 C74 29 72 27 69 27 Z";
 const FACE_GRID_INNER_PATH =
   "M33 30 C31 30 29 31 29 34 L29 71 C29 75 32 77 35 77 L65 77 C68 77 71 75 71 71 L71 34 C71 31 69 30 67 30 Z";
+// A flat, wide BAND — same width top and bottom — not a tapering oval, so
+// it reads as a collar wrapping the neck rather than a beard hanging off
+// the chin. Anchored below the helmet's lowest edge (y≈88) and the mesh
+// grille's own bottom (y=80); roughly half the height of the earlier
+// teardrop shape.
 const GORGET_PATH =
-  "M19 83 C19 79 29 77 40 77 L60 77 C71 77 81 79 81 83 L83 108 C83 122 68 128 50 128 C32 128 17 122 17 108 Z";
+  "M28 92 C28 88 36 86 50 86 C64 86 72 88 72 92 L72 100 C72 104 64 106 50 106 C36 106 28 104 28 100 Z";
 
 /**
  * The exhibit's three parts as named groups (`#helmet`, `#face-grid`,
@@ -33,8 +39,12 @@ const GORGET_PATH =
  * 1. Solid black-ish silhouettes for all three parts (this is what has to
  *    read correctly against the reference photos at a glance).
  * 2. The mesh weave, clipped to the grille's own inset frame.
- * 3. A thin — not bold — red trim, and a thin gold retrace of the grille's
- *    frame. Neither is meant to be the thing a viewer notices first.
+ * 3. A red rim trim and a gold retrace of the grille's frame — bumped up
+ *    from an original hairline (opacity 0.3) to a clearly visible edge
+ *    (opacity 0.85) once the illustration started blending into the near-
+ *    black card background it sits on in `fighter-card.tsx`; the fabric
+ *    gradient's lighter `--iron` stop was likewise widened for the same
+ *    reason.
  *
  * Interaction is unchanged from the previous pass: the pointer wipe acts on
  * the mesh only; tilt is applied by the caller (`helmet-reveal.tsx`) to the
@@ -48,7 +58,7 @@ export function GearMaskIllustration({ hovering, staticFallback }: { hovering: b
       <defs>
         <linearGradient id={`${uid}-fabric`} x1="20%" y1="0%" x2="75%" y2="100%">
           <stop offset="0%" stopColor="var(--iron)" />
-          <stop offset="40%" stopColor="var(--surface)" />
+          <stop offset="60%" stopColor="var(--surface)" />
           <stop offset="100%" stopColor="var(--background-deep)" />
         </linearGradient>
         <pattern id={`${uid}-weave`} width="2.6" height="2.6" patternUnits="userSpaceOnUse">
@@ -64,13 +74,24 @@ export function GearMaskIllustration({ hovering, staticFallback }: { hovering: b
           sides at ear level, narrowing at the jaw. Fabric, not metal: a
           near-black gradient fill, only a hairline of red at the rim. ===== */}
       <g id="helmet">
-        <path d={HELMET_PATH} fill={`url(#${uid}-fabric)`} stroke="var(--accent)" strokeWidth="0.5" opacity="0.3" />
+        <path d={HELMET_PATH} fill={`url(#${uid}-fabric)`} stroke="var(--accent)" strokeWidth="1.4" opacity="0.85" />
         {/* the seam where the flat top pad meets the sides — visible in
             every reference photo */}
-        <path d="M17 22 C30 17 70 17 83 22" stroke="var(--muted)" strokeWidth="1" fill="none" opacity="0.35" strokeLinecap="round" />
+        <path d="M17 22 C30 17 70 17 83 22" stroke="var(--muted)" strokeWidth="1" fill="none" opacity="0.55" strokeLinecap="round" />
         {/* soft highlight, upper-left — reads as padded fabric catching
-            light, not a flat cutout; kept faint on purpose */}
-        <path d="M24 16 C30 10 40 7 50 6" stroke="var(--surface-paper)" strokeWidth="1.6" strokeLinecap="round" fill="none" opacity="0.1" />
+            light, not a flat cutout */}
+        <path d="M24 16 C30 10 40 7 50 6" stroke="var(--surface-paper)" strokeWidth="1.6" strokeLinecap="round" fill="none" opacity="0.25" />
+      </g>
+
+      {/* ================= neck-guard: the gorget — narrower than the
+          helmet, sitting entirely below its lowest edge and the mesh's own
+          bottom, so it reads as a collar wrapping the neck rather than a
+          second, overlapping helmet. Painted before `details`/`face-grid`
+          so the mesh stays on top even if the edges touch. ============== */}
+      <g id="neck-guard">
+        <path d={GORGET_PATH} fill={`url(#${uid}-fabric)`} stroke="var(--accent)" strokeWidth="1.4" opacity="0.85" />
+        <path d="M32 90 C40 88 44 87 50 87" stroke="var(--surface-paper)" strokeWidth="1.2" strokeLinecap="round" fill="none" opacity="0.16" />
+        <path d="M30 97 C40 99 60 99 70 97" stroke="var(--muted)" strokeWidth="1" fill="none" opacity="0.5" strokeLinecap="round" />
       </g>
 
       {/* ================= details: the strap/rivets mounting the grille to
@@ -113,17 +134,6 @@ export function GearMaskIllustration({ hovering, staticFallback }: { hovering: b
         </g>
 
         <path d={FACE_GRID_INNER_PATH} fill="none" stroke="var(--gold)" strokeWidth="0.7" opacity="0.5" />
-      </g>
-
-      {/* ================= neck-guard: the gorget — wide, soft, rectangular,
-          flush against the helmet's own bottom edge (no visible gap) ===== */}
-      <g id="neck-guard">
-        <path d={GORGET_PATH} fill={`url(#${uid}-fabric)`} stroke="var(--accent)" strokeWidth="0.5" opacity="0.3" />
-        <path d="M27 88 C36 84 44 82 50 82" stroke="var(--surface-paper)" strokeWidth="1.2" strokeLinecap="round" fill="none" opacity="0.08" />
-        <g stroke="var(--muted)" strokeWidth="1" fill="none" opacity="0.3" strokeLinecap="round">
-          <path d="M25 98 C36 101 64 101 75 98" />
-          <path d="M23 110 C36 114 64 114 77 110" />
-        </g>
       </g>
     </svg>
   );

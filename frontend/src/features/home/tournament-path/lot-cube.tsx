@@ -1,6 +1,7 @@
 "use client";
 
 import { HandsIcon, KistenIcon, KrugIcon, NozhIcon, PalkaIcon, StenkaIcon } from "@/components/brand/weapon-glyphs";
+import { cubeThrowCss } from "@/lib/motion";
 import { useTournamentPathActions, useTournamentPathState } from "./tournament-path-context";
 import { CUBE_FACE_KEYS, WEAPON_LABELS } from "./bracket-data";
 
@@ -110,7 +111,7 @@ export function LotCube() {
               width: 132,
               height: 132,
               transformStyle: "preserve-3d",
-              transition: `transform ${spinMs}ms cubic-bezier(.16,.86,.24,1)`,
+              transition: cubeThrowCss(spinMs),
               transform: `rotateX(${state.rx}deg) rotateY(${state.ry}deg)`,
             }}
           >

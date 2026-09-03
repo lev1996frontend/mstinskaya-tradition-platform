@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { getBoutRules, listTournaments } from "@/api/tournaments";
 import { Container } from "@/components/ui";
+import { Buza } from "@/features/home/buza";
 import { Chronicle } from "@/features/home/chronicle";
 import { Equipment } from "@/features/home/equipment";
 import { GearArchive } from "@/features/home/gear-archive";
@@ -19,9 +20,12 @@ import { TournamentPathProvider } from "@/features/home/tournament-path/tourname
 /**
  * Front page of the archive — the "Живой архив" v3 redesign
  * (design_handoff_mstinskaya). Masthead, the real live-tournament bulletin,
- * then the new demo/editorial sections (СТЕНКА → ПОЕДИНОК/СЕТКА/ПРАВИЛА/
- * БОЙЦЫ → СНАРЯЖЕНИЕ → АРХИВ ЭКИПИРОВКИ → ХРОНИКА → ЖИВОПИСЬ), closing with
- * the new anchor index. ПОЕДИНОК/СЕТКА/БОЙЦЫ share one `TournamentPathProvider`
+ * then БУЗА (design_handoff_buza_river — the tradition's origin story,
+ * collapsed by default and opened only by the river-boat button in the
+ * header; see `features/home/buza-context.tsx`), then the new demo/editorial
+ * sections (СТЕНКА → ПОЕДИНОК/СЕТКА/ПРАВИЛА/БОЙЦЫ → СНАРЯЖЕНИЕ → АРХИВ
+ * ЭКИПИРОВКИ → ХРОНИКА → ЖИВОПИСЬ), closing with the new anchor index.
+ * ПОЕДИНОК/СЕТКА/БОЙЦЫ share one `TournamentPathProvider`
  * — the "заявленный разряд" state and the fixed demo bracket must stay one
  * source of truth across all three (see `tournament-path/bracket-data.ts`),
  * even though ПРАВИЛА sits between them with no state of its own.
@@ -46,7 +50,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero rules={boutRules} />
+      <Hero />
 
       {upcoming.length > 0 ? (
         <Container className="py-14 sm:py-20">
@@ -70,6 +74,8 @@ export default async function HomePage() {
           </section>
         </Container>
       ) : null}
+
+      <Buza />
 
       <StenkaKrug />
 

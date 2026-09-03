@@ -3,14 +3,16 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import { MonogramFlip } from "@/components/brand/monogram-flip";
+import { MenuToggleGlyph } from "@/components/brand/menu-glyph";
 import { WEAPON_MOTIFS, randomWeaponMotif, type WeaponMotifKey } from "@/components/brand/weapon-glyphs";
+import { RiverStrip } from "@/components/layout/river-strip";
 import { ButtonLink, Container, cn } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
-import { IMPULSE_TAP } from "@/lib/motion";
+import { IMPULSE_TAP, TURN_EASE, stepIn } from "@/lib/motion";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 
 const NAV = [
   { href: "/tournaments", label: "Турниры" },
@@ -85,16 +87,19 @@ export function SiteHeader() {
   const [logoOpponent, setLogoOpponent] = useState<WeaponMotifKey>("kisten");
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const reduceMotion = useReducedMotion();
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   // A full-screen takeover locks page scroll behind it and closes on Escape,
   // same as any modal-ish overlay — the old accordion needed neither, since
-  // it never covered the page.
+  // it never covered the page. Also moves focus onto the panel's own close
+  // button so Tab starts inside it, matching the focus trap below.
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    menuRef.current?.querySelector<HTMLElement>('button[aria-label="Закрыть меню"]')?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
@@ -105,8 +110,13 @@ export function SiteHeader() {
     };
   }, [open]);
 
+  useFocusTrap(menuRef, open);
+
   return (
-    <header className="sticky top-0 z-30 border-b-2 border-[var(--rule)] bg-[var(--background)] shadow-[0_3px_0_-2px_var(--rule)]">
+    <header
+      className="sticky top-0 z-30 border-b-2 border-[var(--rule)] bg-[var(--background)] shadow-[0_3px_0_-2px_var(--rule)]"
+      style={{ viewTransitionName: "site-header" }}
+    >
       <Container className="flex h-16 items-center gap-6">
         <Link
           href="/"
@@ -221,12 +231,17 @@ export function SiteHeader() {
             onClick={() => setOpen((value) => !value)}
             aria-expanded={open}
             aria-label="Меню"
-            className="rounded-[var(--radius-sm)] border border-[var(--chrome-line)] p-2.5 text-[var(--chrome-muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            className="flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--chrome-line)] p-2 text-[var(--chrome-muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
           >
-            {open ? <X className="size-5" /> : <Menu className="size-5" />}
+            <MenuToggleGlyph open={open} reduceMotion={reduceMotion ?? false} size={22} />
           </button>
         </div>
       </Container>
+
+      {/* River strip only exists to open the "Буза" section, which only
+          lives on the homepage — showing it elsewhere would be a control
+          with nothing to open. */}
+      {pathname === "/" ? <RiverStrip /> : null}
 
       {/* Full-screen takeover, not a dropdown: reuses the homepage's own
           numbered-index grammar (`section-index.tsx`'s 01/02/… ruled rows in
@@ -236,10 +251,11 @@ export function SiteHeader() {
         {open ? (
           <motion.div
             key="mobile-menu"
+            ref={menuRef}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={reduceMotion ? { duration: 0 } : { duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.25, ease: TURN_EASE }}
             // `h-dvh` (dynamic viewport height), not just `inset-0`/implicit
             // 100%: on real mobile browsers the address bar shows/hides as
             // you scroll, and a plain `vh`-based full-screen overlay visibly
@@ -259,25 +275,41 @@ export function SiteHeader() {
                   </span>
                 </span>
               </Link>
+              {/* Same square as the collapsed header's own toggle button
+                  (`p-2.5`, 18px glyph) — it used to be a bigger `p-3`/24px
+                  `CloseGlyph`, so the button visibly changed size between
+                  closed and open states. Reusing `MenuToggleGlyph` in its
+                  open shape (rather than the standalone `CloseGlyph`) keeps
+                  the X pixel-identical to the one the header's toggle morphs
+                  into, too. */}
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Закрыть меню"
-                className="rounded-[var(--radius-sm)] border border-[var(--chrome-line)] p-3 text-[var(--chrome-muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                className="flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--chrome-line)] p-2 text-[var(--chrome-muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
               >
-                <X className="size-6" />
+                <MenuToggleGlyph open reduceMotion={reduceMotion ?? false} size={22} />
               </button>
             </div>
 
             <nav aria-label="Основная навигация" className="flex flex-1 flex-col justify-center px-4 sm:px-6">
               {NAV.map((item, index) => {
                 const active = isActive(item.href);
+                // `stepIn` (шаг) — the codebase's own one-shot entrance-
+                // stagger primitive, not a one-off tween: a 14px offset reads
+                // clearly (the earlier 10px + `reduceMotion ? undefined`
+                // read as an instant pop for anyone with reduced motion on,
+                // since `undefined` skips the fade too, not just the move —
+                // reduced motion should drop the *movement*, not the
+                // transition entirely). 50ms/item keeps five items inside
+                // the 30–80ms stagger band while still reading as a cascade.
+                const { initial, animate, transition } = stepIn(14);
                 return (
                   <motion.div
                     key={item.href}
-                    initial={reduceMotion ? undefined : { opacity: 0, y: 10 }}
-                    animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-                    transition={{ duration: 0.25, delay: reduceMotion ? 0 : index * 0.04, ease: [0.16, 1, 0.3, 1] }}
+                    initial={reduceMotion ? { opacity: 0 } : initial}
+                    animate={reduceMotion ? { opacity: 1 } : animate}
+                    transition={{ ...transition, delay: reduceMotion ? 0 : index * 0.05 }}
                   >
                     <Link
                       href={item.href}

@@ -217,3 +217,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Claude Code / editor tooling (local, not part of the app)
+.claude/
+.agents/
+.mcp.json
+skills-lock.json
+.playwright-mcp/
+.vscode/
+
+# Local dev database
+backend/dev.db

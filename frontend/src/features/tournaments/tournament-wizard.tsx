@@ -295,7 +295,7 @@ export function TournamentWizard() {
           const done = index < step;
           const active = index === step;
           return (
-            <li key={label} className="flex-1">
+            <li key={label} className="flex-1" aria-current={active ? "step" : undefined}>
               <div
                 className={cn(
                   "flex items-center gap-2 rounded-[var(--radius-sm)] border px-3 py-2 text-xs whitespace-nowrap",

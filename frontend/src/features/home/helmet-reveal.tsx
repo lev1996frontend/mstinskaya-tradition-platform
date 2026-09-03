@@ -1,33 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useMotionValue, useReducedMotion, useSpring } from "framer-motion";
 
 import { GearMaskIllustration } from "@/components/brand/gear-mask-illustration";
 import { EQUIPMENT_ITEMS } from "@/features/home/equipment-items";
+import { useFinePointer } from "@/lib/use-fine-pointer";
 
 const MASK_ITEM = EQUIPMENT_ITEMS.find((item) => item.title === "Маска")!;
 const GORGET_ITEM = EQUIPMENT_ITEMS.find((item) => item.title === "Горжет")!;
-
-const FINE_POINTER_QUERY = "(hover: hover) and (pointer: fine)";
-
-/** Mirrors the `useSyncExternalStore` pattern already used by
- *  `theme-context.tsx` for reading a `matchMedia` capability without a
- *  render-then-effect-then-setState cascade. */
-function subscribeFinePointer(onChange: () => void) {
-  const query = window.matchMedia(FINE_POINTER_QUERY);
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-}
-
-function getFinePointerSnapshot(): boolean {
-  return window.matchMedia(FINE_POINTER_QUERY).matches;
-}
-
-function getFinePointerServerSnapshot(): boolean {
-  return false;
-}
 
 /**
  * The tradition's actual protective headgear — redrawn 2026-09-01 (third
@@ -66,11 +48,7 @@ function getFinePointerServerSnapshot(): boolean {
 export function HelmetReveal() {
   const containerRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
-  const interactive = useSyncExternalStore(
-    subscribeFinePointer,
-    getFinePointerSnapshot,
-    getFinePointerServerSnapshot,
-  );
+  const interactive = useFinePointer();
   const [hovering, setHovering] = useState(false);
 
   // Off-canvas resting position so the clear patch starts fully hidden.

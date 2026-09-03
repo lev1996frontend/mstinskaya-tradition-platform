@@ -122,11 +122,42 @@ export type WeaponMotifKey = "hands" | "kisten" | "palka" | "nozh";
  * «против» always governs the genitive case in Russian, regardless of which
  * motif is doing the grammatical governing (`b`, the second slot).
  */
-export const WEAPON_MOTIFS: { key: WeaponMotifKey; label: string; genitive: string; Icon: ComponentType<GlyphProps> }[] = [
-  { key: "hands", label: "Безоружный", genitive: "безоружного", Icon: HandsIcon },
-  { key: "kisten", label: "Кистень", genitive: "кистеня", Icon: KistenIcon },
-  { key: "palka", label: "Палка", genitive: "палки", Icon: PalkaIcon },
-  { key: "nozh", label: "Нож", genitive: "ножа", Icon: NozhIcon },
+/**
+ * `description` is the equipment glossary line `hero-clash.tsx`'s
+ * "Знаки традиции" row shows on hover — what the snaryad physically is, not
+ * a competition rule (judges, staging, victory conditions stay backend-driven
+ * via `describeWeaponRule` in `equipment.tsx`, further down the page). Wording
+ * confirmed directly by the tradition's own organiser, not invented.
+ */
+export const WEAPON_MOTIFS: { key: WeaponMotifKey; label: string; genitive: string; description: string; Icon: ComponentType<GlyphProps> }[] = [
+  {
+    key: "hands",
+    label: "Безоружный",
+    genitive: "безоружного",
+    description: "Безоружный — боец выходит с голыми руками, без какого-либо снаряда.",
+    Icon: HandsIcon,
+  },
+  {
+    key: "kisten",
+    label: "Кистень",
+    genitive: "кистеня",
+    description: "Кистень — верёвка с узлом «обезьяний кулак» на конце; снаряд разряда.",
+    Icon: KistenIcon,
+  },
+  {
+    key: "palka",
+    label: "Палка",
+    genitive: "палки",
+    description: "Палка — пластиковая труба, обмотанная поролоном; безопасный снаряд разряда.",
+    Icon: PalkaIcon,
+  },
+  {
+    key: "nozh",
+    label: "Нож",
+    genitive: "ножа",
+    description: "Нож — деревянный муляж ножа; снаряд разряда.",
+    Icon: NozhIcon,
+  },
 ];
 
 /**

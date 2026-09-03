@@ -673,7 +673,7 @@ body::after {
 }
 
 /* волна (mask-ripple) — a stone-dropped-in-water ring expanding outward
-   from `fighter-card.tsx`'s waiting-state `MaskGlyph`, looping. Three rings
+   from `fighter-card.tsx`'s waiting-state mask illustration, looping. Three rings
    share the class at staggered `animation-delay`s so a new one sets off
    before the last fades, reading as continuous rather than a single pulse. */
 @keyframes mask-ripple {
@@ -772,6 +772,114 @@ body::after {
   opacity: 1;
 }
 
+/* река (river-flow) — the header river strip's current line
+   (`components/layout/river-strip.tsx`), a dashed path whose dash offset
+   shifts by exactly three dash+gap cycles (stroke-dasharray "7 7" → a 14px
+   repeat, 3 × 14 = 42) so the loop has no visible seam. The offset here was
+   ported from the design handoff as -48 without checking it against the
+   dasharray — 48 isn't a multiple of 14, so the pattern jumped visibly at
+   every loop restart (reported as the river "cutting off" at the end of its
+   cycle). -42 keeps the same near-48 travel distance (so the perceived
+   speed doesn't change) while landing exactly back on a dash boundary. */
+@keyframes river-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -42;
+  }
+}
+
+.river-flow {
+  animation: river-flow 3.2s linear infinite;
+}
+
+/* на плаву (river-bob) — the gentle rise/fall every river symbol (boat,
+   wax seal, mug — `river-strip.tsx`, `river-wax-seal.tsx`,
+   `river-mug.tsx`) idles with: riding at anchor on the water, never fully
+   still. Applied to an *inner* wrapper, never the same element a symbol's
+   own `gsap.quickTo` drives — stacking it on that element would fight
+   GSAP's inline `transform` for the same property every tick. Each user
+   sets its own `animation-delay` so the three don't bob in lockstep. */
+@keyframes river-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(1.5deg);
+  }
+}
+
+.river-bob {
+  animation: river-bob 3.6s ease-in-out infinite;
+}
+
+/* тускло (river-symbol) — shared rest/hover dimming for the seal and the mug
+   (`river-wax-seal.tsx`, `river-mug.tsx`): present but unobtrusive until
+   hovered or focused, same register as the boat's own GSAP-driven opacity
+   in `river-strip.tsx` (that one needs JS since it's tied to position-lag
+   timing; these two don't, so plain CSS is the cheaper tool). Scoped to
+   `(hover: hover) and (pointer: fine)` — on touch there's no hover to
+   reveal them, so they just stay fully visible, matching the boat's own
+   touch fallback. */
+@media (hover: hover) and (pointer: fine) {
+  .river-symbol {
+    opacity: 0.45;
+    transition: opacity 200ms ease;
+  }
+
+  .river-symbol:hover,
+  .river-symbol:focus-visible {
+    opacity: 1;
+  }
+}
+
+/* раскол (wax-crack-a / wax-crack-b) — the wax seal's two clipped halves
+   (`river-wax-seal.tsx`) parting once its patina is fully scratched away.
+   One-way and held (`both`), unlike `.lunge-a`/`.lunge-b` above (which
+   return to origin) — a broken seal doesn't snap back together. */
+@keyframes wax-crack-a {
+  100% {
+    transform: translate(-7px, 2px) rotate(-16deg);
+    opacity: 0.88;
+  }
+}
+
+@keyframes wax-crack-b {
+  100% {
+    transform: translate(7px, 2px) rotate(16deg);
+    opacity: 0.88;
+  }
+}
+
+.wax-crack-a {
+  animation: wax-crack-a 480ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+.wax-crack-b {
+  animation: wax-crack-b 480ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+/* черпак (mug-tip) — the river mug's click flourish, a quick pour-tip
+   pivoting near its base rather than its center (`river-mug.tsx`). */
+@keyframes mug-tip {
+  0% {
+    transform: rotate(0deg);
+  }
+  35% {
+    transform: rotate(-24deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+.mug-tip {
+  animation: mug-tip 420ms cubic-bezier(0.2, 0.8, 0.3, 1);
+  transform-origin: 50% 88%;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
@@ -780,5 +888,104 @@ body::after {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ---------------------------------------------------------- view transitions ---
+ * React `<ViewTransition>` route animation — see `directional-transition.tsx`
+ * (tournament list → detail) and the shared `text-morph` title. Named UA
+ * pseudo-elements aren't reached by the `*` reduced-motion override above,
+ * so they get their own block at the bottom of this file.
+ */
+:root {
+  --duration-exit: 150ms;
+  --duration-enter: 210ms;
+  --duration-move: 400ms;
+}
+
+@keyframes vt-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes vt-slide {
+  from {
+    translate: var(--slide-offset);
+  }
+  to {
+    translate: 0;
+  }
+}
+
+::view-transition-old(.nav-forward) {
+  --slide-offset: -60px;
+  animation:
+    var(--duration-exit) ease-in both vt-fade reverse,
+    var(--duration-move) ease-in-out both vt-slide reverse;
+}
+::view-transition-new(.nav-forward) {
+  --slide-offset: 60px;
+  animation:
+    var(--duration-enter) ease-out var(--duration-exit) both vt-fade,
+    var(--duration-move) ease-in-out both vt-slide;
+}
+
+::view-transition-old(.nav-back) {
+  --slide-offset: 60px;
+  animation:
+    var(--duration-exit) ease-in both vt-fade reverse,
+    var(--duration-move) ease-in-out both vt-slide reverse;
+}
+::view-transition-new(.nav-back) {
+  --slide-offset: -60px;
+  animation:
+    var(--duration-enter) ease-out var(--duration-exit) both vt-fade,
+    var(--duration-move) ease-in-out both vt-slide;
+}
+
+/* Shared-element title morph (card `<h3>` → detail `<h1>`): the two sizes
+ * differ enough that a raster-scaled morph shows a visible ghost, so the old
+ * snapshot is hidden and the new text just appears at full resolution. */
+::view-transition-group(.text-morph) {
+  animation-duration: var(--duration-move);
+}
+::view-transition-old(.text-morph) {
+  display: none;
+}
+::view-transition-new(.text-morph) {
+  animation: none;
+  object-fit: none;
+  object-position: left top;
+}
+
+/* The sticky header must not slide with the page content, or it breaks the
+ * one fixed reference point the directional slide relies on. */
+::view-transition-group(site-header) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(site-header) {
+  display: none;
+}
+::view-transition-new(site-header) {
+  animation: none;
+}
+
+/* Lets clicks/hover reach live (unnamed) content while a transition is still
+ * animating, instead of the transition overlay eating every pointer event. */
+::view-transition {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
   }
 }

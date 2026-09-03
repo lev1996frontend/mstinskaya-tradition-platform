@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;600;700;800&family=Commissioner:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="./image-slot.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #14120f; color: #e8dcc4; font-family: Commissioner, ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  body::after { content: ""; position: fixed; inset: 0; z-index: 70; pointer-events: none; opacity: .05; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  a { color: #b02a20; text-decoration: none; }
+  a:hover { color: #8e241d; }
+  @keyframes stampIn { from { opacity: 0; transform: scale(1.035); } to { opacity: 1; transform: none; } }
+  @keyframes tickPulse { 0%,100% { opacity: .75; } 50% { opacity: .4; } }
+  @keyframes lungeA { 50% { transform: translateX(30px); } }
+  @keyframes lungeB { 50% { transform: translateX(-30px); } }
+  @keyframes flashKf { 0%,100% { opacity: 0; } 40% { opacity: .8; } }
+  @keyframes strikeRing { 0% { transform: scale(.3); opacity: .9; border-width: 3px; } 100% { transform: scale(2.6); opacity: 0; border-width: .5px; } }
+  @keyframes popIn { 0% { opacity: 0; transform: translateY(6px) scale(.94); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes maskRipple { 0% { transform: scale(.55); opacity: .5; } 100% { transform: scale(2.1); opacity: 0; } }
+  @keyframes spinCube { 0%,100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.08) rotate(8deg); } }
+  .lunge-a { animation: lungeA .7s ease-in-out; }
+  .lunge-b { animation: lungeB .7s ease-in-out; }
+  .flash-ring { animation: flashKf .6s ease-out; }
+  .strike-ring { animation: strikeRing .65s cubic-bezier(.2,.8,.3,1); border: 3px solid #b07a35; border-radius: 50%; }
+  .pop-in { animation: popIn .26s ease-out both; }
+  .mask-ripple { animation: maskRipple 2.8s ease-out infinite; }
+  .spin-cube { animation: spinCube .12s linear infinite; }
+  @keyframes buzaSway { 0%,100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+  .buza-sway { display: inline-block; animation: buzaSway 1.8s ease-in-out infinite; transform-origin: 50% 90%; }
+  @keyframes riverFlow { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -48; } }
+  @keyframes riverBoatSail {
+    0% { left: 3%; top: 14px; transform: rotate(-3deg); }
+    25% { left: 26%; top: 22px; transform: rotate(2deg) scaleX(-1); }
+    50% { left: 50%; top: 12px; transform: rotate(-2deg) scaleX(-1); }
+    50.01% { transform: rotate(-2deg) scaleX(1); }
+    75% { left: 74%; top: 24px; transform: rotate(3deg) scaleX(1); }
+    100% { left: 3%; top: 14px; transform: rotate(-3deg) scaleX(1); }
+  }
+  .river-boat { position: absolute; animation: riverBoatSail 26s linear infinite; }
+  .river-boat:hover { animation-play-state: paused; }
+  ::selection { background: #b02a20; color: #14120f; }
+</style>
+</helmet>
+
+<div style="min-height: 100dvh; background: #14120f; font-family: Commissioner, sans-serif;">
+
+<header style="position: sticky; top: 0; z-index: 30; border-bottom: 2px solid #3a3d38; background: #14120f; box-shadow: 0 3px 0 -2px #3a3d38;">
+  <div style="margin: 0 auto; max-width: 72rem; padding: 0 24px; display: flex; height: 64px; align-items: center; gap: 24px;">
+    <a href="#" style="display: flex; align-items: center; gap: 10px; color: inherit; flex-shrink: 0;">
+      <span style="display: grid; width: 36px; height: 36px; flex-shrink: 0; place-items: center; background: #b02a20; color: #fff; border-radius: 2px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="9" y="2" width="6" height="6" fill="currentColor"></rect><rect x="4" y="10" width="4" height="12" fill="currentColor"></rect><rect x="16" y="10" width="4" height="12" fill="currentColor"></rect><path d="M8 10 L16 10 L12 16 Z" fill="currentColor"></path></svg>
+      </span>
+      <span style="line-height: 1.25;">
+        <span style="font-family: Alegreya, serif; display: block; font-size: 0.9375rem; font-weight: 600;">Мстинская</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; display: block; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.22em; color: #c9bfa8;">традиция</span>
+      </span>
+    </a>
+    <nav aria-label="Основная навигация" style="display: flex; flex: 1; align-items: center; gap: 4px;">
+      <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="5">
+        <a href="#" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: #c9bfa8; padding: 8px 12px;" style-hover="color: #e8dcc4;">{{ item.label }}</a>
+      </sc-for>
+    </nav>
+    <a href="#" style="margin-left: auto; display: inline-flex; align-items: center; border-radius: 2px; background: #b02a20; color: #fff; font-weight: 500; letter-spacing: 0.01em; padding: 8px 16px; font-size: 0.75rem; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase;">Войти</a>
+  </div>
+  <div style="position: relative; height: 44px; overflow: hidden; background: linear-gradient(180deg,#100e0c,#161310); border-top: 1px solid #241c15;">
+    <svg viewBox="0 0 1440 44" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;" aria-hidden="true">
+      <path d="M0 22 C 90 6, 180 38, 270 20 S 460 4, 560 24 S 760 40, 860 18 S 1040 4, 1160 22 S 1360 36, 1440 20 L1440 44 L0 44 Z" fill="#1c2b30" opacity="0.55"></path>
+      <path class="river-flow" d="M0 22 C 90 6, 180 38, 270 20 S 460 4, 560 24 S 760 40, 860 18 S 1040 4, 1160 22 S 1360 36, 1440 20" fill="none" stroke="#4a6d75" stroke-width="1.6" stroke-dasharray="7 7" opacity="0.75"></path>
+    </svg>
+    <button type="button" onClick="{{ toggleBuza }}" title="Плывёт кораблик" class="river-boat" style="background: none; border: none; cursor: pointer; padding: 0; display: grid; place-items: center; z-index: 1; width: 30px; height: 24px;">
+      <span style="display: inline-block;">{{ shipIcon }}</span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+<!-- HERO -->
+<section id="krug" style="position: relative; overflow: hidden; border-bottom: 2px solid #3a3d38; background: #241c15;">
+  <svg style="pointer-events: none; position: absolute; inset: 0; height: 100%; width: 100%; opacity: 0.07; color: #b02a20; mask-image: linear-gradient(to bottom left, black 0%, rgba(0,0,0,0.35) 45%, transparent 78%); -webkit-mask-image: linear-gradient(to bottom left, black 0%, rgba(0,0,0,0.35) 45%, transparent 78%);" aria-hidden="true" preserveAspectRatio="xMidYMid slice">
+    <defs><pattern id="lattice" width="44" height="44" patternUnits="userSpaceOnUse"><path d="M0 22 L22 0 L44 22 L22 44 Z" fill="none" stroke="currentColor" stroke-width="1"></path><path d="M0 0 L44 44 M44 0 L0 44" stroke="currentColor" stroke-width="0.5"></path></pattern></defs>
+    <rect width="100%" height="100%" fill="url(#lattice)"></rect>
+  </svg>
+  <div style="margin: 0 auto; max-width: 80rem; padding: 0 24px; position: relative;">
+    <div style="display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid #322820; padding: 12px 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #9a8f7c;">
+      <span>Цифровой архив сообщества</span>
+      <span>RU</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(12, minmax(0,1fr)); align-items: center; gap: 40px; padding: 40px 0 32px;">
+      <div style="grid-column: span 6;">
+        <div style="border-left: 2px solid #b02a20; padding-left: 24px;">
+          <p style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b02a20; margin: 0;">Цифровая платформа сообщества</p>
+          <h1 style="animation: stampIn 220ms cubic-bezier(.2,.9,.3,1) both; font-family: Alegreya, serif; margin: 14px 0 0; font-size: 3.75rem; font-weight: 700; line-height: 0.95; letter-spacing: -0.02em;">Мстинская традиция</h1>
+        </div>
+        <p style="margin: 24px 0 0; padding-left: 24px; max-width: 34rem; font-size: 0.9375rem; line-height: 1.75; color: #c9bfa8;">Единое пространство для обучения, правил, судейства, клубов и соревнований. Турнирный модуль ведёт участников, команды, жеребьёвку, сетку и результаты — с полной историей изменений.</p>
+        <div style="margin-top: 28px; padding-left: 24px; display: flex; gap: 12px; flex-wrap: wrap;">
+          <a href="#" style="display: inline-flex; border-radius: 2px; background: #b02a20; color: #fff; font-weight: 500; padding: 10px 20px; font-size: 0.9375rem;">Смотреть турниры</a>
+          <a href="#" style="display: inline-flex; border-radius: 2px; border: 1px solid #3a2e22; color: #e8dcc4; font-weight: 500; padding: 10px 20px; font-size: 0.9375rem;">Правила и регламенты</a>
+        </div>
+      </div>
+
+      <figure style="grid-column: span 6; margin: 0;">
+        <div style="min-height: 420px;">
+          <sc-if value="{{ heroClashActive }}" hint-placeholder-val="{{ false }}">
+            <div key="{{ heroClashNonce }}" style="position: relative; overflow: hidden; border: 1px solid #3a2e22; background: #1b1611; padding-top: 30px;">
+              <span style="position: absolute; width: 14px; height: 14px; top: 10px; left: 10px; border-top: 1.5px solid #b07a35; border-left: 1.5px solid #b07a35;"></span>
+              <span style="position: absolute; width: 14px; height: 14px; top: 10px; right: 10px; border-top: 1.5px solid #b07a35; border-right: 1.5px solid #b07a35;"></span>
+              <span style="position: absolute; width: 14px; height: 14px; bottom: 10px; left: 10px; border-bottom: 1.5px solid #b07a35; border-left: 1.5px solid #b07a35;"></span>
+              <span style="position: absolute; width: 14px; height: 14px; bottom: 10px; right: 10px; border-bottom: 1.5px solid #b07a35; border-right: 1.5px solid #b07a35;"></span>
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; text-align: center; color: #9a8f7c; margin: 0;">Сшибка · наглядно</p>
+              <div style="position: relative; display: flex; height: 200px; align-items: center; justify-content: center; gap: 30px;">
+                <span class="flash-ring" style="position: absolute; inset: 0; margin: auto; width: 110px; height: 110px; border-radius: 50%; background: radial-gradient(circle, rgba(176,42,32,.55), transparent 70%);"></span>
+                <span class="strike-ring" style="position: absolute; inset: 0; margin: auto; width: 64px; height: 64px;"></span>
+                <span class="lunge-a">{{ heroClashIconA }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; color: #b07a35;">—</span>
+                <span class="lunge-b">{{ heroClashIconB }}</span>
+              </div>
+              <p class="pop-in" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.8125rem; text-align: center; margin: 6px 0 0;">{{ heroClashCaption }}</p>
+              <p class="pop-in" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.14em; text-align: center; color: #b02a20; margin: 6px 0 20px;">{{ heroClashResult }}</p>
+            </div>
+          </sc-if>
+          <sc-if value="{{ heroShowEquipment }}" hint-placeholder-val="{{ false }}">
+            <div style="position: relative; overflow: hidden; border: 1px solid #3a2e22; background: #1b1611; padding: 24px;">
+              <p style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b07a35; margin: 0;">Опись · обязательный комплект на бою</p>
+              <div style="margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: #322820; border: 1px solid #322820;">
+                <sc-for list="{{ equipmentItems }}" as="eq" hint-placeholder-count="9">
+                  <a href="#arhiv-ekipirovki" onClick="{{ eq.select }}" style="background: #1b1611; padding: 10px; text-align: left; display: block; color: inherit;" style-hover="background: #241c15;">
+                    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.625rem; color: #8b7f6b;">{{ eq.num }}</span>
+                    <p style="margin: 4px 0 0; font-size: 0.8125rem; font-weight: 500;">{{ eq.title }}</p>
+                    <p style="margin: 2px 0 0; font-size: 0.7rem; color: #c9bfa8;">{{ eq.desc }}</p>
+                  </a>
+                </sc-for>
+              </div>
+              <p style="margin: 18px 0 0; padding-top: 12px; border-top: 1px solid #322820; font-size: 0.75rem; line-height: 1.6; color: #c9bfa8;">Разряд (нож / кистень / палка / безоружный) решает жребий на сходке — см. «Знаки традиции» ниже.</p>
+            </div>
+          </sc-if>
+          <sc-if value="{{ heroShowMask }}" hint-placeholder-val="{{ true }}">
+            <div style="position: relative; overflow: hidden; border: 1px solid #3a2e22; background: #1b1611; padding: 20px;">
+              <div style="margin: 0 auto; width: 190px; aspect-ratio: 3/4;">
+                <image-slot id="hero-mask-photo" shape="rounded" radius="6" placeholder="Фото маски · загрузите снимок"></image-slot>
+              </div>
+              <p style="text-align: center; margin: 14px 0 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b07a35;">Маска · защитный шлем</p>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display: flex; justify-content: flex-end; border: 1px solid #3a2e22; border-top: 0; background: #1b1611; padding: 10px 16px;">
+          <button type="button" onClick="{{ toggleHeroMode }}" style="background: none; border: none; cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b02a20;">{{ heroToggleLabel }}</button>
+        </div>
+      </figure>
+    </div>
+
+    <div style="border-top: 1px solid #322820; padding: 20px 0 28px;">
+      <p style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #8b7f6b; margin: 0 0 4px; border-bottom: 1px solid #322820; padding-bottom: 10px;">Знаки традиции</p>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #322820; border: 1px solid #322820;">
+        <sc-for list="{{ heroSeals }}" as="seal" hint-placeholder-count="4">
+          <button type="button" onClick="{{ seal.onClick }}" onMouseEnter="{{ seal.onEnter }}" onMouseLeave="{{ seal.onLeave }}" style="background: #1b1611; border: none; cursor: pointer; padding: 16px 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; opacity: {{ seal.opacity }};">
+            <span style="transform: scale({{ seal.scale }}); transition: transform .2s;">{{ seal.icon }}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #c9bfa8;">{{ seal.label }}</span>
+          </button>
+        </sc-for>
+      </div>
+      <p style="min-height: 2.5rem; margin: 0; padding: 10px 4px 0; font-size: 0.8125rem; color: #9a8f7c;">{{ heroSealDescription }}</p>
+    </div>
+  </div>
+</section>
+
+<!-- BULLETIN -->
+<div style="margin: 0 auto; max-width: 80rem; padding: 56px 24px;">
+  <section style="display: flex; flex-direction: column; gap: 24px;">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <h2 style="font-family: Alegreya, serif; font-size: 1.5rem; font-weight: 600; margin: 0; flex-shrink: 0;">Ближайшие турниры</h2>
+      <span style="height: 1px; flex: 1; background: #3a3d38;"></span>
+      <a href="#" style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b02a20; flex-shrink: 0;">Все турниры →</a>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+      <sc-for list="{{ tournaments }}" as="t" hint-placeholder-count="3">
+        <article style="border: 1px solid {{ t.borderColor }}; background: #241c15; padding: 20px; grid-column: {{ t.span }};">
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.625rem; letter-spacing: 0.14em; text-transform: uppercase; padding: 3px 8px; border: 1px solid {{ t.borderColor }}; color: {{ t.statusColor }};">{{ t.status }}</span>
+          <h3 style="font-family: Alegreya, serif; font-size: 1.5rem; margin: 14px 0 4px;">{{ t.title }}</h3>
+          <p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: #9a8f7c;">{{ t.date }} · {{ t.place }}</p>
+        </article>
+      </sc-for>
+    </div>
+  </section>
+</div>
+
+<!-- BUZA -->
+<section id="buza" style="border-bottom: 2px solid #3a3d38; background: #100e0c; padding: 64px 0; box-shadow: {{ buzaPulseShadow }}; transition: box-shadow 1.1s ease;">
+  <div style="margin: 0 auto; max-width: 80rem; padding: 0 24px;">
+    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 40px;">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b07a35;">Исток традиции</span>
+      <span style="height: 1px; flex: 1; background: #3a3d38;"></span>
+    </div>
+    <div style="display: flex; align-items: baseline; gap: 14px;">
+      <h2 style="font-family: Alegreya, serif; font-size: 3rem; font-weight: 700; margin: 0;">Буза</h2>
+    </div>
+    <p style="margin: 16px 0 0; font-size: 0.9375rem; line-height: 1.6; color: #8b7f6b;">{{ buzaClosedHint }}</p>
+    <sc-if value="{{ buzaOpened }}" hint-placeholder-val="{{ false }}">
+    <p class="pop-in" style="margin: 16px 0 0; font-size: 0.9375rem; line-height: 1.75; color: #c9bfa8; max-width: 32rem;">Буза — обрядовое рукопашное состязание Тверской земли, выросшее из уклада артелей на Вышневолоцкой водной системе. Бурлаки, портовые грузчики и судовые экипажи, нанимавшиеся артелями, называли себя «бузниками» — в этом слове сходились сразу три занятия: гребец, охранник и кулачный боец.</p>
+    <div class="pop-in" style="display: grid; grid-template-columns: 1fr 1fr; gap: 56px; margin-top: 32px;">
+      <div>
+        <div style="border-top: 1px solid #322820; padding-top: 20px;">
+          <p style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #8b7f6b; margin: 0 0 12px;">Слово с тремя историями</p>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <sc-for list="{{ etyChips }}" as="ec" hint-placeholder-count="3">
+              <button type="button" onClick="{{ ec.onClick }}" style="border: 1px solid {{ ec.border }}; background: {{ ec.bg }}; color: {{ ec.color }}; padding: 8px 16px; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer;">{{ ec.label }}</button>
+            </sc-for>
+          </div>
+          <p style="min-height: 3.2rem; margin: 14px 0 0; font-size: 0.875rem; line-height: 1.6; color: #9a8f7c;">{{ etyText }}</p>
+        </div>
+        <figure style="margin: 28px 0 0; border-left: 2px solid #b07a35; padding-left: 20px;">
+          <p style="font-family: Alegreya, serif; font-style: italic; font-size: 1.125rem; line-height: 1.5; margin: 0; color: #d6c7a7;">«Побузиться, побузиться,<br/>Побузиться хочется.<br/>Молодая кровь горячая,<br/>На волю просится!»</p>
+          <figcaption style="margin-top: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.14em; color: #8b7f6b;">Частушка «под Бузу»</figcaption>
+        </figure>
+      </div>
+      <div>
+        <p style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #8b7f6b; margin: 0 0 16px;">Как это было устроено</p>
+        <div style="display: flex; flex-direction: column; gap: 1px; background: #322820; border: 1px solid #322820;">
+          <sc-for list="{{ buzaSteps }}" as="bs" hint-placeholder-count="5">
+            <button type="button" onClick="{{ bs.onClick }}" style="text-align: left; border: none; background: {{ bs.bg }}; padding: 16px 18px; cursor: pointer; display: flex; align-items: baseline; gap: 14px; width: 100%;">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: {{ bs.numColor }}; flex-shrink: 0;">{{ bs.num }}</span>
+              <span>
+                <span style="display: block; font-family: Alegreya, serif; font-size: 1.25rem; font-weight: 600; color: {{ bs.titleColor }};">{{ bs.label }}</span>
+                <sc-if value="{{ bs.active }}" hint-placeholder-val="{{ false }}">
+                  <span style="display: block; margin-top: 6px; font-size: 0.875rem; line-height: 1.6; color: #c9bfa8;">{{ bs.text }}</span>
+                </sc-if>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top: 56px; border-top: 1px solid #322820; padding-top: 32px; display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: #322820; border-bottom: 1px solid #322820;">
+      <sc-for list="{{ lineage }}" as="ln" hint-placeholder-count="3">
+        <div style="background: #1b1611; padding: 22px;">
+          <span style="font-family: Alegreya, serif; font-size: 2rem; font-weight: 700; color: #b07a35;">{{ ln.year }}</span>
+          <p style="margin: 8px 0 0; font-size: 0.875rem; line-height: 1.6; color: #c9bfa8;">{{ ln.text }}</p>
+        </div>
+      </sc-for>
+    </div>
+    <p style="margin: 24px 0 0; font-size: 0.9375rem; line-height: 1.6; color: #e8dcc4;">Турниры этого сайта носят то же имя — <strong style="color: #b02a20;">«Мстинская традиция»</strong> — потому что продолжают ту самую линию: обряд, перенесённый в зал, с судьями, разрядами и жребием.</p>
+    </sc-if>
+  </div>
+</section>
+
+<!-- STENKA/KRUG -->
+<section id="stenka" style="border-bottom: 2px solid #3a3d38; background: #241c15; padding: 64px 0;">
+  <div style="margin: 0 auto; max-width: 80rem; padding: 0 24px;">
+    <div style="margin-bottom: 40px; display: flex; align-items: center; gap: 16px;">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b07a35;">Л. 03 · Стенка / круг</span>
+      <span style="height: 1px; flex: 1; background: #3a3d38;"></span>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+      <sc-for list="{{ stenkaSides }}" as="side" hint-placeholder-count="2">
+        <div style="display: flex; flex-direction: column; gap: 20px; text-align: {{ side.align }};">
+          <div>
+            <p style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b07a35; margin: 0;">{{ side.label }}</p>
+            <h3 style="font-family: Alegreya, serif; font-size: 2.5rem; margin: 12px 0 0;">{{ side.title }}</h3>
+            <p style="margin: 12px 0 0; font-size: 0.875rem; line-height: 1.6; color: #c9bfa8;">{{ side.text }}</p>
+          </div>
+          <ul style="list-style: none; margin: 0; padding: 0; border: 1px solid #322820; background: #1b1611;">
+            <sc-for list="{{ side.participants }}" as="p" hint-placeholder-count="3">
+              <li style="display: flex; flex-direction: {{ side.rowDir }}; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #322820;">
+                <span style="font-size: 0.9375rem; font-weight: 500;">{{ p.name }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.1em; color: #8b7f6b;">{{ p.city }}</span>
+              </li>
+            </sc-for>
+          </ul>
+          <figure style="margin: 0;">
+            <div style="aspect-ratio: 3/2; overflow: hidden; border: 1px solid #3a2e22;">
+              <img src="{{ side.photoSrc }}" alt="{{ side.title }}" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+            </div>
+            <figcaption style="margin-top: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #8b7f6b;">{{ side.credit }}</figcaption>
+          </figure>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- POEDINOK -->
+<section id="poedinok" style="position: relative; overflow: hidden; border-bottom: 1px solid #322820; background: #100e0c; padding: 72px 0;">
+  <div style="margin: 0 auto; max-width: 88rem; padding: 0 24px;">
+    <div style="display: flex; align-items: center; gap: 20px;">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b07a35;">Л. 04 · Поединок · {{ tpBoutLabel }}</span>
+      <span style="height: 1px; flex: 1; background: #322820;"></span>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.14em; padding: 3px 8px; border: 1px solid #3a2e22; color: #8b9186;">Наглядно</span>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: {{ tpPhaseColor }};">{{ tpPhaseLabel }}</span>
+    </div>
+    <p style="margin: 12px 0 0; max-width: 40rem; font-size: 0.875rem; line-height: 1.6; color: #9a8f7c;">Это демонстрация одного пути по турнирной сетке, не настоящий поединок. Настоящий жребий бросается в карточке боя судьёй и сразу пишется сервером в журнал.</p>
+
+    <div style="margin-top: 36px; display: grid; grid-template-columns: 1fr 24rem; align-items: end; gap: 40px; border-bottom: 1px solid #322820; padding-bottom: 28px;">
+      <div>
+        <h3 style="font-family: Alegreya, serif; font-size: 2.5rem; font-weight: 700; margin: 0; line-height: 1.05;">{{ tpTitle }}</h3>
+        <p style="margin: 14px 0 0; max-width: 34rem; font-size: 1rem; line-height: 1.6; color: #9a8f7c;">{{ tpIntro }}</p>
+        <sc-if value="{{ tpShowFighterPicker }}" hint-placeholder-val="{{ true }}">
+          <div style="margin-top: 22px; display: flex; gap: 12px; flex-wrap: wrap;">
+            <sc-for list="{{ tpRunFighters }}" as="f" hint-placeholder-count="3">
+              <button type="button" onClick="{{ f.onClick }}" style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px; border: 1px solid #322820; background: #1b1611; padding: 14px 18px; cursor: pointer; text-align: left; color: inherit;" style-hover="border-color: #b02a20; background: #241c15;">
+                <span style="font-family: Alegreya, serif; font-size: 1.375rem; font-weight: 700;">{{ f.name }}</span>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #8b7f6b;">{{ f.club }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: #322820; border: 1px solid #322820;">
+        <sc-for list="{{ tpLadder }}" as="step" hint-placeholder-count="3">
+          <span style="display: flex; flex-direction: column; gap: 8px; padding: 12px; background: {{ step.bg }};">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; color: #8b7f6b;">{{ step.label }}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; text-transform: uppercase; color: {{ step.color }};">{{ step.state }}</span>
+            <span style="height: 2px; background: {{ step.bar }};"></span>
+          </span>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 300px 1fr; align-items: center; gap: 32px;">
+      <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 14px; text-align: right;">
+        <div class="{{ tpClashClassA }}" style="width: 100%; max-width: 22rem; aspect-ratio: 4/3; border: 1px solid #4a3a28; background: #1b1611; position: relative; overflow: hidden; display: grid; place-items: center;">{{ tpFighterAContent }}</div>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; color: #8b7f6b;">{{ tpFighterAClub }}</span>
+        <span style="font-family: Alegreya, serif; font-size: 1.75rem; font-weight: 700;">{{ tpFighterAName }}</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 2rem; color: {{ tpFighterAScoreColor }};">{{ tpFighterAScore }}</span>
+      </div>
+
+      <div style="display: grid; place-items: center; gap: 16px;">
+        <div class="{{ tpCubeSpinClass }}" style="width: 132px; height: 132px; border: 1px solid #4a3a28; background: #241c15; display: grid; place-items: center; color: {{ tpCubeColor }};">{{ tpCubeIcon }}</div>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #8b7f6b; text-align: center;">{{ tpLotHint }}</span>
+        <sc-if value="{{ tpShowDeclareMine }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; gap: 8px;">
+            <sc-for list="{{ tpWeaponButtonsMine }}" as="w" hint-placeholder-count="4">
+              <button type="button" title="{{ w.label }}" onClick="{{ w.onClick }}" style="width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid {{ w.borderColor }}; background: {{ w.bg }}; color: {{ w.color }}; cursor: pointer;">{{ w.icon }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 14px;">
+        <div class="{{ tpClashClassB }}" style="width: 100%; max-width: 22rem; aspect-ratio: 4/3; border: 1px solid #4a3a28; background: #1b1611; position: relative; overflow: hidden; display: grid; place-items: center;">{{ tpFighterBContent }}</div>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; color: #8b7f6b;">{{ tpFighterBClub }}</span>
+        <span style="font-family: Alegreya, serif; font-size: 1.75rem; font-weight: 700;">{{ tpFighterBName }}</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 2rem; color: {{ tpFighterBScoreColor }};">{{ tpFighterBScore }}</span>
+      </div>
+    </div>
+
+    <div style="margin-top: 44px; display: grid; grid-template-columns: 1fr 340px; gap: 48px; border-top: 1px solid #322820; padding-top: 32px;">
+      <div>
+        <h3 style="font-family: Alegreya, serif; font-size: 2.25rem; font-weight: 700; margin: 0; color: {{ tpLotTitleColor }};">{{ tpLotTitle }}</h3>
+        <p style="margin: 12px 0 0; max-width: 34rem; font-size: 0.9375rem; line-height: 1.6; color: #9a8f7c;">{{ tpLotText }}</p>
+        <div style="margin-top: 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+          <sc-if value="{{ tpShowPrimaryButton }}" hint-placeholder-val="{{ true }}">
+            <button type="button" onClick="{{ tpPrimaryAction }}" style="background: #b02a20; color: #14120f; border: none; padding: 14px 24px; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.14em; cursor: pointer;">{{ tpPrimaryLabel }}</button>
+          </sc-if>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; color: #8b7f6b;">Броски: {{ tpLotCount }}</span>
+          <span style="display: flex; gap: 6px;">
+            <sc-for list="{{ tpExchangeMarks }}" as="ex" hint-placeholder-count="3">
+              <span style="width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid {{ ex.border }}; background: {{ ex.bg }}; color: {{ ex.color }}; font-family: 'IBM Plex Mono', monospace; font-size: 0.625rem;">{{ ex.label }}</span>
+            </sc-for>
+          </span>
+        </div>
+      </div>
+      <div style="border: 1px solid #322820; background: #1b1611;">
+        <span style="display: block; border-bottom: 1px solid #322820; padding: 14px 18px; font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #8b7f6b;">Журнал круга</span>
+        <sc-if value="{{ tpJournalEmpty }}" hint-placeholder-val="{{ true }}">
+          <p style="padding: 14px 18px; margin: 0; font-size: 0.875rem; color: #9a8f7c;">Записей пока нет.</p>
+        </sc-if>
+        <sc-for list="{{ tpJournal }}" as="j" hint-placeholder-count="0">
+          <div style="display: flex; gap: 14px; border-bottom: 1px solid #322820; padding: 12px 18px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: #8b7f6b; flex-shrink: 0;">{{ j.time }}</span>
+            <span style="font-size: 0.875rem; color: #c9bfa8;">{{ j.text }}</span>
+          </div>
+        </sc-for>
+        <div style="display: flex; gap: 1px; background: #322820;">
+          <sc-for list="{{ tpTally }}" as="tl" hint-placeholder-count="4">
+            <span style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; background: #1b1611; padding: 12px;">
+              <span style="color: {{ tl.color }};">{{ tl.icon }}</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.875rem; color: {{ tl.color }};">{{ tl.count }}</span>
+            </span>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BRACKET -->
+<section id="setka" style="border-bottom: 1px solid #322820; background: #14120f; padding: 72px 0;">
+  <div style="margin: 0 auto; max-width: 88rem; padding: 0 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; border-bottom: 1px solid #322820; padding-bottom: 20px; flex-wrap: wrap;">
+      <div>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b07a35;">Л. 05 · Путь</span>
+        <h2 style="font-family: Alegreya, serif; font-size: 2.75rem; font-weight: 700; margin: 14px 0 0;">Карта состязания</h2>
+      </div>
+      <p style="max-width: 26rem; text-align: right; font-size: 0.9375rem; line-height: 1.5; color: #9a8f7c; margin: 0;">Сетка — карта: нажмите имя, чтобы проследить путь бойца. Иконка у имени — заявленный снаряд.</p>
+    </div>
+    <div style="margin-top: 32px; display: flex; gap: 20px;">
+      <sc-for list="{{ bracketColumns }}" as="col" hint-placeholder-count="4">
+        <div style="flex: 1; min-width: 0;">
+          <span style="display: block; margin-bottom: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #8b7f6b;">{{ col.label }}</span>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <sc-for list="{{ col.cells }}" as="cell" hint-placeholder-count="2">
+              <button type="button" onClick="{{ cell.onClick }}" disabled="{{ cell.disabled }}" style="text-align: left; border: 1px solid {{ cell.borderColor }}; background: {{ cell.bg }}; color: {{ cell.color }}; padding: 10px 14px; cursor: pointer;">
+                <span style="display: flex; justify-content: space-between; gap: 8px; align-items: center;">
+                  <span style="font-size: 0.875rem; font-weight: 500;">{{ cell.name }}</span>
+                  {{ cell.weaponIcon }}
+                </span>
+                <span style="display: block; margin-top: 2px; font-family: 'IBM Plex Mono', monospace; font-size: 0.625rem; text-transform: uppercase; color: {{ cell.subColor }};">{{ cell.sub }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- RULES QUIZ -->
+<section id="pravila" style="border-bottom: 1px solid #322820; background: #100e0c; padding: 72px 0;">
+  <div style="margin: 0 auto; max-width: 88rem; padding: 0 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; border-bottom: 1px solid #322820; padding-bottom: 20px; flex-wrap: wrap;">
+      <div>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b07a35;">Л. 06 · Регламент</span>
+        <h2 style="font-family: Alegreya, serif; font-size: 2.75rem; font-weight: 700; margin: 14px 0 0;">Что по правилам?</h2>
+      </div>
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #8b7f6b; max-width: 20rem; text-align: right;">Образец вопросов — наполняется из действующей редакции</span>
+    </div>
+    <div style="margin-top: 32px; display: grid; grid-template-columns: 1fr 300px; gap: 40px;">
+      <div style="border: 1px solid #322820; background: #1b1611; padding: 36px;">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; color: #8b7f6b;">Вопрос {{ quizIndexLabel }} из {{ quizTotalLabel }}</span>
+        <p style="font-family: Alegreya, serif; font-size: 2rem; font-weight: 600; line-height: 1.2; margin: 16px 0 0;">{{ quizText }}</p>
+        <sc-if value="{{ quizAnswered }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top: 24px; border-top: 1px solid #322820; padding-top: 20px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: {{ quizResultColor }};">{{ quizResultLabel }}</span>
+            <p style="margin: 12px 0 0; max-width: 34rem; font-size: 1rem; line-height: 1.6; color: #c9bfa8;">{{ quizExplain }}</p>
+            <button type="button" onClick="{{ quizNext }}" style="margin-top: 18px; background: #e8dcc4; color: #14120f; border: none; padding: 12px 20px; font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.14em; cursor: pointer;">Следующий вопрос →</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ quizNotAnswered }}" hint-placeholder-val="{{ true }}">
+          <div style="margin-top: 24px; display: flex; gap: 14px;">
+            <button type="button" onClick="{{ quizAnswerYes }}" style="flex: 1; border: 1px solid #4a3a28; background: transparent; color: #e8dcc4; padding: 18px; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.14em; cursor: pointer;">Разрешено</button>
+            <button type="button" onClick="{{ quizAnswerNo }}" style="flex: 1; border: 1px solid #4a3a28; background: transparent; color: #e8dcc4; padding: 18px; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.14em; cursor: pointer;">Запрещено</button>
+          </div>
+        </sc-if>
+      </div>
+      <aside style="border: 1px solid #322820; background: #1b1611; padding: 24px;">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #8b7f6b;">Ваш счёт</span>
+        <p style="font-family: 'IBM Plex Mono', monospace; font-size: 2.75rem; line-height: 1; margin: 14px 0 0;">{{ quizScoreLabel }}</p>
+        <div style="margin-top: 24px; display: flex; gap: 6px; flex-wrap: wrap;">
+          <sc-for list="{{ quizMarks }}" as="m" hint-placeholder-count="0">
+            <span style="width: 12px; height: 12px; background: {{ m.color }};"></span>
+          </sc-for>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- DOSSIERS -->
+<section id="bojcy" style="border-bottom: 1px solid #322820; background: #14120f; padding: 72px 0;">
+  <div style="margin: 0 auto; max-width: 88rem; padding: 0 24px;">
+    <div style="display: flex; align-items: center; gap: 20px;">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b07a35;">Л. 07 · Личные дела</span>
+      <span style="height: 1px; flex: 1; background: #322820;"></span>
+    </div>
+    <div style="margin-top: 32px; display: grid; grid-template-columns: repeat(3,1fr); gap: 28px;">
+      <sc-for list="{{ dossiers }}" as="d" hint-placeholder-count="3">
+        <article style="background: #d6c7a7; color: #241c15; padding: 22px;">
+          <div style="display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid rgba(36,28,21,.28); padding-bottom: 14px;">
+            <span>
+              <span style="display: block; font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.2em; color: #6b5c42;">Личное дело</span>
+              <span style="display: block; font-family: 'IBM Plex Mono', monospace; font-size: 1.75rem; color: #8e241d;">{{ d.fileNo }}</span>
+            </span>
+            <span style="width: 60px; height: 60px; border: 2px solid #8e241d; border-radius: 50%; display: grid; place-items: center; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; text-transform: uppercase; color: #8e241d; transform: rotate(-14deg); flex-shrink: 0;">{{ d.stamp }}</span>
+          </div>
+          <p style="font-family: Alegreya, serif; font-size: 1.75rem; font-weight: 700; margin: 16px 0 0;">{{ d.name }}</p>
+          <p style="margin: 6px 0 0; font-family: 'IBM Plex Mono', monospace; font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.14em; color: #6b5c42;">{{ d.club }}</p>
+          <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; border-top: 1px solid rgba(36,28,21,.22); padding-top: 12px;">
+            <sc-for list="{{ d.stats }}" as="st" hint-placeholder-count="3">
+              <span>
+                <span style="display: block; font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; text-transform: uppercase; color: #6b5c42;">{{ st.label }}</span>
+                <span style="display: block; font-family: 'IBM Plex Mono', monospace; font-size: 1.0625rem;">{{ st.value }}</span>
+              </span>
+            </sc-for>
+          </div>
+          <div style="margin-top: 14px; display: flex; align-items: center; gap: 8px;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.14em; color: #6b5c42;">Разряд</span>
+            <sc-for list="{{ d.weaponButtons }}" as="w" hint-placeholder-count="4">
+              <button type="button" title="{{ w.label }}" onClick="{{ w.onClick }}" style="width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid {{ w.borderColor }}; background: {{ w.bg }}; color: {{ w.color }}; cursor: pointer;">{{ w.icon }}</button>
+            </sc-for>
+          </div>
+        </article>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- EQUIPMENT -->
+<section id="snaryazhenie" style="border-top: 1px solid #322820; border-bottom: 1px solid #322820; background: #100e0c; padding: 64px 0;">
+  <div style="margin: 0 auto; max-width: 80rem; padding: 0 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; border-bottom: 1px solid #322820; padding-bottom: 24px; flex-wrap: wrap;">
+      <div>
+        <p style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b07a35; margin: 0;">Л. 08 · Опись снаряжения</p>
+        <h2 style="font-family: Alegreya, serif; font-size: 2.75rem; font-weight: 600; margin: 10px 0 0;">Чем бьются</h2>
+      </div>
+      <p style="max-width: 22rem; text-align: right; font-size: 0.875rem; line-height: 1.6; color: #9a8f7c; margin: 0;">Четыре разряда, заявленных в регламенте — жребий на сходке решает, каким разряд пойдёт бой.</p>
+    </div>
+    <div style="margin-top: 32px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px;">
+      <figure style="margin: 0; display: flex; flex-direction: column;">
+        <div style="position: relative; min-height: 380px; flex: 1; overflow: hidden; border: 1px solid #322820; background: #1b1611; display: flex; align-items: center; justify-content: center;">
+          <svg width="100%" height="100%" viewBox="0 0 200 140" preserveAspectRatio="none" aria-hidden="true"><defs><pattern id="crop-stripe" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="#1b1611"></rect><line x1="0" y1="0" x2="0" y2="10" stroke="#3a2e22" stroke-width="4"></line></pattern></defs><rect width="200" height="140" fill="url(#crop-stripe)"></rect></svg>
+          <span style="position: absolute; font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.1em; color: #8b7f6b; background: rgba(16,14,12,.7); padding: 6px 10px;">рисунок с натуры · загрузите фото</span>
+        </div>
+        <figcaption style="margin-top: 14px; border-top: 1px solid #322820; padding-top: 12px;">
+          <p style="font-family: Alegreya, serif; font-size: 1.125rem; font-weight: 600; margin: 0;">«Кулачной бой!», рисунок с натуры</p>
+          <p style="margin: 6px 0 0; font-size: 0.875rem; line-height: 1.5; color: #9a8f7c;">На листе — рукавицы бойцов, кафтаны, пояса и шапки.</p>
+        </figcaption>
+      </figure>
+      <div style="display: flex; flex-direction: column; gap: 1px; background: #322820; border: 1px solid #322820;">
+        <sc-for list="{{ boutWeapons }}" as="w" hint-placeholder-count="4">
+          <div style="display: grid; grid-template-columns: 54px 1fr; gap: 16px; background: #100e0c; padding: 20px;">
+            <div style="width: 54px; height: 54px; border: 1px solid #3a2e22; background: #241c15; color: #b07a35; display: grid; place-items: center;">{{ w.icon }}</div>
+            <div>
+              <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
+                <h3 style="font-family: Alegreya, serif; font-size: 1.5rem; margin: 0;">{{ w.label }}</h3>
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.5625rem; color: #9a8f7c;">{{ w.tag }}</span>
+              </div>
+              <p style="margin: 8px 0 0; font-size: 0.875rem; line-height: 1.5; color: #9a8f7c;">{{ w.desc }}</p>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GEAR ARCHIVE -->
+<section id="arhiv-ekipirovki" style="border-bottom: 2px solid #3a3d38; background: #14120f; padding: 64px 0;">
+  <div style="margin: 0 auto; max-width: 80rem; padding: 0 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; border-bottom: 1px solid #322820; padding-bottom: 24px; flex-wrap: wrap;">
+      <div>
+        <p style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b07a35; margin: 0;">Л. 09 · Архив экипировки</p>
+        <h2 style="font-family: Alegreya, serif; font-size: 2.75rem; font-weight: 600; margin: 10px 0 0;">Экспонаты</h2>
+      </div>
+      <p style="max-width: 20rem; text-align: right; font-size: 0.875rem; line-height: 1.6; color: #9a8f7c; margin: 0;">Девять предметов обязательного комплекта — независимо от разряда, вытянутого жребием.</p>
+    </div>
+    <div style="margin-top: 32px; position: relative; overflow: hidden; border: 1px solid #3a2e22; background: #1b1611;">
+      <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #322820; padding: 12px 24px; font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase;">
+        <span style="color: #b07a35;">Архив · экипировка</span>
+        <span style="color: #8b7f6b;">Экспонаты {{ gaCounter }}</span>
+      </div>
+      <div style="padding: 32px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center;">
+        <div>
+          <span style="font-family: Alegreya, serif; font-size: 3.5rem; font-weight: 600; color: #b02a20;">{{ gaIndexLabel }}</span>
+          <h3 style="font-family: Alegreya, serif; font-size: 2rem; font-weight: 600; margin: 10px 0 0;">{{ gaTitle }}</h3>
+          <p style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b07a35; margin: 6px 0 0;">{{ gaSubtitle }}</p>
+          <p style="margin: 16px 0 0; max-width: 26rem; font-size: 0.875rem; line-height: 1.6; color: #9a8f7c;">{{ gaDesc }}</p>
+        </div>
+        <div style="aspect-ratio: 4/5; max-width: 300px; margin: 0 auto; border: 1px solid #322820; position: relative; overflow: hidden; display: grid; place-items: center;">
+          <span style="position: absolute; width: 112%; aspect-ratio: 1/1; border-radius: 50%; border: 1px solid #322820; opacity: 0.4;"></span>
+          <svg viewBox="0 0 100 100" style="position: absolute; inset: 0; width: 100%; height: 100%; color: #b07a35; opacity: 0.5;"><defs><pattern id="ga-swatch" width="4.2" height="4.2" patternUnits="userSpaceOnUse"><path d="M0 4.2 L4.2 0" stroke="currentColor" stroke-width="0.5"></path><path d="M0 0 L4.2 4.2" stroke="currentColor" stroke-width="0.5"></path></pattern></defs><rect x="10" y="10" width="80" height="80" fill="url(#ga-swatch)"></rect><rect x="10" y="10" width="80" height="80" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.6"></rect></svg>
+          <span style="position: relative; font-family: Alegreya, serif; font-size: 4.5rem; font-weight: 600; color: #c9bfa8; opacity: 0.28;">{{ gaIndexLabel }}</span>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: space-between; border-top: 1px solid #322820; padding: 20px 24px;">
+        <button type="button" onClick="{{ gaPrev }}" style="background: none; border: 1px solid #3a2e22; color: #8b9186; padding: 10px 16px; font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.14em; cursor: pointer;">← Назад</button>
+        <button type="button" onClick="{{ gaNext }}" style="background: none; border: 1px solid #3a2e22; color: #8b9186; padding: 10px 16px; font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.14em; cursor: pointer;">Следующий →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CHRONICLE -->
+<section id="hronika" style="border-bottom: 2px solid #3a3d38; background: #1b1611; padding: 64px 0;">
+  <div style="margin: 0 auto; max-width: 80rem; padding: 0 24px;">
+    <div style="margin-bottom: 40px; display: flex; align-items: center; gap: 16px;">
+      <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b07a35; flex-shrink: 0;">Л. 10 · Хроника</span>
+      <span style="height: 1px; flex: 1; background: #3a3d38;"></span>
+    </div>
+    <div style="display: grid; grid-template-columns: 1.7fr 1fr 1fr; gap: 28px;">
+      <sc-for list="{{ chroniclePhotos }}" as="ph" hint-placeholder-count="3">
+        <figure style="margin: 0; display: flex; flex-direction: column; gap: 12px;">
+          <div style="position: relative; overflow: hidden; border: 1px solid #3a2e22; aspect-ratio: {{ ph.aspect }};">
+            <img src="{{ ph.src }}" alt="{{ ph.caption }}" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
+            <span style="position: absolute; bottom: 8px; left: 8px; background: rgba(16,14,12,.72); padding: 4px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.16em; color: #8b7f6b;">{{ ph.credit }}</span>
+          </div>
+          <figcaption style="font-size: 0.875rem; line-height: 1.6; color: #9a8f7c; margin: 0;">
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; color: #b07a35; margin-right: 8px;">{{ ph.n }}</span>{{ ph.caption }}
+          </figcaption>
+        </figure>
+      </sc-for>
+    </div>
+  </div>
+</section>
+
+<!-- PAINTINGS -->
+<section id="zhivopis" style="border-bottom: 2px solid #3a3d38; background: #100e0c; padding: 64px 0;">
+  <div style="margin: 0 auto; max-width: 80rem; padding: 0 24px; display: flex; flex-direction: column; gap: 56px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap;">
+      <div>
+        <p style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b07a35; margin: 0;">Л. 11 · Живописный ряд</p>
+        <h2 style="font-family: Alegreya, serif; font-size: 2.75rem; font-weight: 600; margin: 12px 0 0;">Как это писали</h2>
+      </div>
+      <p style="max-width: 22rem; text-align: right; font-size: 0.875rem; line-height: 1.6; color: #c9bfa8; margin: 0;">Разные руки и разный век — от рисунка с натуры до академического холста и уличного снимка.</p>
+    </div>
+
+    <figure style="position: relative; margin: 0;">
+      <div style="position: relative; aspect-ratio: 1280/868; overflow: hidden; border: 1px solid #3a2e22; display: flex; align-items: center; justify-content: center; background: #1b1611;">
+        <svg width="100%" height="100%" viewBox="0 0 200 140" preserveAspectRatio="none" aria-hidden="true"><rect width="200" height="140" fill="#1b1611"></rect><line x1="0" y1="0" x2="200" y2="140" stroke="#3a2e22" stroke-width="2"></line><line x1="200" y1="0" x2="0" y2="140" stroke="#3a2e22" stroke-width="2"></line></svg>
+        <span style="position: absolute; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: #8b7f6b;">рисунок 1845 · загрузите фото</span>
+      </div>
+      <figcaption style="position: absolute; inset-x: 0; bottom: 0; display: flex; flex-direction: column; gap: 6px; padding: 20px;">
+        <span style="font-family: Alegreya, serif; font-size: 1.75rem; font-weight: 600;">Торопецкий кулачный бой и гулянье, 1845</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #8b7f6b;">Рисунок с натуры</span>
+        <span style="display: inline-flex; width: fit-content; align-items: center; gap: 6px; border: 1px dashed #d9a44e; background: #2a2114; padding: 4px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.14em; color: #d9a44e;">Архив сообщества · происхождение уточняется</span>
+      </figcaption>
+    </figure>
+
+    <div style="display: grid; grid-template-columns: minmax(0,620px) minmax(0,1fr); gap: 40px;">
+      <figure style="margin: 0; position: relative;">
+        <div style="aspect-ratio: 4/3; overflow: hidden; border: 1px solid #3a2e22;"><img src="{{ featuredPainting.src }}" alt="{{ featuredPainting.title }}" style="width: 100%; height: 100%; object-fit: cover; display: block; filter: sepia(.18) contrast(1.05) brightness(.93);" /></div>
+        <span style="position: absolute; bottom: 8px; left: 8px; background: rgba(16,14,12,.72); padding: 4px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.16em; color: #8b7f6b;">{{ featuredPainting.credit }}</span>
+      </figure>
+      <div style="display: flex; flex-direction: column; justify-content: center; gap: 10px;">
+        <p style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b07a35; margin: 0;">Живопись · Public domain</p>
+        <h3 style="font-family: Alegreya, serif; font-size: 2rem; font-weight: 600; margin: 0;">{{ featuredPainting.title }}</h3>
+        <p style="margin: 0; font-size: 0.875rem; line-height: 1.6; color: #c9bfa8;">{{ featuredPainting.text }}</p>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3,1fr); gap: 28px;">
+      <sc-for list="{{ rowPaintings }}" as="p" hint-placeholder-count="3">
+        <figure style="margin: 0; position: relative;">
+          <div style="aspect-ratio: 4/3; overflow: hidden; border: 1px solid #3a2e22;"><img src="{{ p.src }}" alt="{{ p.title }}" style="width: 100%; height: 100%; object-fit: cover; display: block; filter: sepia(.18) contrast(1.05) brightness(.93);" /></div>
+          <span style="position: absolute; bottom: 8px; left: 8px; background: rgba(16,14,12,.72); padding: 4px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.16em; color: #8b7f6b;">{{ p.credit }}</span>
+          <figcaption style="margin-top: 10px; font-size: 0.875rem; line-height: 1.5; color: #c9bfa8;">{{ p.title }}. {{ p.author }}, {{ p.year }}.</figcaption>
+        </figure>
+      </sc-for>
+    </div>
+
+    <div style="display: grid; grid-template-columns: minmax(0,1fr) minmax(0,26rem); gap: 40px;">
+      <figure style="margin: 0; position: relative;">
+        <div style="aspect-ratio: 16/9; overflow: hidden; border: 1px solid #3a2e22;"><img src="{{ documentaryPhoto.src }}" alt="{{ documentaryPhoto.title }}" style="width: 100%; height: 100%; object-fit: cover; display: block;" /></div>
+        <span style="position: absolute; bottom: 8px; left: 8px; background: rgba(16,14,12,.72); padding: 4px 8px; font-family: 'IBM Plex Mono', monospace; font-size: 0.5rem; text-transform: uppercase; letter-spacing: 0.16em; color: #8b7f6b;">{{ documentaryPhoto.credit }}</span>
+      </figure>
+      <div style="display: flex; flex-direction: column; justify-content: center; gap: 10px;">
+        <p style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #b07a35; margin: 0;">Фотография · Public domain</p>
+        <h3 style="font-family: Alegreya, serif; font-size: 1.5rem; font-weight: 600; margin: 0;">{{ documentaryPhoto.title }}</h3>
+        <p style="margin: 0; font-size: 0.875rem; line-height: 1.6; color: #c9bfa8;">{{ documentaryPhoto.text }}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION INDEX -->
+<div style="margin: 0 auto; max-width: 80rem; padding: 56px 24px;">
+  <nav aria-label="Разделы страницы" style="border-top: 1px solid #3a2e22;">
+    <sc-for list="{{ sectionIndex }}" as="s" hint-placeholder-count="8">
+      <a href="{{ s.href }}" style="display: grid; grid-template-columns: 70px minmax(12rem,1fr) minmax(0,26rem) 40px; align-items: center; gap: 24px; border-bottom: 1px solid #322820; padding: 24px 8px; color: inherit;" style-hover="background: #1b1611;">
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 0.875rem; color: #9a8f7c;">{{ s.index }}</span>
+        <span style="font-family: Alegreya, serif; font-size: 2rem; font-weight: 600;">{{ s.title }}</span>
+        <span style="font-size: 0.875rem; line-height: 1.5; color: #9a8f7c;">{{ s.text }}</span>
+        <span style="color: #b02a20;">→</span>
+      </a>
+    </sc-for>
+  </nav>
+</div>
+
+</main>
+
+<footer style="background: #100e0c;">
+  <div style="margin: 0 auto; max-width: 72rem; padding: 32px 24px 0; border-top: 2px solid #3a3d38;"></div>
+  <div style="margin: 0 auto; max-width: 72rem; padding: 40px 24px; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 40px;">
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="color: #b02a20;"><rect x="9" y="2" width="6" height="6" fill="currentColor"></rect><rect x="4" y="10" width="4" height="12" fill="currentColor"></rect><rect x="16" y="10" width="4" height="12" fill="currentColor"></rect><path d="M8 10 L16 10 L12 16 Z" fill="currentColor"></path></svg>
+        <span style="line-height: 1.25;">
+          <span style="font-family: Alegreya, serif; display: block; font-size: 0.9375rem; font-weight: 600;">Мстинская</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; display: block; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.22em; color: #c9bfa8;">традиция</span>
+        </span>
+      </div>
+      <p style="max-width: 20rem; font-size: 0.875rem; line-height: 1.6; color: #c9bfa8; margin: 0;">Цифровая платформа сообщества: обучение, правила, турниры, клубы и снаряжение.</p>
+    </div>
+    <sc-for list="{{ footerColumns }}" as="col" hint-placeholder-count="3">
+      <nav style="display: flex; flex-direction: column; gap: 12px;">
+        <p style="font-family: 'IBM Plex Mono', monospace; font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; color: #8b9186; border-bottom: 1px solid #3a2e22; padding-bottom: 8px; margin: 0;">{{ col.title }}</p>
+        <sc-for list="{{ col.links }}" as="l" hint-placeholder-count="2">
+          <a href="#" style="font-size: 0.875rem; color: #e8dcc4;" style-hover="color: #b02a20;">{{ l }}</a>
+        </sc-for>
+      </nav>
+    </sc-for>
+  </div>
+  <div style="margin: 0 auto; max-width: 72rem; padding: 24px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #3a2e22;">
+    <p style="font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.14em; color: #c9bfa8; margin: 0;">© 2026 · Мстинская традиция</p>
+    <div style="display: flex; gap: 12px;">
+      <sc-for list="{{ footerSeals }}" as="fs" hint-placeholder-count="4">
+        <span style="color: #4a3a28;">{{ fs.icon }}</span>
+      </sc-for>
+    </div>
+  </div>
+</footer>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;buzaMechanic&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;seal&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;options&quot;: [&quot;seal&quot;, &quot;ship&quot;, &quot;scratch&quot;], &quot;section&quot;: &quot;Буза&quot;}}">
+const TOK = { accent: '#b02a20', accentDeep: '#8e241d', gold: '#b07a35', border: '#322820', borderStrong: '#3a2e22', text4: '#8b7f6b', muted: '#c9bfa8', surface: '#241c15', surfaceMuted: '#1b1611' };
+
+function S(d, w, cap, join) { return React.createElement('path', { key: d, d, stroke: 'currentColor', strokeWidth: w || 1.6, strokeLinecap: cap, strokeLinejoin: join, fill: 'none' }); }
+function C(cx, cy, r) { return React.createElement('circle', { key: 'c' + cx + cy, cx, cy, r, stroke: 'currentColor', strokeWidth: 1.6, fill: 'none' }); }
+function svgWrap(size, color, children) { return React.createElement('svg', { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', style: { color }, 'aria-hidden': true }, children); }
+
+function handsPaths() { return [C(7, 7.5, 2.6), C(17, 7.5, 2.6), S('M7 10.1 L10.5 17.5 L13.5 17.5 L17 10.1', 1.6, 'round', 'round')]; }
+function kistenPaths() { return [S('M6 20 L10.5 13.5', 1.6, 'round'), S('M10.5 13.5 L13 10.8 L12 9.4 L14.3 8.4', 1.3, 'round', 'round'), C(16.2, 6.3, 2.7)]; }
+function palkaPaths() { return [S('M5.5 19.5 L18.5 5.5', 1.8, 'round'), S('M7.7 17.1 L9.4 15.3 M14.6 9.7 L16.3 7.9', 1.4, 'round')]; }
+function nozhPaths() { return [S('M5 19 L13.5 10.5', 1.8, 'round'), S('M13.5 10.5 L18.7 5.3 C19.3 4.7 19.9 5.3 19.4 6.1 L15.2 12.8 Z', 1.4, undefined, 'round'), S('M6.6 17.4 L8.1 18.9', 1.4, 'round')]; }
+const WEAPON_PATHS = { hands: handsPaths, kisten: kistenPaths, palka: palkaPaths, nozh: nozhPaths };
+function weaponIcon(key, size, color) { return svgWrap(size || 20, color || 'currentColor', WEAPON_PATHS[key]()); }
+function boatPaths() { return [S('M4 15 L20 15 L17.5 19 L6.5 19 Z', 1.4, 'round', 'round'), S('M12 15 L12 6', 1.4, 'round'), S('M12 6 L17 9', 1.2, 'round', 'round')]; }
+function boatIcon(size, color) { return svgWrap(size || 20, color || 'currentColor', boatPaths()); }
+function sideBoatPaths() { return [
+  S('M2 17 L27 17 L23 22 L7 22 Z', 1.6, 'round', 'round'),
+  S('M14.5 17 L14.5 3', 1.6, 'round'),
+  S('M14.5 4 L22 15 L14.5 15 Z', 1.3, 'round', 'round'),
+  S('M14.5 8 L8 15 L14.5 15 Z', 1.3, 'round', 'round'),
+]; }
+function sideBoatIcon(size, color) { size = size || 30; return React.createElement('svg', { width: size, height: size * 0.8, viewBox: '0 0 29 24', fill: 'none', 'aria-hidden': true, style: { color: color || 'currentColor' } }, sideBoatPaths()); }
+function buzaEmblem(size, color) {
+  size = size || 132;
+  return React.createElement('svg', { viewBox: '0 0 200 200', width: size, height: size, fill: 'none', 'aria-hidden': true, style: { color } },
+    React.createElement('circle', { cx: 100, cy: 100, r: 86, stroke: 'currentColor', strokeWidth: 2.4, opacity: 0.95 }),
+    React.createElement('circle', { cx: 100, cy: 100, r: 74, stroke: 'currentColor', strokeWidth: 1.2, opacity: 0.7 }),
+    React.createElement('path', { d: 'M46 96 C36 78 46 54 70 46 C60 60 58 76 66 92 C56 94 50 96 46 96 Z', stroke: 'currentColor', strokeWidth: 2.4, fill: 'none' }),
+    React.createElement('path', { d: 'M154 96 C164 78 154 54 130 46 C140 60 142 76 134 92 C144 94 150 96 154 96 Z', stroke: 'currentColor', strokeWidth: 2.4, fill: 'none' }),
+    React.createElement('path', { d: 'M66 92 C74 104 84 110 100 110 C116 110 126 104 134 92', stroke: 'currentColor', strokeWidth: 2.4, fill: 'none' }),
+    React.createElement('path', { d: 'M100 118 L100 152 M88 128 L112 128', stroke: 'currentColor', strokeWidth: 3.4, strokeLinecap: 'round' }),
+    React.createElement('path', { d: 'M70 160 L130 160 L124 172 L76 172 Z', stroke: 'currentColor', strokeWidth: 1.8, fill: 'none' }));
+}
+
+const ETY = [
+  { label: 'Напиток', text: 'Тюркское слово — к традиции не имеет отношения, созвучие случайное.' },
+  { label: 'Буянить', text: 'В славянских языках «бузовать» значит бить, бушевать — бузники бузятся, то есть состязаются.' },
+  { label: 'Корабль', text: 'Буса — тип судна из новгородских былин; экипаж бусы называли бузниками, как «корабль» → «корабельщики».' },
+];
+const BUZA_STEPS = [
+  { label: 'Сбор', text: 'Партия бузников проходит по улицам под наигрыш «по деревне», созывая дружину в поход в соседнее село.' },
+  { label: 'Круг', text: 'Мужчины встают кругом; в центре — гармонист и двое сохранников, охраняющих его от удара.' },
+  { label: 'Пляска', text: 'Боец выходит в круг и бузится — раскачивается, как на палубе корабля, поёт частушки, метит ударами в воздух.' },
+  { label: 'Толчки', text: 'К пляшущему выходит соперник: они толкаются в лицо, корпус и руки — пока без ударов.' },
+  { label: 'Уговор', text: 'Кто-то объявляет уговор — правила на бой: побороться, побиться или и то, и другое. После него — удары и броски, до падения одного из бойцов.' },
+];
+const LINEAGE = [
+  { year: '1990', text: 'Тверской клуб «Белый волк» начинает системные занятия и экспедиции по традиции.' },
+  { year: '2011', text: 'Буза входит в международный союз боевых искусств WoMAU — наравне с самбо.' },
+  { year: '16 лет', text: 'Ежегодные всероссийские соревнования «Мстинская традиция» переносят обряд в зал — с судьями, разрядами и жребием.' },
+];
+
+function octagonPath(size, inset) {
+  const r = size / 2 - inset, cx = size / 2;
+  const pts = [];
+  for (let i = 0; i < 8; i++) { const a = (Math.PI / 4) * i + Math.PI / 8; pts.push((cx + r * Math.cos(a)).toFixed(2) + ' ' + (cx + r * Math.sin(a)).toFixed(2)); }
+  return 'M' + pts.join(' L') + ' Z';
+}
+const SEAL_OUTER = octagonPath(48, 2), SEAL_INNER = octagonPath(48, 6.5);
+function seal(child, size, color, filled) {
+  size = size || 38;
+  return React.createElement('span', { style: { position: 'relative', display: 'inline-grid', placeItems: 'center', width: size, height: size, color: color || TOK.text4, flexShrink: 0 } },
+    React.createElement('svg', { viewBox: '0 0 48 48', style: { position: 'absolute', inset: 0, width: '100%', height: '100%' }, fill: 'none', 'aria-hidden': true },
+      React.createElement('path', { d: SEAL_OUTER, fill: filled ? 'currentColor' : 'none', stroke: 'currentColor', strokeWidth: 1.6 }),
+      React.createElement('path', { d: SEAL_INNER, stroke: filled ? '#1b1611' : 'currentColor', strokeWidth: 0.9, opacity: filled ? 0.55 : 0.45 })),
+    React.createElement('span', { style: { position: 'relative', display: 'grid', placeItems: 'center', width: size * 0.46, height: size * 0.46, color: filled ? '#1b1611' : undefined } }, child));
+}
+function weaponSeal(key, size, color, filled) { return seal(weaponIcon(key, Math.round((size || 38) * 0.44), filled ? '#1b1611' : color), size, color, filled); }
+
+const HERO_MOTIFS = [
+  { key: 'hands', label: 'Безоружный', genitive: 'безоружного', code: 'HANDS' },
+  { key: 'kisten', label: 'Кистень', genitive: 'кистеня', code: 'KISTEN' },
+  { key: 'palka', label: 'Палка', genitive: 'палки', code: 'PALKA' },
+  { key: 'nozh', label: 'Нож', genitive: 'ножа', code: 'NOZH' },
+];
+const CLASH_RESULT_LINES = ['удар в голову — соступ взят', 'чистый уход — дистанция разорвана', 'захват сорван — попытка не защитана', 'снаряд выбит — снова в стойку'];
+const EQUIPMENT_ITEMS = [
+  { title: 'Маска', desc: 'Сетка на всё лицо и мягкий каркас', subtitle: 'Защитный шлем' },
+  { title: 'Горжет', desc: 'Крепится к маске, закрывает шею', subtitle: 'Защита шеи' },
+  { title: 'Налокотники', desc: 'Жёсткая вставка на сустав', subtitle: 'Защита локтей' },
+  { title: 'Перчатки', desc: 'Кевларовые или для ММА', subtitle: 'Боевые перчатки' },
+  { title: 'Паховая защита', desc: 'Протектор под шароварами', subtitle: 'Протектор' },
+  { title: 'Щитки', desc: 'Закрывают голень от удара', subtitle: 'Защита голени' },
+  { title: 'Косоворотка', desc: 'Или футболка — без иностранных надписей', subtitle: 'Тренировочная одежда' },
+  { title: 'Опояска', desc: 'Плетёный пояс традиционного кроя', subtitle: 'Пояс' },
+  { title: 'Шаровары', desc: 'Свободные традиционные штаны, не стесняют движение', subtitle: 'Тренировочные штаны' },
+];
+
+const TP_WEAPONS = [
+  { key: 'hands', label: 'Безоружный' },
+  { key: 'palka', label: 'Палка' },
+  { key: 'nozh', label: 'Нож' },
+  { key: 'kisten', label: 'Кистень' },
+];
+const RUN_FIGHTERS = [{ name: 'А. Ветров', club: 'Мста · Вышний Волочёк' }, { name: 'И. Дорохов', club: 'Буза · Тверь' }, { name: 'М. Гуляев', club: 'Мста · Боровичи' }];
+const PAIRS = [['А. Ветров', 'Д. Ершов'], ['С. Кузьмин', 'Т. Савин'], ['И. Дорохов', 'Р. Белов'], ['М. Гуляев', 'П. Лавров']];
+const CLUBS = { 'А. Ветров': 'Мста · Вышний Волочёк', 'Д. Ершов': 'Буза · Тверь', 'С. Кузьмин': 'Порубежье · Торжок', 'Т. Савин': 'Застава · Удомля', 'И. Дорохов': 'Буза · Тверь', 'Р. Белов': 'Мста · Боровичи', 'М. Гуляев': 'Мста · Боровичи', 'П. Лавров': 'Застава · Удомля' };
+const GHOST_R1 = ['Д. Ершов', 'С. Кузьмин', 'Р. Белов', 'П. Лавров'];
+const GHOST_R2 = ['С. Кузьмин', 'П. Лавров'];
+const INITIAL_DECLARED = { 'А. Ветров': 1, 'С. Кузьмин': 0, 'И. Дорохов': 2, 'М. Гуляев': 3, 'Д. Ершов': 0, 'Т. Савин': 1, 'Р. Белов': 2, 'П. Лавров': 3 };
+const LADDER_LABELS = ['Круг 1', 'Полуфинал', 'Сходка'];
+const ROUND_WIN_FLAVORS = [['бросок и удержание', 'залом на удержании', 'уход с обезоруживанием'], ['чистый удар в голову', 'снаряд выбит, ход взят'], ['чистый порез в открытую линию', 'укол в шею — чисто'], ['точное попадание грузом', 'обхват перехвачен, снаряд взят']];
+
+function pairIndexOf(fighter) { const i = PAIRS.findIndex((p) => p.includes(fighter)); return i >= 0 ? i : 0; }
+function opponentAt(fighter, step) {
+  const p = pairIndexOf(fighter);
+  if (step === 0) { const [a, b] = PAIRS[p]; return a === fighter ? b : a; }
+  if (step === 1) return GHOST_R1[p ^ 1];
+  return GHOST_R2[p < 2 ? 1 : 0];
+}
+function buildLadder(fighter) {
+  return LADDER_LABELS.map((label, i) => {
+    const opponent = fighter ? opponentAt(fighter, i) : [GHOST_R1[0], GHOST_R1[1], GHOST_R2[0]][i];
+    return { label, opponent, club: CLUBS[opponent] || '' };
+  });
+}
+function buildBracket(fighter, runStep, runOver) {
+  const p = fighter ? pairIndexOf(fighter) : -1;
+  const myHalf = p < 2 ? 0 : 1;
+  const wonStep = (step) => !!fighter && (step < runStep || (step === runStep && runOver !== null && runOver !== 'out'));
+  const col1 = PAIRS.flat();
+  const col2 = PAIRS.map((pair, i) => (i === p && fighter ? (wonStep(0) ? fighter : '—') : GHOST_R1[i]));
+  const col3 = [0, 1].map((half) => (half === myHalf && fighter ? (wonStep(1) ? fighter : '—') : GHOST_R2[half]));
+  const col4 = [runOver === 'champion' && fighter ? fighter : '—'];
+  const cell = (name) => ({ name, club: name === '—' ? 'ожидает' : (CLUBS[name] || '') });
+  return [
+    { label: 'Круг 1 · 8 бойцов', cells: col1.map(cell) },
+    { label: 'Полуфинал · 4 бойца', cells: col2.map(cell) },
+    { label: 'Сходка · 2 бойца', cells: col3.map(cell) },
+    { label: 'Победитель', cells: col4.map(cell) },
+  ];
+}
+function boutOf(state) {
+  const fighter = state.tpFighter;
+  const step = fighter ? Math.min(state.tpStep, 2) : 0;
+  const opponent = fighter ? opponentAt(fighter, step) : buildLadder(null)[step].opponent;
+  return { a: fighter || 'Ваш боец', b: opponent, label: buildLadder(fighter)[step].label };
+}
+
+const QUIZ = [
+  { text: 'Продолжать бой после команды судьи «стой».', allowed: false, explain: 'Команда судьи останавливает бой немедленно — любое действие после неё разбирается отдельно.' },
+  { text: 'Борьба в захвате с выведением из равновесия.', allowed: true, explain: 'Работа в захвате — основа традиции: выведение из равновесия входит в разряд без оружия.' },
+  { text: 'Удар в затылок и по позвоночнику.', allowed: false, explain: 'Закрытые зоны исключены в любом разряде, независимо от снаряда.' },
+  { text: 'Выход с макетом ножа без маски и рукавиц.', allowed: false, explain: 'Допуск к бою даётся только в полном снаряжении, проверяет судейская тройка.' },
+];
+
+class Component extends DCLogic {
+  state = {
+    heroMode: 'mask', heroHovered: null, heroClash: null, heroClashNonce: 0,
+    etyIndex: null, buzaStep: 0, buzaPulse: false, buzaOpened: false, buzaStriking: false, scratchCount: 0, buzaShipMoving: false,
+    gaIndex: 0,
+    declared: { ...INITIAL_DECLARED },
+    tpFighter: null, tpStep: 0, tpPhase: 'idle', tpBeaten: [], tpOver: null,
+    tpLot: null, tpLotCount: 0, tpTally: [0, 0, 0, 0], tpJournal: [],
+    tpRound: 0, tpExchanges: [], tpScores: [0, 0], tpPicked: null,
+    tpSpinning: false, tpSpinFrame: 0,
+    quizIndex: 0, quizPicked: null, quizScore: 0, quizMarks: [],
+  };
+
+  clashTimer = null;
+  spinTimer = null;
+
+  logJournal(text) {
+    const time = String(14 + this.state.tpJournal.length).padStart(2, '0') + ':' + String((42 + this.state.tpJournal.length * 3) % 60).padStart(2, '0');
+    return [{ time, text }, ...this.state.tpJournal].slice(0, 4);
+  }
+
+  triggerHeroClash(motifKey) {
+    if (this.clashTimer) clearTimeout(this.clashTimer);
+    const a = motifKey || HERO_MOTIFS[Math.floor(Math.random() * 4)].key;
+    const b = HERO_MOTIFS[Math.floor(Math.random() * 4)].key;
+    const result = CLASH_RESULT_LINES[Math.floor(Math.random() * CLASH_RESULT_LINES.length)];
+    this.setState((s) => ({ heroClash: { a, b, result }, heroClashNonce: s.heroClashNonce + 1 }));
+    this.clashTimer = setTimeout(() => this.setState({ heroClash: null }), 2360);
+  }
+
+  selectExhibit(index) { this.setState({ gaIndex: index }); }
+
+  jumpToBuza() {
+    if (this.buzaPulseTimer) clearTimeout(this.buzaPulseTimer);
+    this.setState({ buzaPulse: true, buzaOpened: true });
+    this.strikeBuza();
+    this.buzaPulseTimer = setTimeout(() => this.setState({ buzaPulse: false }), 1400);
+    setTimeout(() => { const el = document.getElementById('buza'); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 72, behavior: 'smooth' }); }, 10);
+  }
+  strikeBuza() {
+    if (this.buzaStrikeTimer) clearTimeout(this.buzaStrikeTimer);
+    this.setState({ buzaStriking: true });
+    this.buzaStrikeTimer = setTimeout(() => this.setState({ buzaStriking: false }), 500);
+  }
+  toggleBuza() {
+    const mech = this.props.buzaMechanic || 'seal';
+    if (mech === 'scratch') {
+      if (this.state.buzaOpened) { this.setState({ buzaOpened: false, scratchCount: 0 }); return; }
+      const next = Math.min(3, this.state.scratchCount + 1);
+      this.setState(next >= 3 ? { scratchCount: next, buzaOpened: true } : { scratchCount: next });
+      return;
+    }
+    if (mech === 'ship') {
+      if (this.state.buzaOpened) { this.setState({ buzaOpened: false, buzaShipMoving: false }); return; }
+      this.setState({ buzaShipMoving: true });
+      setTimeout(() => this.setState({ buzaOpened: true }), 550);
+      return;
+    }
+    this.strikeBuza();
+    this.setState((s) => ({ buzaOpened: !s.buzaOpened }));
+  }
+
+  throwLot() {
+    const b = boutOf(this.state);
+    const pool = [this.state.declared[b.a], this.state.declared[b.b]].filter((x) => x !== undefined);
+    const weapon = pool.length ? pool[Math.floor(Math.random() * pool.length)] : Math.floor(Math.random() * 4);
+    this.setState({ tpSpinning: true });
+    let frame = 0;
+    const spin = () => {
+      frame++;
+      this.setState({ tpSpinFrame: frame % 4 });
+      if (frame < 10) { this.spinTimer = setTimeout(spin, 90); }
+      else {
+        this.setState((s) => ({
+          tpSpinning: false, tpPhase: 'result', tpLot: weapon, tpLotCount: s.tpLotCount + 1,
+          tpTally: s.tpTally.map((v, i) => (i === weapon ? v + 1 : v)),
+          tpJournal: this.logJournal('Жребий: ' + TP_WEAPONS[weapon].label.toLowerCase() + ' — ' + boutOf(s).label.toLowerCase() + '.'),
+        }));
+      }
+    };
+    this.spinTimer = setTimeout(spin, 90);
+  }
+
+  chooseFighter(name) {
+    const ladder = buildLadder(name);
+    this.setState({
+      tpFighter: name, tpStep: 0, tpBeaten: [], tpOver: null, tpPhase: 'declare', tpLot: null,
+      tpRound: 0, tpExchanges: [], tpScores: [0, 0], tpPicked: name,
+      tpJournal: this.logJournal(name + ' заявлен на турнир. Круг 1: ' + ladder[0].opponent + '.'),
+    });
+  }
+  restartRun() { this.setState({ tpFighter: null, tpStep: 0, tpBeaten: [], tpOver: null, tpPhase: 'idle', tpLot: null, tpRound: 0, tpExchanges: [], tpScores: [0, 0], tpPicked: null, tpJournal: [] }); }
+  nextStep() {
+    const nextStep = this.state.tpStep + 1;
+    const ladder = buildLadder(this.state.tpFighter);
+    const next = ladder[nextStep];
+    this.setState((s) => ({ tpStep: nextStep, tpPhase: 'declare', tpLot: null, tpRound: 0, tpExchanges: [], tpScores: [0, 0], tpJournal: next ? this.logJournal(next.label + ': выходит ' + next.opponent + '.') : s.tpJournal }));
+  }
+  declare(name, weapon) {
+    this.setState((s) => ({ declared: { ...s.declared, [name]: weapon } }));
+    if (name === this.state.tpFighter && this.state.tpPhase === 'declare') {
+      if (this.state.tpStep >= 2) {
+        this.setState((s) => ({ tpPhase: 'result', tpLot: weapon, tpLotCount: s.tpLotCount + 1, tpTally: s.tpTally.map((v, i) => (i === weapon ? v + 1 : v)), tpJournal: this.logJournal(this.state.tpFighter + ' выходит на сходку с разрядом: ' + TP_WEAPONS[weapon].label.toLowerCase() + ' — без жребия.') }));
+      } else {
+        this.setState({ tpPhase: 'ready', tpJournal: this.logJournal(name + ' заявил разряд: ' + TP_WEAPONS[weapon].label.toLowerCase() + '.') });
+      }
+    }
+  }
+  startBout() { const b = boutOf(this.state); this.setState({ tpPhase: 'bout', tpRound: 0, tpExchanges: [], tpScores: [0, 0], tpJournal: this.logJournal('Бойцы сведены: ' + b.a + ' — ' + b.b + '.') }); }
+  runRound() {
+    if (this.state.tpPhase === 'clash') return;
+    this.setState({ tpPhase: 'clash' });
+    setTimeout(() => {
+      const s = this.state;
+      const b = boutOf(s);
+      const last = s.tpStep >= 2;
+      const win = Math.random() < 0.5 ? 0 : 1;
+      const scores = [...s.tpScores]; scores[win] += 1;
+      const exchanges = [...s.tpExchanges, win];
+      const round = s.tpRound + 1;
+      const flavorPool = ROUND_WIN_FLAVORS[s.tpLot ?? 0] || ROUND_WIN_FLAVORS[0];
+      const flavor = flavorPool[Math.floor(Math.random() * flavorPool.length)];
+      let journal = this.logJournal('Обмен ' + round + ': ' + flavor + ' — ' + (win === 0 ? b.a : b.b) + '.');
+      if (exchanges.length < 3) { this.setState({ tpScores: scores, tpExchanges: exchanges, tpRound: round, tpPhase: 'bout', tpJournal: journal }); return; }
+      const iWon = scores[0] > scores[1];
+      const beaten = iWon ? [...s.tpBeaten, b.b] : s.tpBeaten;
+      const runOver = iWon ? (last ? 'champion' : null) : 'out';
+      journal = [{ time: journal[0].time, text: b.label + ' окончен, счёт ' + scores[0] + ':' + scores[1] + ' — ' + (iWon ? 'дальше идёт ' + b.a : b.a + ' выбывает') + '.' }, ...journal].slice(0, 4);
+      this.setState({ tpScores: scores, tpExchanges: exchanges, tpRound: round, tpPhase: 'over', tpBeaten: beaten, tpOver: runOver, tpJournal: journal });
+    }, 700);
+  }
+  pickBracket(name) { this.setState((s) => ({ tpPicked: s.tpPicked === name ? null : name })); }
+
+  quizAnswer(said) {
+    if (this.state.quizPicked !== null) return;
+    const q = QUIZ[this.state.quizIndex];
+    const right = said === q.allowed;
+    this.setState((s) => ({ quizPicked: said, quizScore: s.quizScore + (right ? 1 : 0), quizMarks: [...s.quizMarks, right].slice(-8) }));
+  }
+  quizNext() { this.setState((s) => ({ quizIndex: (s.quizIndex + 1) % QUIZ.length, quizPicked: null })); }
+
+  renderVals() {
+    const s = this.state;
+    const pad = (n) => String(n).padStart(2, '0');
+
+    const navItems = [{ label: 'Турниры' }, { label: 'Спортсмены' }, { label: 'Клубы' }, { label: 'Правила' }, { label: 'Обучение' }].map((x) => x);
+
+    // hero
+    const heroClashActive = !!s.heroClash;
+    const heroShowMask = !heroClashActive && s.heroMode === 'mask';
+    const heroShowEquipment = !heroClashActive && s.heroMode === 'equipment';
+    let heroClashIconA, heroClashIconB, heroClashCaption, heroClashResult;
+    if (heroClashActive) {
+      const ma = HERO_MOTIFS.find((m) => m.key === s.heroClash.a);
+      const mb = HERO_MOTIFS.find((m) => m.key === s.heroClash.b);
+      heroClashIconA = weaponSeal(ma.key, 84, TOK.accent, true);
+      heroClashIconB = weaponSeal(mb.key, 84, TOK.accent, true);
+      heroClashCaption = ma.label + ' против ' + mb.genitive;
+      heroClashResult = s.heroClash.result;
+    }
+    const heroSeals = HERO_MOTIFS.map((m) => {
+      const glowing = heroClashActive && (s.heroClash.a === m.key || s.heroClash.b === m.key);
+      const hovered = s.heroHovered === m.key;
+      const dimmed = s.heroHovered !== null && !hovered;
+      return {
+        label: m.label,
+        icon: seal(weaponIcon(m.key, 17, glowing ? TOK.accent : '#343b3c'), 38, glowing ? TOK.accent : '#343b3c', false),
+        opacity: dimmed ? 0.45 : 1, scale: hovered ? 1.12 : 1,
+        onClick: () => this.triggerHeroClash(m.key),
+        onEnter: () => this.setState({ heroHovered: m.key }),
+        onLeave: () => this.setState((st) => ({ heroHovered: st.heroHovered === m.key ? null : st.heroHovered })),
+      };
+    });
+    const hoveredMotif = HERO_MOTIFS.find((m) => m.key === s.heroHovered);
+    let heroSealDescription = ' ';
+    if (hoveredMotif) {
+      heroSealDescription = hoveredMotif.code === 'HANDS'
+        ? '«Безоружный» — безоружный разряд: сходка идёт без какого-либо снаряда, одним приёмом.'
+        : (hoveredMotif.code === 'NOZH' || hoveredMotif.code === 'PALKA')
+          ? 'Нож и палка выходят на сходку с одним и тем же требованием к постановке — общая для двух разрядов норма страховки.'
+          : '«' + hoveredMotif.label + '» — один из вооружённых разрядов традиции.';
+    }
+    const equipmentItems = EQUIPMENT_ITEMS.map((it, i) => ({ num: pad(i), title: it.title, desc: it.desc, select: () => this.selectExhibit(i) }));
+
+    // buza
+    const buzaPulseShadow = s.buzaPulse ? 'inset 0 0 0 2px ' + TOK.gold + ', 0 0 40px rgba(176,122,53,.35)' : 'inset 0 0 0 0px transparent, 0 0 0 rgba(0,0,0,0)';
+    const jumpToBuza = () => this.jumpToBuza();
+    const toggleBuza = () => this.toggleBuza();
+    const buzaEmblemIcon = buzaEmblem(38, s.buzaOpened ? '#e0603f' : '#d9a44e');
+    const mechanic = this.props.buzaMechanic || 'seal';
+    const isSeal = mechanic === 'seal', isShip = mechanic === 'ship', isScratch = mechanic === 'scratch';
+    const sealHalfAClip = 'polygon(0 0,100% 0,0 100%)', sealHalfBClip = 'polygon(100% 0,100% 100%,0 100%)';
+    const sealHalfATransform = s.buzaOpened ? 'translate(-10px,-8px) rotate(-12deg)' : 'translate(0,0) rotate(0deg)';
+    const sealHalfBTransform = s.buzaOpened ? 'translate(10px,8px) rotate(12deg)' : 'translate(0,0) rotate(0deg)';
+    const sealHalfOpacity = s.buzaOpened ? 0 : 1;
+    const shipIcon = sideBoatIcon(30, TOK.gold);
+    const shipOffset = (s.buzaShipMoving || s.buzaOpened) ? 24 : 0;
+    const scratchOpacity = s.buzaOpened ? 0 : (1 - s.scratchCount / 3);
+    const etyChips = ETY.map((e, i) => ({ label: e.label, border: s.etyIndex === i ? TOK.accent : TOK.borderStrong, bg: s.etyIndex === i ? '#241c15' : 'transparent', color: s.etyIndex === i ? '#e8dcc4' : TOK.text4, onClick: () => this.setState({ etyIndex: i }) }));
+    const etyText = s.etyIndex === null ? 'Нажмите вариант — все три значения в ходу, но традицию бойцов пишут с большой буквы: Буза.' : ETY[s.etyIndex].text;
+    const buzaSteps = BUZA_STEPS.map((st, i) => ({ num: pad(i + 1), label: st.label, text: st.text, active: s.buzaStep === i, bg: s.buzaStep === i ? '#241c15' : '#1b1611', numColor: s.buzaStep === i ? TOK.accent : TOK.text4, titleColor: s.buzaStep === i ? '#e8dcc4' : TOK.muted, onClick: () => this.setState({ buzaStep: i }) }));
+    const lineage = LINEAGE;
+
+    // bulletin
+    const tournaments = [
+      { title: 'Кубок Мсты', date: '12 сентября', place: 'Вышний Волочёк', status: 'Регистрация', span: 'span 2', borderColor: TOK.gold, statusColor: TOK.gold },
+      { title: 'Осенний сбор', date: '28 сентября', place: 'Тверь', status: 'Скоро', span: 'span 1', borderColor: TOK.border, statusColor: TOK.text4 },
+      { title: 'Сходка традиции', date: '11 октября', place: 'Боровичи', status: 'Скоро', span: 'span 1', borderColor: TOK.border, statusColor: TOK.text4 },
+    ];
+
+    // stenka/krug
+    const stenkaSides = [
+      { label: 'Стенка', title: 'Стенка на стенку', text: 'Два строя сходятся по прямой, плечом к плечу — линия против линии, до тех пор, пока один строй не подастся назад.', align: 'right', rowDir: 'row-reverse',
+        participants: [{ name: 'Соколов Андрей', city: 'Боровичи' }, { name: 'Гришин Максим', city: 'Валдай' }, { name: 'Фомичёв Илья', city: 'Вышний Волочёк' }],
+        photoSrc: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Lob_Stenka_na_stenku.jpg/1920px-Lob_Stenka_na_stenku.jpg', credit: 'В. Лобачев · CC0' },
+      { label: 'Круг', title: 'Круговой бой', text: 'Один на один в очерченном круге: соступ решает выпад, а не количество бойцов за спиной.', align: 'left', rowDir: 'row',
+        participants: [{ name: 'Морозов Кирилл', city: 'Тверь' }, { name: 'Дмитриев Егор', city: 'Удомля' }, { name: 'Клюев Артём', city: 'Бологое' }],
+        photoSrc: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Lob_Kulachni_boi.jpg/1920px-Lob_Kulachni_boi.jpg', credit: 'В. Лобачев · CC0' },
+    ];
+
+    // tournament path
+    const bout = boutOf(s);
+    const ladder = buildLadder(s.tpFighter).map((step, i) => {
+      const done = i < s.tpStep || (i === s.tpStep && s.tpPhase === 'over' && s.tpOver !== 'out');
+      const lost = i === s.tpStep && s.tpOver === 'out';
+      const now = i === s.tpStep && !s.tpOver;
+      const state_ = !s.tpFighter ? 'ожидает' : done ? 'пройден' : lost ? 'проигран' : now ? 'идёт' : 'впереди';
+      const color = done ? TOK.gold : lost ? TOK.accent : now ? '#e8dcc4' : TOK.text4;
+      const bar = done ? TOK.gold : lost ? TOK.accent : now ? TOK.accent : TOK.borderStrong;
+      return { label: step.label, state: state_, color, bar, bg: now ? '#241c15' : '#1b1611' };
+    });
+    const PHASE_LABEL = { idle: ['Выберите бойца', TOK.text4], declare: ['Заявка разряда', TOK.gold], ready: ['Готов к жребию', TOK.gold], result: ['Разряд определён', TOK.gold], bout: ['Идёт бой', TOK.accent], clash: ['Сшибка', TOK.accent], over: ['Результат', TOK.gold] };
+    const [tpPhaseLabel, tpPhaseColor] = PHASE_LABEL[s.tpPhase] || PHASE_LABEL.idle;
+    const winner = s.tpPhase === 'over' ? (s.tpScores[0] > s.tpScores[1] ? 0 : 1) : null;
+    const fighting = s.tpPhase === 'bout' || s.tpPhase === 'clash' || s.tpPhase === 'over';
+    const clashing = s.tpPhase === 'clash';
+
+    const tpTitle = !s.tpFighter ? 'Пройдите турнир за одного бойца'
+      : s.tpOver === 'champion' ? 'Сходка взята'
+      : s.tpOver === 'out' ? bout.a + ' выбывает'
+      : s.tpPhase === 'over' ? bout.label + ' взят'
+      : bout.label + ' · ' + bout.a + ' против ' + bout.b;
+    const tpIntro = !s.tpFighter ? 'Три круга подряд: круг 1, полуфинал, сходка. Разряд заявляете сами, но снаряд выбирает жребий из двух заявленных. Одно поражение — и путь закончен.'
+      : s.tpOver === 'champion' ? 'Пройдены все три круга: ' + s.tpBeaten.join(', ') + '. Путь можно начать заново за другого бойца.'
+      : s.tpOver === 'out' ? 'Пройдено кругов: ' + s.tpBeaten.length + ' из 3. В традиции второго шанса в сетке нет — только следующий турнир.'
+      : s.tpPhase === 'over' ? bout.b + ' пройден со счётом ' + s.tpScores[0] + ':' + s.tpScores[1] + '.'
+      : 'Заявите разряд, бросьте жребий и проведите сшибки. Победа — до двух чистых касаний.';
+
+    const isFinal = s.tpStep >= 2;
+    const tpLotTitle = (s.tpPhase === 'idle' || s.tpPhase === 'declare') ? (s.tpPhase === 'declare' ? 'С чем выходите' : 'Круг ждёт')
+      : s.tpPhase === 'over' ? (s.tpOver === 'out' ? 'Путь закончен' : ('Дальше идёт ' + (winner === 0 ? bout.a : bout.b)))
+      : (s.tpPhase === 'bout' || s.tpPhase === 'clash') ? ('Обмен ' + (s.tpRound + 1) + ' из 3')
+      : (s.tpLot === null || s.tpPhase !== 'result') ? 'Разряд решает жребий' : TP_WEAPONS[s.tpLot].label;
+    const tpLotText = s.tpPhase === 'idle' ? 'Выберите бойца выше — и круг соберётся.'
+      : s.tpPhase === 'declare' ? (isFinal ? 'Сходка — разряд на неё выбираете сами, без жребия.' : 'Заявите разряд, если хотите сузить жребий до своей заявки, или сразу бросьте жребий.')
+      : s.tpPhase === 'over' ? ('Счёт ' + s.tpScores[0] + ':' + s.tpScores[1] + '. Результат уходит в журнал и в сетку.')
+      : (s.tpPhase === 'bout' || s.tpPhase === 'clash') ? 'Бой идёт до трёх обменов. Судейская тройка держит счёт.'
+      : (s.tpLot === null || s.tpPhase !== 'result') ? 'Разряды заявлены. Бросьте жребий: он выберет снаряд из двух заявленных.' : 'Разряд определён жребием.';
+
+    const tpShowPrimaryButton = !(s.tpPhase === 'declare' && isFinal);
+    const tpPrimaryLabel = s.tpPhase === 'idle' ? 'Выберите бойца' : s.tpPhase === 'ready' ? 'Свести бойцов' : s.tpPhase === 'over' ? (s.tpOver ? 'Начать путь заново' : 'Следующий круг →') : s.tpPhase === 'bout' ? ('Сшибка ' + (s.tpRound + 1) + ' →') : s.tpPhase === 'clash' ? 'Сшибка…' : s.tpPhase === 'declare' ? 'Бросить жребий' : 'Бросить жребий';
+    const tpPrimaryAction = s.tpPhase === 'ready' ? () => this.startBout()
+      : s.tpPhase === 'over' ? (s.tpOver ? () => this.restartRun() : () => this.nextStep())
+      : (s.tpPhase === 'bout' || s.tpPhase === 'clash') ? () => this.runRound()
+      : s.tpPhase === 'declare' ? () => this.throwLot()
+      : () => {};
+
+    const tpCubeIcon = s.tpSpinning ? weaponIcon(TP_WEAPONS[s.tpSpinFrame].key, 54, TOK.text4)
+      : s.tpPhase === 'result' && s.tpLot !== null ? weaponIcon(TP_WEAPONS[s.tpLot].key, 54, TOK.accent)
+      : weaponIcon('hands', 54, TOK.text4);
+    const tpCubeColor = s.tpPhase === 'result' && !s.tpSpinning ? TOK.accent : TOK.text4;
+    const tpCubeSpinClass = s.tpSpinning ? 'spin-cube' : '';
+    const tpLotHint = s.tpPhase === 'idle' ? 'Выберите бойца' : s.tpPhase === 'declare' ? (isFinal ? 'Финал без жребия — выберите разряд' : 'Готов к жребию') : s.tpPhase === 'result' ? 'Разряд определён' : (s.tpPhase === 'bout' || s.tpPhase === 'clash') ? 'Идёт бой' : 'Результат';
+    const tpShowDeclareMine = s.tpPhase === 'declare' && !!s.tpFighter;
+    const tpWeaponButtonsMine = TP_WEAPONS.map((w, i) => {
+      const active = s.tpFighter && s.declared[s.tpFighter] === i;
+      return { label: w.label, icon: weaponIcon(w.key, 19, active ? TOK.accent : TOK.text4), borderColor: active ? TOK.accent : TOK.borderStrong, bg: active ? '#1b1611' : 'transparent', color: active ? TOK.accent : TOK.text4, onClick: () => this.declare(s.tpFighter, i) };
+    });
+
+    const fighterContent = (name, declaredIdx) => {
+      if (declaredIdx !== undefined) {
+        const w = TP_WEAPONS[declaredIdx];
+        return React.createElement('span', { style: { color: TOK.borderStrong } }, weaponIcon(w.key, 90, TOK.borderStrong));
+      }
+      return React.createElement('span', { style: { position: 'relative', width: 140, height: 140, display: 'grid', placeItems: 'center' } },
+        React.createElement('span', { className: 'mask-ripple', style: { position: 'absolute', inset: 0, borderRadius: '50%', border: '1px solid ' + TOK.gold } }),
+        weaponIcon('hands', 60, TOK.accent));
+    };
+
+    const exchangeMarks = [0, 1, 2].map((i) => { const r = s.tpExchanges[i]; const decided = r !== undefined; return { label: decided ? (r === 0 ? 'A' : 'Б') : String(i + 1), border: decided ? TOK.accentDeep : TOK.border, bg: decided ? '#241c15' : 'transparent', color: decided ? TOK.accent : TOK.text4 }; });
+    const tpTally = TP_WEAPONS.map((w, i) => { const active = s.tpPhase === 'result' && s.tpLot === i; const color = active ? TOK.accent : TOK.muted; return { icon: weaponIcon(w.key, 16, color), color, count: s.tpTally[i] }; });
+
+    const bracketColumns = buildBracket(s.tpFighter, s.tpStep, s.tpOver).map((col) => ({
+      label: col.label,
+      cells: col.cells.map((c) => {
+        const mine = s.tpFighter === c.name;
+        const on = s.tpPicked === c.name || mine;
+        const beaten = s.tpBeaten.includes(c.name);
+        const wIdx = s.declared[c.name];
+        return {
+          name: c.name, sub: beaten ? 'пройден' : c.club, disabled: c.name === '—',
+          borderColor: mine ? TOK.accent : beaten ? TOK.accentDeep : on ? TOK.accent : TOK.border,
+          bg: mine ? '#2A1A16' : (on || beaten) ? '#241c15' : '#1b1611',
+          color: (on || beaten) ? '#e8dcc4' : TOK.muted, subColor: beaten ? TOK.accentDeep : TOK.text4,
+          weaponIcon: wIdx !== undefined ? weaponIcon(TP_WEAPONS[wIdx].key, 16, on ? TOK.accent : TOK.gold) : null,
+          onClick: () => c.name !== '—' && this.pickBracket(c.name),
+        };
+      }),
+    }));
+
+    // quiz
+    const q = QUIZ[s.quizIndex];
+    const quizAnswered = s.quizPicked !== null;
+    const correct = quizAnswered && s.quizPicked === q.allowed;
+
+    // dossiers
+    const DOSSIER_DATA = [
+      { name: 'А. Ветров', club: 'Мста · Вышний Волочёк', fileNo: '№ 014', stamp: 'Допуск 2026', stats: [{ label: 'Боёв', value: '18' }, { label: 'Побед', value: '13' }, { label: 'Круг', value: '03' }] },
+      { name: 'И. Дорохов', club: 'Буза · Тверь', fileNo: '№ 027', stamp: 'Допуск 2026', stats: [{ label: 'Боёв', value: '22' }, { label: 'Побед', value: '15' }, { label: 'Круг', value: '03' }] },
+      { name: 'М. Гуляев', club: 'Мста · Боровичи', fileNo: '№ 031', stamp: 'Судья · III', stats: [{ label: 'Боёв', value: '31' }, { label: 'Побед', value: '19' }, { label: 'Круг', value: '02' }] },
+    ];
+    const dossiers = DOSSIER_DATA.map((d) => ({
+      ...d,
+      weaponButtons: TP_WEAPONS.map((w, i) => { const active = s.declared[d.name] === i; return { label: w.label, icon: weaponIcon(w.key, 17, active ? TOK.accentDeep : TOK.paperMuted || '#7a6b50'), borderColor: active ? TOK.accentDeep : 'rgba(36,28,21,.28)', bg: active ? 'rgba(142,36,29,.12)' : 'transparent', onClick: () => this.declare(d.name, i) }; }),
+    }));
+
+    // equipment
+    const boutWeapons = [
+      { code: 'HANDS', label: 'Безоружный', tag: 'Без оружия · приёмов: 6', desc: '«Безоружный» — безоружный разряд: сходка идёт без какого-либо снаряда, одним приёмом.', icon: weaponIcon('hands', 26, TOK.gold) },
+      { code: 'PALKA', label: 'Палка', tag: 'Вооружённый разряд · приёмов: 9', desc: 'Нож и палка делят общую норму постановки на сходке.', icon: weaponIcon('palka', 26, TOK.gold) },
+      { code: 'NOZH', label: 'Нож', tag: 'Вооружённый разряд · приёмов: 7', desc: 'Нож и палка делят общую норму постановки на сходке.', icon: weaponIcon('nozh', 26, TOK.gold) },
+      { code: 'KISTEN', label: 'Кистень', tag: 'Вооружённый разряд · приёмов: 5', desc: '«Кистень» — один из вооружённых разрядов традиции.', icon: weaponIcon('kisten', 26, TOK.gold) },
+    ];
+
+    // gear archive
+    const gaItem = EQUIPMENT_ITEMS[s.gaIndex];
+    const gaCounter = pad(s.gaIndex) + ' / ' + pad(EQUIPMENT_ITEMS.length - 1);
+
+    // chronicle
+    const chroniclePhotos = [
+      { n: '01', src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Lob_Kulachni_boi.jpg/1920px-Lob_Kulachni_boi.jpg', credit: 'В. Лобачев · CC0', caption: 'Круговой бой: один на один в очерченном круге, зрители — по кромке.', aspect: '4/3' },
+      { n: '02', src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Lob_Stenka_na_stenku.jpg/1920px-Lob_Stenka_na_stenku.jpg', credit: 'В. Лобачев · CC0', caption: 'Стенка на стенку: строй на строй, до того, как один подастся назад.', aspect: '3/4' },
+      { n: '03', src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/%D0%9C%D0%B0%D1%81%D0%BB%D0%B5%D0%BD%D0%B8%D1%87%D0%BD%D1%8B%D0%B9_%D0%BA%D1%83%D0%BB%D0%B0%D1%87%D0%BD%D1%8B%D0%B9_%D0%B1%D0%BE%D0%B9._%D0%9C%D0%B0%D0%BB%D1%8B%D0%B5_%D0%9A%D0%BE%D1%80%D0%B5%D0%BB%D1%8B%2C_%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9_%D0%A1%D0%B5%D0%B2%D0%B5%D1%80%2C_2019.jpg/1920px-%D0%9C%D0%B0%D1%81%D0%BB%D0%B5%D0%BD%D0%B8%D1%87%D0%BD%D1%8B%D0%B9_%D0%BA%D1%83%D0%BB%D0%B0%D1%87%D0%BD%D1%8B%D0%B9_%D0%B1%D0%BE%D0%B9._%D0%9C%D0%B0%D0%BB%D1%8B%D0%B5_%D0%9A%D0%BE%D1%80%D0%B5%D0%BB%D1%8B%2C_%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9_%D0%A1%D0%B5%D0%B2%D0%B5%D1%80%2C_2019.jpg', credit: 'FrolovaAlex · CC BY-SA 4.0', caption: 'Масленичный бой в деревне Малые Корелы, Русский Север. 2019 год.', aspect: '3/4' },
+    ];
+
+    // paintings
+    const featuredPainting = { title: 'Кулачный бой при Иване IV', credit: 'М. И. Песков · 1862 · PD', text: 'Академическое полотно XIX века воспроизводит летописный сюжет: кулачный бой как публичное состязание, а не стихийная драка — с судьями и правилами, признанными обеими сторонами.', src: 'https://upload.wikimedia.org/wikipedia/commons/4/46/%D0%9F%D0%B5%D1%81%D0%BA%D0%BE%D0%B2_%D0%9C%D0%B8%D1%85%D0%B0%D0%B8%D0%BB_%D0%98%D0%B2%D0%B0%D0%BD%D0%BE%D0%B2%D0%B8%D1%87_-_%D0%9A%D1%83%D0%BB%D0%B0%D1%87%D0%BD%D1%8B%D0%B9_%D0%B1%D0%BE%D0%B9_%D0%BF%D1%80%D0%B8_%D0%98%D0%B2%D0%B0%D0%BD%D0%B5_IV_%281862%29.jpg' };
+    const rowPaintings = [
+      { title: 'Кулачный бой', author: 'Ф. Г. Солнцев', year: '1836', credit: 'Ф. Г. Солнцев · 1836 · PD', src: 'https://upload.wikimedia.org/wikipedia/commons/f/f7/%D0%A1%D0%BE%D0%BB%D0%BD%D1%86%D0%B5%D0%B2_%D0%9A%D1%83%D0%BB%D0%B0%D1%87%D0%BD%D1%8B%D0%B9_%D0%B1%D0%BE%D0%B9_1836.jpg' },
+      { title: '«Кулачный бой» (илл. к «Песне о купце Калашникове»)', author: 'В. М. Васнецов', year: '1891', credit: 'В. М. Васнецов · 1891 · PD', src: 'https://upload.wikimedia.org/wikipedia/commons/5/5f/%D0%9A%D1%83%D0%BB%D0%B0%D1%87%D0%BD%D1%8B%D0%B9_%D0%B1%D0%BE%D0%B9._%D0%98%D0%BB%D0%BB%D1%8E%D1%81%D1%82%D1%80%D0%B0%D1%86%D0%B8%D1%8F_%D0%BA_%D0%BF%D0%BE%D1%8D%D0%BC%D0%B5_%C2%AB%D0%9F%D0%B5%D1%81%D0%BD%D1%8F_%D0%BE_%D0%BA%D1%83%D0%BF%D1%86%D0%B5_%D0%9A%D0%B0%D0%BB%D0%B0%D1%88%D0%BD%D0%B8%D0%BA%D0%BE%D0%B2%D0%B5%C2%BB.jpg' },
+      { title: 'Лист из «Забав русского народа»', author: 'Г. Г. Гейслер', year: '1805', credit: 'Г. Г. Гейслер · 1805 · PD', src: 'https://upload.wikimedia.org/wikipedia/commons/5/5e/03_Spiele_und_Blustigungen_der_Russen_aus_den_niederen_Volksschichten.jpg' },
+    ];
+    const documentaryPhoto = { title: 'Кулачный бой перед ночлежным домом', credit: 'М. П. Дмитриев · до 1917 · PD', text: 'Нижегородский фотограф М. П. Дмитриев снимал уличную жизнь без постановки — здесь кулачный бой попал в кадр как часть будничной сцены, а не как постановочный сюжет.', src: 'https://upload.wikimedia.org/wikipedia/commons/9/99/%D0%9A%D1%83%D0%BB%D0%B0%D1%87%D0%BD%D1%8B%D0%B9_%D0%B1%D0%BE%D0%B9_%D0%BF%D0%B5%D1%80%D0%B5%D0%B4_%D0%BD%D0%BE%D1%87%D0%BB%D0%B5%D0%B6%D0%BD%D1%8B%D0%BC_%D0%B4%D0%BE%D0%BC%D0%BE%D0%BC.jpg' };
+
+    const sectionIndex = [
+      { href: '#poedinok', index: '01', title: 'Поединок', text: 'Прохождение турнира за одного бойца — жребий и до трёх сшибок в каждом круге.' },
+      { href: '#setka', index: '02', title: 'Сетка', text: 'Карта состязания от первого круга до сходки, с текущим положением бойца.' },
+      { href: '#snaryazhenie', index: '03', title: 'Снаряжение', text: 'Опись четырёх разрядов лота традиции — от безоружного боя до кистеня.' },
+      { href: '#arhiv-ekipirovki', index: '04', title: 'Архив', text: 'Девять предметов обязательного комплекта, один за другим — от маски до шароваров.' },
+      { href: '#pravila', index: '05', title: 'Правила', text: 'Регламент состязания — коротким квизом вместо страницы текста.' },
+      { href: '#bojcy', index: '06', title: 'Бойцы', text: 'Личные дела участников: клуб, разряд, послужной список.' },
+      { href: '#hronika', index: '07', title: 'Хроника', text: 'Документальные снимки состязаний прошлых лет.' },
+      { href: '#zhivopis', index: '08', title: 'Живопись', text: 'Кулачный бой в живописи и архивной графике — от начала XIX века до наших дней.' },
+    ];
+
+    const footerColumns = [
+      { title: 'Соревнования', links: ['Турниры', 'Правила и регламенты'] },
+      { title: 'Сообщество', links: ['Спортсмены', 'Клубы'] },
+      { title: 'Развитие', links: ['Обучение'] },
+    ];
+    const footerSeals = TP_WEAPONS.map((w) => ({ icon: weaponSeal(w.key, 28, TOK.text4, false) }));
+
+    return {
+      navItems,
+      heroClashActive, heroShowMask, heroShowEquipment, heroClashIconA, heroClashIconB, heroClashCaption, heroClashResult, heroClashNonce: s.heroClashNonce,
+      heroSeals, heroSealDescription, equipmentItems,
+      etyChips, etyText, buzaSteps, lineage, buzaPulseShadow, jumpToBuza, toggleBuza, buzaEmblemIcon, buzaOpened: s.buzaOpened, buzaStriking: s.buzaStriking,
+      isSeal, isShip, isScratch, sealHalfAClip, sealHalfBClip, sealHalfATransform, sealHalfBTransform, sealHalfOpacity, shipIcon, shipOffset, scratchOpacity,
+      buzaClosedHint: s.buzaOpened ? '' : 'Кораблик на реке выше приведёт сюда историю.',
+      heroMode: s.heroMode, heroToggleLabel: s.heroMode === 'mask' ? 'Показать снаряжение →' : '← Показать маску', toggleHeroMode: () => this.setState((st) => ({ heroMode: st.heroMode === 'mask' ? 'equipment' : 'mask' })),
+      tournaments,
+      stenkaSides,
+      tpBoutLabel: bout.label, tpPhaseLabel, tpPhaseColor, tpTitle, tpIntro,
+      tpShowFighterPicker: !s.tpFighter,
+      tpRunFighters: RUN_FIGHTERS.map((f) => ({ name: f.name, club: f.club, onClick: () => this.chooseFighter(f.name) })),
+      tpLadder: ladder,
+      tpClashClassA: clashing ? 'lunge-a' : '', tpClashClassB: clashing ? 'lunge-b' : '',
+      tpFighterAContent: fighterContent(bout.a, s.tpFighter ? s.declared[bout.a] : undefined),
+      tpFighterAClub: s.tpFighter ? (RUN_FIGHTERS.find((f) => f.name === s.tpFighter) || {}).club || '' : 'выберите бойца',
+      tpFighterAName: bout.a, tpFighterAScore: fighting ? String(s.tpScores[0]) : '—', tpFighterAScoreColor: winner === 0 ? TOK.accent : TOK.text4,
+      tpFighterBContent: fighterContent(bout.b, s.declared[bout.b]),
+      tpFighterBClub: CLUBS[bout.b] || '', tpFighterBName: bout.b, tpFighterBScore: fighting ? String(s.tpScores[1]) : '—', tpFighterBScoreColor: winner === 1 ? TOK.accent : TOK.text4,
+      tpCubeIcon, tpCubeColor, tpCubeSpinClass, tpLotHint, tpShowDeclareMine, tpWeaponButtonsMine,
+      tpLotTitle, tpLotTitleColor: (s.tpPhase === 'over' || s.tpPhase === 'clash') ? TOK.accent : '#e8dcc4', tpLotText,
+      tpShowPrimaryButton, tpPrimaryLabel, tpPrimaryAction, tpLotCount: pad(s.tpLotCount),
+      tpExchangeMarks: exchangeMarks, tpJournal: s.tpJournal, tpJournalEmpty: s.tpJournal.length === 0, tpTally,
+      bracketColumns,
+      quizIndexLabel: pad(s.quizIndex + 1), quizTotalLabel: pad(QUIZ.length), quizText: q.text, quizAnswered, quizNotAnswered: !quizAnswered,
+      quizResultLabel: correct ? 'Верно' : 'Неверно', quizResultColor: correct ? TOK.gold : TOK.accent, quizExplain: q.explain,
+      quizAnswerYes: () => this.quizAnswer(true), quizAnswerNo: () => this.quizAnswer(false), quizNext: () => this.quizNext(),
+      quizScoreLabel: pad(s.quizScore), quizMarks: s.quizMarks.map((ok) => ({ color: ok ? TOK.gold : TOK.accent })),
+      dossiers,
+      boutWeapons,
+      gaCounter, gaIndexLabel: pad(s.gaIndex), gaTitle: gaItem.title, gaSubtitle: gaItem.subtitle, gaDesc: gaItem.desc,
+      gaPrev: () => this.setState((st) => ({ gaIndex: (st.gaIndex - 1 + EQUIPMENT_ITEMS.length) % EQUIPMENT_ITEMS.length })),
+      gaNext: () => this.setState((st) => ({ gaIndex: (st.gaIndex + 1) % EQUIPMENT_ITEMS.length })),
+      chroniclePhotos, featuredPainting, rowPaintings, documentaryPhoto,
+      sectionIndex, footerColumns, footerSeals,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

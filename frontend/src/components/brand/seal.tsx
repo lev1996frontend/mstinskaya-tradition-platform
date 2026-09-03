@@ -46,6 +46,7 @@ export function Seal({
   size = 44,
   tone = "iron",
   filled = false,
+  accented = false,
   className,
 }: {
   /** Any glyph — a weapon motif, a lucide icon, a numeral. */
@@ -55,6 +56,16 @@ export function Seal({
   /** Struck-and-inked variant: solid ground, knocked-out glyph. Reserve it for
    *  the one seal that is the subject of a screen, not for every seal. */
   filled?: boolean;
+  /**
+   * Fades in a bolder retrace of the outer ring — a static hover/focus
+   * accent (~160ms opacity, nothing else) that replaces animating the seal
+   * itself. An earlier pass scaled the whole seal (ring + glyph together)
+   * on hover; scaling a ~17px glyph with ~1.5px strokes visibly wobbles from
+   * antialiasing recalculating every frame, even though it never actually
+   * shifts position (verified with `getBoundingClientRect`). The glyph and
+   * ring now stay at a fixed size always — only this extra outline reacts.
+   */
+  accented?: boolean;
   className?: string;
 }) {
   return (
@@ -69,6 +80,13 @@ export function Seal({
         fill="none"
       >
         <path d={OUTER} fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" />
+        <path
+          d={OUTER}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.6"
+          style={{ opacity: accented ? 1 : 0, transition: "opacity 160ms ease" }}
+        />
         <path
           d={INNER}
           stroke={filled ? "var(--surface)" : "currentColor"}

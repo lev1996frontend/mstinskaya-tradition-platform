@@ -2,7 +2,6 @@ import { InterlacePattern } from "@/components/brand/interlace-pattern";
 import { ButtonLink, Container } from "@/components/ui";
 import { HelmetReveal } from "@/features/home/helmet-reveal";
 import { HeroClashProvider, HeroIllustration, HeroIllustrationToggle, HeroTraditionSeals } from "@/features/home/hero-clash";
-import type { WeaponRulesView } from "@/types";
 
 /**
  * The masthead of the archive — the front page of a ledger, not a centred
@@ -34,7 +33,7 @@ import type { WeaponRulesView } from "@/types";
  * framer-motion in the bundle. `prefers-reduced-motion` neutralises it through
  * the global override in globals.css.
  */
-export function Hero({ rules }: { rules: WeaponRulesView | null }) {
+export function Hero() {
   return (
     <section id="krug" className="relative overflow-hidden border-b-2 border-[var(--rule)] bg-[var(--surface)]">
       <InterlacePattern className="text-[var(--accent)]" />
@@ -51,7 +50,7 @@ export function Hero({ rules }: { rules: WeaponRulesView | null }) {
         </div>
 
         <HeroClashProvider>
-          <div className="grid items-center gap-10 py-8 lg:grid-cols-12 lg:gap-14 lg:py-10">
+          <div className="grid items-center gap-10 pt-8 pb-4 lg:grid-cols-12 lg:gap-14 lg:pt-10 lg:pb-6">
             <div className="lg:col-span-6">
               <div className="border-l-2 border-[var(--accent)] pl-5 sm:pl-7">
                 <p className="record-label text-[var(--accent)]">Цифровая платформа сообщества</p>
@@ -89,15 +88,13 @@ export function Hero({ rules }: { rules: WeaponRulesView | null }) {
                 own touch-appropriate static fallback (no pointer tracking,
                 just a fixed legible face) for exactly this case.
 
-                The toggle link is docked directly onto the plate as a footer
-                strip sharing its left/right/bottom border (`border-t-0`)
-                rather than floating below it — it reads as a control on the
-                card, not a stray link sitting in the page's own whitespace. */}
+                The toggle link sits bare below the plate — no docked strip,
+                no bar background — just the button itself. */}
             <figure className="lg:col-span-6">
               <div className="min-h-[495px]">
                 <HeroIllustration mask={<HelmetReveal />} />
               </div>
-              <div className="flex items-center justify-end border border-t-0 border-[var(--border-strong)] bg-[var(--surface-muted)] px-4 py-2.5">
+              <div className="mt-3 flex items-center justify-end">
                 <HeroIllustrationToggle />
               </div>
             </figure>
@@ -108,8 +105,8 @@ export function Hero({ rules }: { rules: WeaponRulesView | null }) {
               beside a loose row of icons; see `HeroTraditionSeals` for the
               ledger layout itself. This wrapper only supplies the outer
               separation from the grid above. */}
-          <div className="border-t border-[var(--border)] py-6 sm:py-8">
-            <HeroTraditionSeals rules={rules} />
+          <div className="pt-2 pb-6 sm:pb-8">
+            <HeroTraditionSeals />
           </div>
         </HeroClashProvider>
       </Container>
