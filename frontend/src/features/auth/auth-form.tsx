@@ -2,13 +2,20 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Alert, Button, Card, Container } from "@/components/ui";
 import { Field, Input } from "@/components/ui/form";
 import { ApiError, ApiUnreachableError } from "@/lib/api";
 
 import { useAuth } from "./auth-context";
+
+/** Keeps the submit button disabled this long after a failed attempt
+ *  settles, on top of however long the request itself took — a fast
+ *  rejection (an instant 401, say) would otherwise re-enable the button
+ *  quickly enough for someone tapping it repeatedly to queue up several
+ *  more requests before they've even read the error. */
+const RETRY_COOLDOWN_MS = 600;
 
 function describeError(error: unknown, mode: "login" | "register"): string {
   if (error instanceof ApiUnreachableError) {
@@ -32,6 +39,13 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [lastName, setLastName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const cooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (cooldownTimer.current) clearTimeout(cooldownTimer.current);
+    };
+  }, []);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -57,10 +71,13 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       }
       router.push("/profile");
       router.refresh();
+      // `busy` deliberately stays true here, through the redirect — success
+      // navigates this component away, so there's nothing left to re-enable.
     } catch (caught) {
       setError(describeError(caught, mode));
-    } finally {
-      setBusy(false);
+      // Stay disabled a beat longer than the request itself took, so a fast
+      // failure can't be immediately re-tapped — see RETRY_COOLDOWN_MS above.
+      cooldownTimer.current = setTimeout(() => setBusy(false), RETRY_COOLDOWN_MS);
     }
   }
 
@@ -154,7 +171,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
           {error ? <Alert tone="danger">{error}</Alert> : null}
 
-          <Button type="submit" disabled={busy}>
+          <Button type="submit" disabled={busy} className="w-full justify-center">
             {busy ? "Подождите…" : mode === "login" ? "Войти" : "Создать аккаунт"}
           </Button>
         </form>
