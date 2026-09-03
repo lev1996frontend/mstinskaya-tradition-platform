@@ -4,9 +4,10 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 
 import { Seal } from "@/components/brand/seal";
 import { WEAPON_MOTIFS, randomWeaponMotif, type WeaponMotifKey } from "@/components/brand/weapon-glyphs";
+import { useRouter } from "next/navigation";
+
 import { CLASH_RESULT_LINES, ClashCard } from "@/features/home/clash-card";
 import { EQUIPMENT_ITEMS } from "@/features/home/equipment-items";
-import { selectExhibit } from "@/lib/gear-archive-link";
 
 type Clash = { a: WeaponMotifKey; b: WeaponMotifKey; nonce: number; result: string };
 type IllustrationMode = "mask" | "equipment";
@@ -202,18 +203,20 @@ export function HeroTraditionSeals() {
  * "Опись обязательный комплект на бою" — a direct port of the design
  * canvas's "Вариант В — опись обязательного снаряжения" (direction 4): the
  * nine items a fighter wears regardless of drawn weapon category, in the
- * same bordered specimen-plate frame as `ClashCard`. Each item is a deep
- * link into "Архив экипировки" (`features/equipment/gear-archive.tsx`) —
- * clicking "Паховая защита" here scrolls there and selects that exact
- * exhibit — via `selectExhibit` (`@/lib/gear-archive-link`). This replaced
- * an earlier "click starts a random сшибка" behavior: with a specific item
- * named on the button, jumping to a same-named exhibit is a much more
- * legible response to the click than an unrelated random weapon duel.
+ * same bordered specimen-plate frame as `ClashCard`. Each item deep-links
+ * into "Архив экипировки" on `/equipment` (`features/equipment/gear-
+ * archive.tsx`) — clicking "Паховая защита" here navigates there with that
+ * exact exhibit already selected, via `?exhibit=N` (read server-side by
+ * `app/equipment/page.tsx`). This replaced an earlier "click starts a
+ * random сшибка" behavior: with a specific item named on the button,
+ * jumping to a same-named exhibit is a much more legible response to the
+ * click than an unrelated random weapon duel.
  *
  * `EQUIPMENT_ITEMS` itself lives in `equipment-items.ts`, shared with that
  * same archive slider — this grid's item order is the slider's index order.
  */
 function EquipmentPlate() {
+  const router = useRouter();
   return (
     <div className="relative overflow-hidden border border-[var(--border-strong)] bg-[var(--surface-muted)] p-6">
       <span aria-hidden="true" className="tick" style={{ top: 10, left: 10, borderTop: "1.5px solid var(--gold)", borderLeft: "1.5px solid var(--gold)" }} />
@@ -235,7 +238,7 @@ function EquipmentPlate() {
           <button
             key={item.title}
             type="button"
-            onClick={() => selectExhibit(index)}
+            onClick={() => router.push(`/equipment?exhibit=${index}`)}
             className="group bg-[var(--surface-muted)] p-3 text-left transition-colors hover:bg-[var(--surface)]"
             aria-label={`${item.title} — открыть в архиве экипировки`}
           >

@@ -5,7 +5,6 @@ import { AnimatePresence, motion, useReducedMotion, type PanInfo, type Variants 
 
 import { Container, cn } from "@/components/ui";
 import { EQUIPMENT_ITEMS } from "@/features/home/equipment-items";
-import { GEAR_ARCHIVE_SELECT_EVENT } from "@/lib/gear-archive-link";
 import { TURN_EASE } from "@/lib/motion";
 
 const TOTAL = EQUIPMENT_ITEMS.length;
@@ -68,9 +67,16 @@ const slideVariants: Variants = {
  * every slide for now. Filling in an item's `image` path once a real file
  * lands at `public/references/exhibits/` is the only change needed to swap
  * that one slide over to the real photo — nothing else in this file changes.
+ *
+ * `initialIndex` seeds which slide shows first — the homepage Hero's "опись"
+ * grid (`EquipmentPlate` in `features/home/hero-clash.tsx`) deep-links here
+ * via `/equipment?exhibit=N`, and `app/equipment/page.tsx` reads that
+ * search param server-side and passes it down. There is no same-page event
+ * anymore (there used to be, back when this section lived on the homepage
+ * next to the Hero) — the two are on different routes now.
  */
-export function GearArchive() {
-  const [index, setIndex] = useState(0);
+export function GearArchive({ initialIndex }: { initialIndex?: number } = {}) {
+  const [index, setIndex] = useState(initialIndex ?? 0);
   const [direction, setDirection] = useState<1 | -1>(1);
   const reduceMotion = useReducedMotion();
   const item = EQUIPMENT_ITEMS[index];
@@ -104,21 +110,6 @@ export function GearArchive() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
-
-  // Deep-link target: the hero's опись grid (`EquipmentPlate`) dispatches
-  // this to jump straight to a specific exhibit — see `@/lib/gear-archive-
-  // link`. `direction` picked from the jump distance so the slide still
-  // animates toward where the target actually is, not always forward.
-  useEffect(() => {
-    function onSelect(event: Event) {
-      const targetIndex = (event as CustomEvent<number>).detail;
-      if (typeof targetIndex !== "number" || targetIndex === index) return;
-      setDirection(targetIndex > index ? 1 : -1);
-      setIndex(targetIndex);
-    }
-    window.addEventListener(GEAR_ARCHIVE_SELECT_EVENT, onSelect);
-    return () => window.removeEventListener(GEAR_ARCHIVE_SELECT_EVENT, onSelect);
-  }, [index]);
 
   function handleDragEnd(_event: unknown, info: PanInfo) {
     if (info.offset.x <= -SWIPE_OFFSET_THRESHOLD || info.velocity.x <= -SWIPE_VELOCITY_THRESHOLD) {
