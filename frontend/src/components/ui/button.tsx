@@ -83,18 +83,31 @@ export function Button({
   iconPosition = "start",
   className,
   children,
+  disabled,
   ...props
 }: Omit<ComponentProps<"button">, MotionConflictKeys> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
 } & IconProps) {
   const reduceMotion = useReducedMotion();
+  // A button that goes disabled mid-gesture (e.g. a submit button while a
+  // request is in flight) re-enables with the pointer often still resting on
+  // it — no fresh mouseenter fires, but framer-motion still re-evaluates
+  // `whileHover` the instant `disabled` clears, so the lift/scale spring
+  // fires right as any layout shift from the request's result (an error
+  // Alert mounting above it, say) is also landing. Two motions arriving in
+  // the same frame reads as a jitter, not two separate, legible changes.
+  // Gating every gesture prop on `disabled` (not just `reduceMotion`) means
+  // a disabled button never enters "hover" in the first place, so there is
+  // nothing left to re-trigger when it re-enables.
+  const skipMotion = reduceMotion || disabled;
   return (
     <motion.button
-      whileHover={reduceMotion ? undefined : "hover"}
-      whileTap={reduceMotion ? undefined : { scale: 0.98 }}
-      variants={reduceMotion ? undefined : liftVariants}
+      whileHover={skipMotion ? undefined : "hover"}
+      whileTap={skipMotion ? undefined : { scale: 0.98 }}
+      variants={skipMotion ? undefined : liftVariants}
       transition={{ duration: 0.12 }}
+      disabled={disabled}
       className={cn(buttonBase, buttonVariants[variant], buttonSizes[size], className)}
       {...props}
     >
