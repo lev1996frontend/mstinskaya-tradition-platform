@@ -551,7 +551,7 @@ export function BracketView({
                 aria-label="Предыдущий раунд"
                 disabled={activeIndex === 0}
                 onClick={() => setMobileRoundIndex((value) => Math.max(0, value - 1))}
-                className="rounded-full border border-[var(--border-strong)] p-1.5 text-[var(--muted)] disabled:opacity-30"
+                className="rounded-[var(--radius-sm)] border border-[var(--border-strong)] p-1.5 text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:pointer-events-none disabled:opacity-30"
               >
                 <ChevronLeft className="size-4" />
               </button>
@@ -561,7 +561,7 @@ export function BracketView({
                 aria-label="Следующий раунд"
                 disabled={activeIndex === rounds.length - 1}
                 onClick={() => setMobileRoundIndex((value) => Math.min(rounds.length - 1, value + 1))}
-                className="rounded-full border border-[var(--border-strong)] p-1.5 text-[var(--muted)] disabled:opacity-30"
+                className="rounded-[var(--radius-sm)] border border-[var(--border-strong)] p-1.5 text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:pointer-events-none disabled:opacity-30"
               >
                 <ChevronRight className="size-4" />
               </button>
