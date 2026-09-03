@@ -203,7 +203,7 @@ export function HeroTraditionSeals() {
  * canvas's "Вариант В — опись обязательного снаряжения" (direction 4): the
  * nine items a fighter wears regardless of drawn weapon category, in the
  * same bordered specimen-plate frame as `ClashCard`. Each item is a deep
- * link into "Архив экипировки" (`gear-archive.tsx`) further down the page —
+ * link into "Архив экипировки" (`features/equipment/gear-archive.tsx`) —
  * clicking "Паховая защита" here scrolls there and selects that exact
  * exhibit — via `selectExhibit` (`@/lib/gear-archive-link`). This replaced
  * an earlier "click starts a random сшибка" behavior: with a specific item

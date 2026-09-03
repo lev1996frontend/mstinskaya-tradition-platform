@@ -126,7 +126,7 @@ export type WeaponMotifKey = "hands" | "kisten" | "palka" | "nozh";
  * `description` is the equipment glossary line `hero-clash.tsx`'s
  * "Знаки традиции" row shows on hover — what the snaryad physically is, not
  * a competition rule (judges, staging, victory conditions stay backend-driven
- * via `describeWeaponRule` in `equipment.tsx`, further down the page). Wording
+ * via `describeWeaponRule` in `features/equipment/equipment.tsx`). Wording
  * confirmed directly by the tradition's own organiser, not invented.
  */
 export const WEAPON_MOTIFS: { key: WeaponMotifKey; label: string; genitive: string; description: string; Icon: ComponentType<GlyphProps> }[] = [
