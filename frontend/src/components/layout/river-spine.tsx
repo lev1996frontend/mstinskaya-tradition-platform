@@ -775,8 +775,13 @@ export function RiverSpine() {
           `aria-hidden`, no hover label. The marks beside the water are the
           things you click. */}
       <div ref={boatRef} aria-hidden="true" className="absolute top-0 left-0 will-change-transform">
-        <span className="river-bob relative block text-[var(--gold)] opacity-85">
-          <BoatIcon size={21} />
+        {/* The 0.85 sits on the hull alone, not on the wrapper: it used to dim
+            the whole group, and the anchor — already small, thin and in cold
+            metal against a dark pool — went with it. */}
+        <span className="river-bob relative block">
+          <span className="block text-[var(--gold)] opacity-85">
+            <BoatIcon size={21} />
+          </span>
 
           {/* Якорь на канате — hung off the hull itself, inside the bobbing
               wrapper, so the line rides the water with the boat instead of
@@ -784,11 +789,13 @@ export function RiverSpine() {
               is lying in a berth, and gone the moment it gets under way: rope
               and anchor belong to a boat at rest. */}
           <span className={`river-anchor${berthed ? " is-down" : ""}`}>
-            <svg className="river-rode" width="7" height="8" viewBox="0 0 7 8" fill="none" aria-hidden="true">
-              <path d="M3.5 0 C 5.4 2.4, 1.6 4.8, 3.5 8" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+            {/* Five pixels of rope, measured rather than guessed: at eight the
+                flukes hung three past the pool's rim. */}
+            <svg className="river-rode" width="7" height="5" viewBox="0 0 7 5" fill="none" aria-hidden="true">
+              <path d="M3.5 0 C 5.3 1.6, 1.7 3.2, 3.5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
             </svg>
             <span className="river-anchor-fluke">
-              <AnchorIcon size={8} />
+              <AnchorIcon size={11} />
             </span>
           </span>
         </span>

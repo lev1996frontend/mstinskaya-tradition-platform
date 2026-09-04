@@ -1287,20 +1287,27 @@ body::after {
    is under way again. */
 .river-anchor {
   position: absolute;
-  top: 82%;
+  /* Hung from just under the keel. Higher than it looks it should be: the rope
+     and the anchor together are taller than the hull, and any lower the flukes
+     crossed the pool's rim — ground tackle belongs inside the harbour. */
+  top: 72%;
   left: 50%;
   translate: -50% 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: var(--chrome);
+  /* Cold metal at the light end of the ramp, not the mid tone: the anchor is
+     the smallest thing on the rail and it sits inside a pool filled with
+     --background-deep, where --chrome all but disappeared. */
+  color: var(--chrome-strong);
   opacity: 0;
   transition: opacity 160ms ease;
   pointer-events: none;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.6));
 }
 
 .river-anchor.is-down {
-  opacity: 0.9;
+  opacity: 1;
 }
 
 /* Канат отдаётся сверху вниз: the line grows from the hull's end, not the
@@ -1314,12 +1321,12 @@ body::after {
 
   100% {
     transform: scaleY(1);
-    opacity: 0.55;
+    opacity: 0.75;
   }
 }
 
 .river-rode {
-  opacity: 0.55;
+  opacity: 0.75;
 }
 
 .river-anchor.is-down .river-rode {
