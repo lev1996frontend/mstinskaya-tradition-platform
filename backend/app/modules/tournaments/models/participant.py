@@ -13,6 +13,7 @@ from app.models.base import Base
 if TYPE_CHECKING:
     from app.modules.athletes.models import Athlete
     from .competition import Competition
+    from .competition_group import CompetitionGroup
     from .team import Team
     from .participant_status_history import ParticipantStatusHistory
     from .match import Match
@@ -67,6 +68,14 @@ class Participant(Base):
     #: because an entrant imported from a spreadsheet has no profile to read it
     #: from; a year rather than a date, matching what `Athlete` already stores.
     birth_year: Mapped[int | None] = mapped_column(nullable=True)
+    #: Which subgroup this entry was dealt into, when the discipline has a
+    #: group stage. Null for a straight knockout.
+    group_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("competition_groups.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     #: Only for an entrant with no platform profile yet. When ``athlete_id`` is
     #: set the name always comes from that profile, so linking an existing
     #: athlete can never produce a duplicate identity.
@@ -84,6 +93,7 @@ class Participant(Base):
     competition: Mapped[Competition | None] = relationship("Competition", back_populates="participants")
     team: Mapped[Team | None] = relationship("Team", back_populates="participants")
     status_history: Mapped[list[ParticipantStatusHistory]] = relationship("ParticipantStatusHistory", back_populates="participant", cascade="all, delete-orphan")
+    group: Mapped[CompetitionGroup | None] = relationship("CompetitionGroup", back_populates="participants")
 
     @property
     def type(self) -> str:

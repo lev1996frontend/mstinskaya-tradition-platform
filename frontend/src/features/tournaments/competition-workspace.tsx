@@ -10,10 +10,12 @@ import type {
   BracketTreeView,
   ChampionSummaryView,
   CompetitionEventView,
+  GroupStageView,
   CompetitionView,
   DrawView,
   MatchView,
   ParticipantView,
+  QualificationView,
   StandingsView,
   TeamBoutView,
   TeamView,
@@ -26,13 +28,18 @@ import { ChampionSummary } from "./champion-summary";
 import { EventsJournal } from "./events-journal";
 import { MatchResultDialog } from "./match-result-dialog";
 import { MatchesList } from "./matches-list";
+import { GroupStageConfig } from "./group-stage-config";
+import { GroupStandings } from "./group-standings";
 import { ParticipantsTable } from "./participants-table";
+import { QualificationPanel } from "./qualification-panel";
 import { StandingsTable } from "./standings-table";
 import { TeamBouts } from "./team-bouts";
 import { TeamsList } from "./teams-list";
 
 type TabKey =
   | "participants"
+  | "groups"
+  | "qualification"
   | "teams"
   | "matches"
   | "standings"
@@ -52,11 +59,24 @@ export type CompetitionData = {
   events: CompetitionEventView[];
   teamBouts: TeamBoutView[];
   champion: ChampionSummaryView | null;
+  groupStage: GroupStageView | null;
+  qualification: QualificationView | null;
 };
 
 export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
-  const { competition, participants, teams, matches, standings, bracket, events, teamBouts, champion } =
-    data;
+  const {
+    competition,
+    participants,
+    teams,
+    matches,
+    standings,
+    bracket,
+    events,
+    teamBouts,
+    champion,
+    groupStage,
+    qualification,
+  } = data;
   const { user } = useAuth();
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -79,9 +99,18 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
       competition.format === "GROUP_PLAYOFF" ||
       hasPlayoffRounds;
 
+    const hasGroups = (groupStage?.groups.length ?? 0) > 0;
+    // Once the playoff exists the qualification step is history; the bracket
+    // tab shows what came of it.
+    const showQualification = hasGroups && !hasPlayoffRounds;
+
     const list: { key: TabKey; label: string; count?: number }[] = [
       { key: "participants", label: "Участники", count: participants.length },
     ];
+    if (hasGroups) {
+      list.push({ key: "groups", label: "Подгруппы", count: groupStage?.groups.length });
+    }
+    if (showQualification) list.push({ key: "qualification", label: "Выход в плей-офф" });
     if (competition.type === "TEAM" || teams.length > 0) {
       list.push({ key: "teams", label: "Команды", count: teams.length });
       list.push({ key: "teamBouts", label: "Трое на трое", count: teamBouts.length });
@@ -102,7 +131,17 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
     bracket,
     teamBouts.length,
     champion,
+    groupStage,
   ]);
+
+  // Read in the bracket tab, where what to offer depends on how far the
+  // discipline has actually got.
+  const hasGroupStage = (groupStage?.groups.length ?? 0) > 0;
+  const hasPlayoff = (bracket?.rounds ?? []).some(
+    (round) => round.key !== "GROUP" && round.key !== "QUALIFICATION",
+  );
+  const isGroupFormat =
+    competition.format === "GROUP_PLAYOFF" || competition.format === "ROUND_ROBIN";
 
   const [tab, setTab] = useState<TabKey>(tabs[0]?.key ?? "participants");
   const activeTab = tabs.some((item) => item.key === tab) ? tab : (tabs[0]?.key ?? "participants");
@@ -204,6 +243,24 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
             onChanged={refresh}
           />
         ) : null}
+        {activeTab === "groups" ? (
+          groupStage ? (
+            <GroupStandings stage={groupStage} canManage={canManage} onChanged={refresh} />
+          ) : (
+            <p className="text-sm text-[var(--muted)]">Подгруппы недоступны.</p>
+          )
+        ) : null}
+        {activeTab === "qualification" ? (
+          qualification ? (
+            <QualificationPanel
+              state={qualification}
+              canManage={canManage}
+              onGenerated={refresh}
+            />
+          ) : (
+            <p className="text-sm text-[var(--muted)]">Данные о выходе недоступны.</p>
+          )
+        ) : null}
         {activeTab === "teams" ? <TeamsList teams={teams} /> : null}
         {activeTab === "standings" ? (
           standings ? (
@@ -215,14 +272,34 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
         {activeTab === "bracket" ? (
           bracket ? (
             <div className="space-y-6">
-              {/* Nothing has been drawn yet: offer the real generator, with its
-                  bye count and city verdict, rather than an empty tree. */}
-              {bracket.rounds.length === 0 && bracket.unassigned.length === 0 && canManage ? (
-                <BracketGenerator
-                  competitionId={competition.id}
-                  participantCount={participants.length}
-                  onGenerated={refresh}
-                />
+              {/* Nothing drawn at all: offer the real generator, with its bye
+                  count and separation verdict, rather than an empty tree.
+
+                  The branch has to be explicit about the group case. After a
+                  group stage `bracket.rounds` already holds the GROUP column,
+                  so a plain "is it empty" test hid the generator and put
+                  nothing in its place — the organizer was left on a tab with a
+                  group column and no way forward. A group stage is not built
+                  by this generator anyway; its playoff comes from the
+                  qualification step. */}
+              {canManage && !hasPlayoff ? (
+                hasGroupStage ? (
+                  qualification ? (
+                    <QualificationPanel
+                      state={qualification}
+                      canManage={canManage}
+                      onGenerated={refresh}
+                    />
+                  ) : null
+                ) : isGroupFormat ? (
+                  <GroupStageConfig competitionId={competition.id} onGenerated={refresh} />
+                ) : bracket.rounds.length === 0 && bracket.unassigned.length === 0 ? (
+                  <BracketGenerator
+                    competitionId={competition.id}
+                    participantCount={participants.length}
+                    onGenerated={refresh}
+                  />
+                ) : null
               ) : null}
               <BracketView
                 bracket={bracket}

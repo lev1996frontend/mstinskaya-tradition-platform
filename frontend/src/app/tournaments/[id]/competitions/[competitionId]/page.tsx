@@ -6,6 +6,8 @@ import {
   getBracket,
   getChampion,
   getCompetition,
+  getGroupStage,
+  getQualification,
   getStandings,
   getTournament,
   listDraws,
@@ -37,18 +39,31 @@ export default async function CompetitionPage({ params }: PageProps) {
   ]);
   if (!competition || competition.tournament_id !== id) notFound();
 
-  const [participants, teams, matches, standings, bracket, draws, events, teamBouts, champion] =
-    await Promise.all([
-      listParticipants(competitionId),
-      listTeams(competitionId),
-      listMatches(competitionId),
-      getStandings(competitionId),
-      getBracket(competitionId),
-      listDraws(competitionId),
-      listEvents(competitionId),
-      listTeamBouts(competitionId),
-      getChampion(competitionId),
-    ]);
+  const [
+    participants,
+    teams,
+    matches,
+    standings,
+    bracket,
+    draws,
+    events,
+    teamBouts,
+    champion,
+    groupStage,
+    qualification,
+  ] = await Promise.all([
+    listParticipants(competitionId),
+    listTeams(competitionId),
+    listMatches(competitionId),
+    getStandings(competitionId),
+    getBracket(competitionId),
+    listDraws(competitionId),
+    listEvents(competitionId),
+    listTeamBouts(competitionId),
+    getChampion(competitionId),
+    getGroupStage(competitionId),
+    getQualification(competitionId),
+  ]);
 
   return (
     <Container wide className="space-y-8 py-10">
@@ -92,6 +107,8 @@ export default async function CompetitionPage({ params }: PageProps) {
           events,
           teamBouts,
           champion,
+          groupStage,
+          qualification,
         }}
       />
     </Container>

@@ -277,6 +277,16 @@ class TournamentEngineService:
         match.winner_id = item.winner_participant_id
         session.add(item)
         await session.flush()
+
+        # Seat the winner in the next round, through the same wiring a bye and a
+        # completed соступ use. Without this a bracket recorded through the plain
+        # result dialog stops dead after one round: the bout reads FINISHED and
+        # the next one never receives anybody. A no-op for a group bout or a
+        # standalone match, both of which have no `next_match_id`.
+        from app.modules.tournaments.services.bracket_service import BracketService
+
+        await BracketService.advance_winner(session, match)
+        await BracketService.sync_tournament_state(session, match)
         return item
 
     @staticmethod

@@ -28,6 +28,8 @@ from app.modules.tournaments.schemas.views import (
     TeamView,
 )
 from app.modules.tournaments.services.engine_service import TournamentEngineService
+from app.modules.tournaments.schemas.bouts import GroupStageView, QualificationView
+from app.modules.tournaments.services.group_service import GroupService
 from app.modules.tournaments.services.read_service import TournamentReadService
 
 router = APIRouter(prefix="/api/v1", tags=["tournament-engine"])
@@ -125,3 +127,29 @@ async def list_participant_status_history(participant_id: str, session: AsyncSes
 @router.get("/athletes/{athlete_id}/tournament-history", response_model=list[AthleteParticipationView])
 async def get_athlete_tournament_history(athlete_id: str, session: AsyncSession = Depends(get_db)):
     return await TournamentReadService.athlete_history(session, athlete_id)
+
+
+# -------------------------------------------------------------- group stage
+# Public, like the rest of this file: a group table is a result, and results
+# are what the platform publishes.
+
+
+@router.get("/competitions/{competition_id}/groups", response_model=GroupStageView)
+async def get_group_stage(
+    competition_id: str, session: AsyncSession = Depends(get_db)
+) -> GroupStageView:
+    """Every subgroup with its table, and any place still genuinely tied.
+
+    A row's ``rank`` is null while its cluster is unresolved — the platform
+    reports the tie rather than putting a number on a place it did not honestly
+    determine.
+    """
+    return GroupStageView(**await GroupService.group_standings(session, competition_id))
+
+
+@router.get("/competitions/{competition_id}/qualification", response_model=QualificationView)
+async def get_qualification(
+    competition_id: str, session: AsyncSession = Depends(get_db)
+) -> QualificationView:
+    """Who goes through to the playoff, and what is still in the way."""
+    return QualificationView(**await GroupService.qualification(session, competition_id))

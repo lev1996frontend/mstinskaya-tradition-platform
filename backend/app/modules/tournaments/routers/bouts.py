@@ -19,11 +19,17 @@ from app.modules.tournaments.schemas.bouts import (
     BracketGenerateRequest,
     BracketPlanView,
     ChampionSummaryView,
+    GroupLayoutSuggestionView,
+    GroupPlanView,
+    GroupStageConfigRequest,
+    GroupStageView,
+    GroupTieBreakRequest,
     LotDrawRequest,
     LotOverrideRequest,
     LotView,
     MatchRoundView,
     ParticipantWithdrawRequest,
+    QualificationView,
     RoundCompleteRequest,
     RoundScoreRequest,
     ScoringActionView,
@@ -42,6 +48,7 @@ from app.modules.tournaments.security.deps import (
 )
 from app.modules.tournaments.services.bout_service import BoutService
 from app.modules.tournaments.services.bracket_service import BracketService
+from app.modules.tournaments.services.group_service import GroupService
 from app.modules.tournaments.services.read_service import TournamentReadService
 from app.modules.tournaments.services.team_bout_service import TeamBoutService
 
@@ -348,3 +355,115 @@ async def record_team_pairing_result(
     )
     await session.commit()
     return await TournamentReadService.match_detail(session, match_id)
+
+
+# -------------------------------------------------------------- group stage
+
+
+@router.post("/competitions/{competition_id}/groups/suggest", response_model=GroupLayoutSuggestionView)
+async def suggest_groups(
+    competition_id: str,
+    manager: TournamentManager = Depends(get_current_manager),
+    session: AsyncSession = Depends(get_db),
+) -> GroupLayoutSuggestionView:
+    """Every valid way to split this field, with one marked as advice.
+
+    POST rather than GET only for consistency with the bracket preview beside
+    it, which is also a manager-guarded dry run.
+    """
+    competition = await TournamentReadService.get_competition(session, competition_id)
+    await ensure_can_manage_competition(session, manager, competition)
+    return GroupLayoutSuggestionView(**await GroupService.suggest(session, competition_id))
+
+
+@router.post("/competitions/{competition_id}/groups/preview", response_model=GroupPlanView)
+async def preview_groups(
+    competition_id: str,
+    payload: GroupStageConfigRequest,
+    manager: TournamentManager = Depends(get_current_manager),
+    session: AsyncSession = Depends(get_db),
+) -> GroupPlanView:
+    """Dry run of the deal — who lands where, and what could not be separated."""
+    competition = await TournamentReadService.get_competition(session, competition_id)
+    await ensure_can_manage_competition(session, manager, competition)
+    plan = await GroupService.preview(
+        session,
+        competition_id,
+        group_count=payload.group_count,
+        advance_per_group=payload.advance_per_group,
+    )
+    return GroupPlanView(**plan)
+
+
+@router.post(
+    "/competitions/{competition_id}/groups/generate",
+    response_model=GroupPlanView,
+    status_code=status.HTTP_201_CREATED,
+)
+async def generate_groups(
+    competition_id: str,
+    payload: GroupStageConfigRequest,
+    manager: TournamentManager = Depends(get_current_manager),
+    session: AsyncSession = Depends(get_db),
+) -> GroupPlanView:
+    competition = await TournamentReadService.get_competition(session, competition_id)
+    await ensure_can_manage_competition(session, manager, competition)
+    plan = await GroupService.generate(
+        session,
+        competition_id,
+        group_count=payload.group_count,
+        advance_per_group=payload.advance_per_group,
+        actor_id=manager.user.id,
+    )
+    await session.commit()
+    return GroupPlanView(**plan)
+
+
+@router.post("/competition-groups/{group_id}/tie-break", response_model=GroupStageView)
+async def resolve_group_tie(
+    group_id: str,
+    payload: GroupTieBreakRequest,
+    manager: TournamentManager = Depends(get_current_manager),
+    session: AsyncSession = Depends(get_db),
+) -> GroupStageView:
+    """Settle a tie the bouts could not.
+
+    The platform refuses to pick a place it did not determine, so this is where
+    a человек does it — with a reason, on the record.
+    """
+    group = await GroupService.get_group(session, group_id)
+    competition = await TournamentReadService.get_competition(session, str(group.competition_id))
+    await ensure_can_manage_competition(session, manager, competition)
+    standings = await GroupService.resolve_tie(
+        session,
+        group_id,
+        ordering=payload.ordering,
+        reason=payload.reason,
+        actor_id=manager.user.id,
+    )
+    await session.commit()
+    return GroupStageView(**standings)
+
+
+@router.post(
+    "/competitions/{competition_id}/playoff/generate",
+    response_model=BracketPlanView,
+    status_code=status.HTTP_201_CREATED,
+)
+async def generate_playoff(
+    competition_id: str,
+    payload: BracketGenerateRequest | None = None,
+    manager: TournamentManager = Depends(get_current_manager),
+    session: AsyncSession = Depends(get_db),
+) -> BracketPlanView:
+    """Build the knockout stage from the group winners."""
+    competition = await TournamentReadService.get_competition(session, competition_id)
+    await ensure_can_manage_competition(session, manager, competition)
+    plan = await GroupService.promote_to_playoff(
+        session,
+        competition_id,
+        actor_id=manager.user.id,
+        final_weapon=(payload.final_weapon if payload else None),
+    )
+    await session.commit()
+    return BracketPlanView(**plan)

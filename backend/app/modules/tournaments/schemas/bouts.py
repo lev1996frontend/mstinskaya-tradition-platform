@@ -8,7 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.modules.tournaments.domain import rules
-from app.modules.tournaments.schemas.views import MatchView
+from app.modules.tournaments.schemas.views import MatchView, ParticipantView
 
 WeaponCategory = Literal["PALKA", "NOZH", "HANDS", "KISTEN"]
 LotMethod = Literal["PHYSICAL_DICE", "ONLINE_DICE"]
@@ -271,3 +271,148 @@ class WithdrawalView(BaseModel):
     reason: str
     walkovers: list[WalkoverView] = Field(default_factory=list)
     pending_walkovers: list[PendingWalkoverView] = Field(default_factory=list)
+
+
+# --------------------------------------------------------------- group stage
+
+
+class GroupLayoutOptionView(BaseModel):
+    """One valid way to split the field."""
+
+    group_count: int
+    advance_per_group: int
+    group_sizes: list[int]
+    qualifier_count: int
+    bracket_size: int
+    bye_count: int
+    #: Marked as advice. The platform never applies it on its own — both numbers
+    #: are required in the generate request regardless.
+    is_default: bool
+    note: str
+
+
+class GroupLayoutSuggestionView(BaseModel):
+    competition_id: str
+    participant_count: int
+    rationale: str
+    options: list[GroupLayoutOptionView] = Field(default_factory=list)
+
+
+class GroupStageConfigRequest(BaseModel):
+    """Both numbers are required and have no defaults on purpose.
+
+    `docs/domain-model.md` §5 forbids inventing tournament formats, so the
+    platform must not be able to build a group stage the organizer did not
+    actually specify.
+    """
+
+    group_count: int = Field(ge=1, le=8)
+    advance_per_group: int = Field(ge=1, le=8)
+
+
+class GroupMemberView(BaseModel):
+    participant_id: str
+    display_name: str
+
+
+class GroupSlotView(BaseModel):
+    ordinal: int
+    name: str
+    advance_count: int
+    members: list[GroupMemberView] = Field(default_factory=list)
+
+
+class GroupPlanView(BaseModel):
+    competition_id: str
+    group_count: int
+    participant_count: int
+    advance_per_group: int
+    qualifier_count: int
+    match_count: int
+    strategy: str
+    separation_satisfied: bool
+    unavoidable_collisions: list[CityCollisionView] = Field(default_factory=list)
+    groups: list[GroupSlotView] = Field(default_factory=list)
+
+
+class GroupStandingRow(BaseModel):
+    """One line of a group table.
+
+    ``rank`` is null while the fighters at that record are still tied — the
+    platform does not put a number on a place it did not honestly determine.
+    ``resolved_by`` says how the place was reached, so a manual decision is
+    visible as one.
+    """
+
+    rank: int | None = None
+    resolved_by: str | None = None
+    participant: ParticipantView | None = None
+    played: int = 0
+    wins: int = 0
+    losses: int = 0
+    draws: int = 0
+    no_results: int = 0
+    qualifies: bool = False
+
+
+class UnresolvedTieView(BaseModel):
+    participant_ids: list[str]
+    participant_names: list[str]
+    wins: int
+    losses: int
+    reason: str
+
+
+class GroupView(BaseModel):
+    id: str
+    ordinal: int
+    name: str
+    advance_count: int
+    complete: bool
+    decided: bool
+    rows: list[GroupStandingRow] = Field(default_factory=list)
+    unresolved: list[UnresolvedTieView] = Field(default_factory=list)
+
+
+class GroupStageView(BaseModel):
+    competition_id: str
+    format: str
+    matches_total: int = 0
+    matches_finished: int = 0
+    decided: bool = False
+    groups: list[GroupView] = Field(default_factory=list)
+
+
+class GroupTieBreakRequest(BaseModel):
+    """The organizer's answer to a tie the bouts could not settle.
+
+    ``reason`` is mandatory: this is a human decision that changes who reaches
+    the playoff, and the journal has to be able to say why it went that way.
+    """
+
+    ordering: list[str] = Field(min_length=2)
+    reason: str = Field(min_length=3, max_length=2000)
+
+
+class QualifierView(BaseModel):
+    participant_id: str
+    display_name: str
+    group_ordinal: int
+    group_name: str
+    place_in_group: int
+    seed: int
+
+
+class QualificationBlocker(BaseModel):
+    code: str
+    message: str
+    ids: list[str] = Field(default_factory=list)
+
+
+class QualificationView(BaseModel):
+    competition_id: str
+    ready: bool
+    blockers: list[QualificationBlocker] = Field(default_factory=list)
+    qualifiers: list[QualifierView] = Field(default_factory=list)
+    #: The playoff that would be built, or null while something blocks it.
+    plan: BracketPlanView | None = None

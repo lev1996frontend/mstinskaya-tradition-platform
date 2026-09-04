@@ -21,6 +21,9 @@ import type {
   CompetitionType,
   CompetitionView,
   DrawView,
+  GroupLayoutSuggestionView,
+  GroupPlanView,
+  GroupStageView,
   ImportCommitResponse,
   ImportReport,
   ImportRow,
@@ -32,6 +35,7 @@ import type {
   MatchView,
   ParticipantStatusHistoryView,
   ParticipantView,
+  QualificationView,
   ResultMethod,
   StandingsView,
   TeamBoutView,
@@ -100,6 +104,12 @@ export const listDraws = (competitionId: string) =>
 
 export const listEvents = (competitionId: string) =>
   apiListOrEmpty<CompetitionEventView>(`/api/v1/competitions/${competitionId}/events`);
+
+export const getGroupStage = (competitionId: string) =>
+  apiRequestOrNull<GroupStageView>(`/api/v1/competitions/${competitionId}/groups`);
+
+export const getQualification = (competitionId: string) =>
+  apiRequestOrNull<QualificationView>(`/api/v1/competitions/${competitionId}/qualification`);
 
 export const listStatusHistory = (participantId: string) =>
   apiListOrEmpty<ParticipantStatusHistoryView>(
@@ -219,6 +229,60 @@ export const listTeamBouts = (competitionId: string) =>
 export const previewBracket = (competitionId: string) =>
   apiRequest<BracketPlanView>(`/api/v1/competitions/${competitionId}/bracket/preview`, {
     method: "POST",
+  });
+
+// ------------------------------------------------------------- group stage
+// The organizer states both numbers; the platform only suggests. Neither
+// request carries a default, so a group stage nobody specified cannot happen.
+
+export const suggestGroups = (competitionId: string) =>
+  apiRequest<GroupLayoutSuggestionView>(`/api/v1/competitions/${competitionId}/groups/suggest`, {
+    method: "POST",
+  });
+
+/** Dry run of the deal — who lands where, and what could not be separated. */
+export const previewGroups = (
+  competitionId: string,
+  body: { group_count: number; advance_per_group: number },
+) =>
+  apiRequest<GroupPlanView>(`/api/v1/competitions/${competitionId}/groups/preview`, {
+    method: "POST",
+    body,
+  });
+
+export const generateGroups = (
+  competitionId: string,
+  body: { group_count: number; advance_per_group: number },
+) =>
+  apiRequest<GroupPlanView>(`/api/v1/competitions/${competitionId}/groups/generate`, {
+    method: "POST",
+    body,
+  });
+
+/**
+ * Settle a tie the bouts could not.
+ *
+ * The platform refuses to pick a place it did not determine, so this is the
+ * organizer doing it — and the reason is required because the decision changes
+ * who reaches the playoff.
+ */
+export const resolveGroupTie = (
+  groupId: string,
+  body: { ordering: string[]; reason: string },
+) =>
+  apiRequest<GroupStageView>(`/api/v1/competition-groups/${groupId}/tie-break`, {
+    method: "POST",
+    body,
+  });
+
+/** Build the knockout stage out of the group winners. */
+export const generatePlayoff = (
+  competitionId: string,
+  body: { final_weapon?: WeaponCategory | null } = {},
+) =>
+  apiRequest<BracketPlanView>(`/api/v1/competitions/${competitionId}/playoff/generate`, {
+    method: "POST",
+    body,
   });
 
 export const generateBracket = (

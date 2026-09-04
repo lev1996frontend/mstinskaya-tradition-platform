@@ -1,6 +1,7 @@
 from .bracket import Bracket
 from .competition import Competition
 from .competition_event import CompetitionEvent
+from .competition_group import CompetitionGroup
 from .draw import Draw
 from .judge_assignment import JudgeAssignment
 from .match import Match
@@ -37,4 +38,5 @@ __all__ = [
     "MatchResult",
     "ParticipantStatusHistory",
     "CompetitionEvent",
+    "CompetitionGroup",
 ]

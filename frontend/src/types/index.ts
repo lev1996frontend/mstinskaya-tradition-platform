@@ -417,6 +417,118 @@ export interface FirstRoundPairPlan {
   participant_b_city: string | null;
 }
 
+// ------------------------------------------------------------- group stage
+
+/** One valid way to split the field, offered as an option not a rule. */
+export interface GroupLayoutOptionView {
+  group_count: number;
+  advance_per_group: number;
+  group_sizes: number[];
+  qualifier_count: number;
+  bracket_size: number;
+  bye_count: number;
+  /** Marked as advice. The platform never applies it on its own. */
+  is_default: boolean;
+  note: string;
+}
+
+export interface GroupLayoutSuggestionView {
+  competition_id: string;
+  participant_count: number;
+  rationale: string;
+  options: GroupLayoutOptionView[];
+}
+
+export interface GroupSlotView {
+  ordinal: number;
+  name: string;
+  advance_count: number;
+  members: { participant_id: string; display_name: string }[];
+}
+
+export interface GroupPlanView {
+  competition_id: string;
+  group_count: number;
+  participant_count: number;
+  advance_per_group: number;
+  qualifier_count: number;
+  match_count: number;
+  strategy: string;
+  separation_satisfied: boolean;
+  unavoidable_collisions: CityCollisionView[];
+  groups: GroupSlotView[];
+}
+
+/**
+ * One line of a group table.
+ *
+ * `rank` is null while the fighters on that record are still tied — the
+ * platform does not put a number on a place it did not honestly determine.
+ */
+export interface GroupStandingRow {
+  rank: number | null;
+  resolved_by: "RECORD" | "HEAD_TO_HEAD" | "MANUAL" | null;
+  participant: ParticipantView | null;
+  played: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  no_results: number;
+  qualifies: boolean;
+}
+
+export interface UnresolvedTieView {
+  participant_ids: string[];
+  participant_names: string[];
+  wins: number;
+  losses: number;
+  reason: string;
+}
+
+export interface GroupView {
+  id: string;
+  ordinal: number;
+  name: string;
+  advance_count: number;
+  complete: boolean;
+  decided: boolean;
+  rows: GroupStandingRow[];
+  unresolved: UnresolvedTieView[];
+}
+
+export interface GroupStageView {
+  competition_id: string;
+  format: CompetitionFormat;
+  matches_total: number;
+  matches_finished: number;
+  decided: boolean;
+  groups: GroupView[];
+}
+
+export interface QualifierView {
+  participant_id: string;
+  display_name: string;
+  group_ordinal: number;
+  group_name: string;
+  place_in_group: number;
+  seed: number;
+}
+
+export interface QualificationBlocker {
+  code: string;
+  message: string;
+  ids: string[];
+}
+
+export interface QualificationView {
+  competition_id: string;
+  ready: boolean;
+  blockers: QualificationBlocker[];
+  qualifiers: QualifierView[];
+  /** The playoff that would be built, or null while something blocks it. */
+  plan: BracketPlanView | null;
+}
+
 // --------------------------------------------------------- entry-list import
 
 export interface ImportColumnSpec {
