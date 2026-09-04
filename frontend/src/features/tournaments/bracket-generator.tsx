@@ -7,7 +7,7 @@ import { generateBracket, previewBracket } from "@/api/tournaments";
 import { Alert, Badge, Button, Card, cn } from "@/components/ui";
 import { ApiError, ApiUnreachableError } from "@/lib/api";
 import { weaponCategory } from "@/lib/labels";
-import type { BracketPlanView, WeaponCategory } from "@/types";
+import type { BracketPlanView, CityCollisionView, WeaponCategory } from "@/types";
 
 import { WeaponGlyph } from "./weapon-mark";
 
@@ -31,26 +31,45 @@ function describeError(error: unknown): string {
   return "Не удалось построить сетку.";
 }
 
+/**
+ * The draw separates clubmates first and fellow-townsmen second, and reports
+ * whatever it could not separate rather than accepting it silently. The two
+ * kinds are named apart because they are different news for an organizer: a
+ * club clash is often a missing club on an entry, a city clash usually just
+ * means the field is too concentrated.
+ */
+const COLLISION_NOUN: Record<CityCollisionView["kind"], string> = {
+  CLUB: "одноклубники",
+  CITY: "земляки",
+  GROUP: "одна подгруппа",
+};
+
 export function CityVerdict({ plan }: { plan: BracketPlanView }) {
-  if (plan.city_constraint_satisfied) {
+  if (plan.separation_satisfied) {
     return (
-      <Alert tone="success" title="В первом круге нет земляков">
-        Ни одна пара первого круга не сводит участников из одного города.
+      <Alert tone="success" title="В первом круге нет своих">
+        Ни одна пара первого круга не сводит участников одного клуба или города.
       </Alert>
     );
   }
+  const kinds = new Set(plan.unavoidable_collisions.map((collision) => collision.kind));
+  const title =
+    kinds.size === 1 && kinds.has("CLUB")
+      ? "Не удалось развести одноклубников"
+      : kinds.size === 1 && kinds.has("CITY")
+        ? "Не удалось полностью развести земляков"
+        : "Не удалось развести всех своих";
   return (
-    <Alert tone="warning" title="Не удалось полностью развести земляков">
-      <p>
-        Размер сетки не позволяет избежать всех встреч участников из одного города. Эти пары
-        останутся:
-      </p>
+    <Alert tone="warning" title={title}>
+      <p>Размер сетки не позволяет избежать всех этих встреч. Эти пары останутся:</p>
       <ul className="mt-2 space-y-1">
         {plan.unavoidable_collisions.map((collision) => (
           <li key={`${collision.position}-${collision.participant_a_id}`} className="text-sm">
             <span className="font-record">№{collision.position}</span>{" "}
             {collision.participant_a_name} — {collision.participant_b_name}{" "}
-            <span className="text-[var(--muted)]">({collision.city})</span>
+            <span className="text-[var(--muted)]">
+              ({COLLISION_NOUN[collision.kind]}: {collision.value})
+            </span>
           </li>
         ))}
       </ul>

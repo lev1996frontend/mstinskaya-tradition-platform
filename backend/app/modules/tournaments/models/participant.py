@@ -55,6 +55,14 @@ class Participant(Base):
     #: events and past results must stay true to the city they entered under.
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     club_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True, index=True)
+    #: Club as written on the entry, and the input to the club half of the
+    #: first-round separation. Free text rather than a lookup through
+    #: ``club_id`` for the same reason ``city`` is: entries arrive from a
+    #: spreadsheet naming a club that may match no row here, and a fighter who
+    #: changes school later must not retroactively change which school they
+    #: represented at this event. ``club_id`` is set additionally when the name
+    #: does resolve, but the constraint never depends on it.
+    club_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
     #: Only for an entrant with no platform profile yet. When ``athlete_id`` is
     #: set the name always comes from that profile, so linking an existing
     #: athlete can never produce a duplicate identity.

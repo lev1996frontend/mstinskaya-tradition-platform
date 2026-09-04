@@ -36,6 +36,24 @@ from typing import Sequence
 #: can create; beyond that the distribution is genuinely over-constrained.
 MAX_SWAP_PASSES = 3
 
+#: What counts as "one of ours", in priority order. Club first: two fighters
+#: from the same school train together every week, which
+#: ``docs/tournament-engine.md`` reflects by listing ``avoid_same_club`` right
+#: after ``avoid_same_city``. Both are soft — the doc says «если есть другие
+#: варианты».
+SEPARATION_KINDS: tuple[str, ...] = ("CLUB", "CITY")
+
+
+def _normalize(value: str | None) -> str | None:
+    """Case- and whitespace-insensitive comparison key.
+
+    Two spellings of the same club or city must collide, otherwise the
+    constraint quietly does nothing for real, hand-typed data.
+    """
+    if not value:
+        return None
+    return " ".join(value.split()).casefold()
+
 
 @dataclass(frozen=True)
 class Entrant:
@@ -44,18 +62,22 @@ class Entrant:
     participant_id: str
     display_name: str
     city: str | None = None
+    club: str | None = None
     seed: int | None = None
 
     @property
     def city_key(self) -> str | None:
-        """Cities are compared case- and whitespace-insensitively.
+        return _normalize(self.city)
 
-        Two spellings of the same city must collide, otherwise the constraint
-        quietly does nothing for real, hand-typed data.
-        """
-        if not self.city:
-            return None
-        return " ".join(self.city.split()).casefold()
+    @property
+    def club_key(self) -> str | None:
+        return _normalize(self.club)
+
+    def key_for(self, kind: str) -> str | None:
+        return self.club_key if kind == "CLUB" else self.city_key
+
+    def label_for(self, kind: str) -> str | None:
+        return self.club if kind == "CLUB" else self.city
 
 
 @dataclass
@@ -81,15 +103,33 @@ class PlannedPair:
 
 
 @dataclass(frozen=True)
-class CityCollision:
-    """A first-round pair the constraint could not separate."""
+class SeparationCollision:
+    """A pair the constraint could not separate, and what they share.
+
+    ``city`` is a property rather than a field so the wire shape the frontend
+    and the existing tests read keeps working: a city clash still reports a
+    city, while a club clash reports ``None`` there and names the club instead.
+    """
 
     position: int
-    city: str
+    kind: str
+    value: str
     participant_a_id: str
     participant_b_id: str
     participant_a_name: str
     participant_b_name: str
+
+    @property
+    def city(self) -> str | None:
+        return self.value if self.kind == "CITY" else None
+
+    @property
+    def club(self) -> str | None:
+        return self.value if self.kind == "CLUB" else None
+
+
+#: Kept so existing imports and annotations keep resolving.
+CityCollision = SeparationCollision
 
 
 @dataclass
@@ -99,12 +139,23 @@ class BracketPlan:
     bye_count: int
     round_count: int
     first_round: list[PlannedPair] = field(default_factory=list)
-    unavoidable_collisions: list[CityCollision] = field(default_factory=list)
-    strategy: str = "seeded-then-shuffled, standard slots, greedy city swaps"
+    unavoidable_collisions: list[SeparationCollision] = field(default_factory=list)
+    strategy: str = "seeded-then-shuffled, standard slots, greedy club-then-city swaps"
+
+    @property
+    def separation_satisfied(self) -> bool:
+        """No first-round pair shares a club or a city."""
+        return not self.unavoidable_collisions
 
     @property
     def city_constraint_satisfied(self) -> bool:
-        return not self.unavoidable_collisions
+        """Narrower: no pair shares a *city*.
+
+        Reported apart from the club verdict because they are different news
+        for an organizer — a club clash is often fixable by entering the right
+        club on the entry, a city clash usually is not.
+        """
+        return not any(c.kind == "CITY" for c in self.unavoidable_collisions)
 
 
 # --------------------------------------------------------------- slot order
@@ -163,13 +214,34 @@ def rank_entrants(entrants: Sequence[Entrant], *, rng: secrets.SystemRandom | No
 # ----------------------------------------------------------- city resolution
 
 
-def _collision_city(pair: PlannedPair) -> str | None:
+def _collision(pair: PlannedPair) -> tuple[str, str] | None:
+    """``(kind, value)`` of the highest-priority thing this pair shares."""
     if pair.a is None or pair.b is None:
         return None
-    key_a, key_b = pair.a.city_key, pair.b.city_key
-    if key_a is not None and key_a == key_b:
-        return pair.a.city
+    for kind in SEPARATION_KINDS:
+        key_a, key_b = pair.a.key_for(kind), pair.b.key_for(kind)
+        if key_a is not None and key_a == key_b:
+            return kind, pair.a.label_for(kind) or key_a
     return None
+
+
+def _describe(pair: PlannedPair, kind: str, value: str) -> SeparationCollision:
+    assert pair.a is not None and pair.b is not None
+    return SeparationCollision(
+        position=pair.position,
+        kind=kind,
+        value=value,
+        participant_a_id=pair.a.participant_id,
+        participant_b_id=pair.b.participant_id,
+        participant_a_name=pair.a.display_name,
+        participant_b_name=pair.b.display_name,
+    )
+
+
+def report_collisions(pairs: list[PlannedPair]) -> list[SeparationCollision]:
+    """What collides, with no attempt to fix it."""
+    found = [(pair, _collision(pair)) for pair in pairs]
+    return [_describe(pair, *hit) for pair, hit in found if hit is not None]
 
 
 def _swappable(pair: PlannedPair) -> bool:
@@ -177,8 +249,11 @@ def _swappable(pair: PlannedPair) -> bool:
     return pair.a is not None and pair.b is not None
 
 
-def resolve_city_collisions(pairs: list[PlannedPair]) -> list[CityCollision]:
-    """Greedily separate same-city first-round pairs; report what is left.
+def resolve_collisions(pairs: list[PlannedPair]) -> list[SeparationCollision]:
+    """Greedily separate pairs sharing a club or a city; report what is left.
+
+    A swap is accepted only when it clears *every* key on both pairs, so
+    fixing a club clash can never quietly create a city one.
 
     Bounded by :data:`MAX_SWAP_PASSES` full passes over the pair list, each
     trying at most four slot combinations against each other pair — so the worst
@@ -189,7 +264,7 @@ def resolve_city_collisions(pairs: list[PlannedPair]) -> list[CityCollision]:
     for _ in range(MAX_SWAP_PASSES):
         made_progress = False
         for i, pair in enumerate(pairs):
-            if _collision_city(pair) is None or not _swappable(pair):
+            if _collision(pair) is None or not _swappable(pair):
                 continue
             for j, other in enumerate(pairs):
                 if i == j or not _swappable(other):
@@ -201,7 +276,7 @@ def resolve_city_collisions(pairs: list[PlannedPair]) -> list[CityCollision]:
                         theirs = getattr(other, slot_j)
                         setattr(pair, slot_i, theirs)
                         setattr(other, slot_j, mine)
-                        if _collision_city(pair) is None and _collision_city(other) is None:
+                        if _collision(pair) is None and _collision(other) is None:
                             swapped = True
                             break
                         # Not an improvement — put both back and try the next
@@ -216,23 +291,11 @@ def resolve_city_collisions(pairs: list[PlannedPair]) -> list[CityCollision]:
         if not made_progress:
             break
 
-    collisions: list[CityCollision] = []
-    for pair in pairs:
-        city = _collision_city(pair)
-        if city is None:
-            continue
-        assert pair.a is not None and pair.b is not None
-        collisions.append(
-            CityCollision(
-                position=pair.position,
-                city=city,
-                participant_a_id=pair.a.participant_id,
-                participant_b_id=pair.b.participant_id,
-                participant_a_name=pair.a.display_name,
-                participant_b_name=pair.b.display_name,
-            )
-        )
-    return collisions
+    return report_collisions(pairs)
+
+
+#: Kept so existing imports keep resolving.
+resolve_city_collisions = resolve_collisions
 
 
 # --------------------------------------------------------------- entry point
@@ -242,11 +305,18 @@ def build_plan(
     entrants: Sequence[Entrant],
     *,
     rng: secrets.SystemRandom | None = None,
+    separate: bool = True,
 ) -> BracketPlan:
     """Plan a single-elimination bracket for ``entrants``.
 
     The plan is data only — nothing is persisted here, so a wizard can show the
-    organizer the bye count and the city-collision verdict *before* they commit.
+    organizer the bye count and the separation verdict *before* they commit.
+
+    ``separate=False`` skips the swap pass and only *reports* what collides.
+    That is what a playoff built from group qualifiers needs: their slots
+    already carry the cross-seeding that keeps group winners apart, and
+    swapping fighters around would destroy exactly the arrangement the
+    seeding just produced.
     """
     entrant_list = list(entrants)
     count = len(entrant_list)
@@ -264,7 +334,7 @@ def build_plan(
         for index in range(bracket_size // 2)
     ]
 
-    collisions = resolve_city_collisions(pairs)
+    collisions = resolve_collisions(pairs) if separate else report_collisions(pairs)
 
     round_count = bracket_size.bit_length() - 1
     return BracketPlan(

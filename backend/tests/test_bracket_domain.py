@@ -17,10 +17,16 @@ import pytest
 from app.modules.tournaments.domain import bracket as bracket_domain
 
 
-def entrant(name: str, *, city: str | None = None, seed: int | None = None) -> bracket_domain.Entrant:
+def entrant(
+    name: str,
+    *,
+    city: str | None = None,
+    club: str | None = None,
+    seed: int | None = None,
+) -> bracket_domain.Entrant:
     """An entrant whose participant id is derived from its name, for readable failures."""
     return bracket_domain.Entrant(
-        participant_id=f"id-{name.lower()}", display_name=name, city=city, seed=seed
+        participant_id=f"id-{name.lower()}", display_name=name, city=city, club=club, seed=seed
     )
 
 
@@ -188,3 +194,101 @@ def test_resolution_terminates_on_a_hostile_distribution():
     assert plan.bracket_size == 16
     assert len(plan.first_round) == 8
     assert not any(pair.is_empty for pair in plan.first_round)
+
+
+# ---------------------------------------------------------- club separation
+
+
+def test_club_keys_normalize_like_city_keys():
+    assert entrant("А", club="Буза  Новгород").club_key == entrant("Б", club="буза новгород").club_key
+    assert entrant("В").club_key is None
+
+
+def test_clubmates_are_separated_too():
+    field = [
+        entrant("Иван", city="Новгород", club="Буза"),
+        entrant("Сергей", city="Псков", club="Буза"),
+        entrant("Пётр", city="Тверь", club="Сокол"),
+        entrant("Фёдор", city="Москва", club="Ратник"),
+    ]
+    plan = bracket_domain.build_plan(field, rng=random.Random(2))
+    assert plan.separation_satisfied
+    for pair in plan.first_round:
+        if pair.a and pair.b:
+            assert pair.a.club_key != pair.b.club_key
+
+
+def test_a_club_clash_is_reported_as_a_club_not_a_city():
+    """Two fighters, one club, different cities: nothing to swap with."""
+    field = [entrant("Иван", city="Новгород", club="Буза"), entrant("Сергей", city="Псков", club="Буза")]
+    plan = bracket_domain.build_plan(field, rng=random.Random(4))
+    assert not plan.separation_satisfied
+    collision = plan.unavoidable_collisions[0]
+    assert collision.kind == "CLUB"
+    assert collision.value == "Буза"
+    assert collision.club == "Буза"
+    # A club clash must not masquerade as a city one — they are different news.
+    assert collision.city is None
+    assert plan.city_constraint_satisfied
+
+
+def test_club_outranks_city_when_a_pair_shares_both():
+    field = [
+        entrant("Иван", city="Новгород", club="Буза"),
+        entrant("Сергей", city="Новгород", club="Буза"),
+    ]
+    plan = bracket_domain.build_plan(field, rng=random.Random(5))
+    assert [c.kind for c in plan.unavoidable_collisions] == ["CLUB"]
+
+
+def test_separating_a_club_never_creates_a_city_clash():
+    """A swap is only taken when it clears every key on both pairs."""
+    field = [
+        entrant("Иван", city="Новгород", club="Буза"),
+        entrant("Сергей", city="Тверь", club="Буза"),
+        entrant("Пётр", city="Новгород", club="Сокол"),
+        entrant("Фёдор", city="Тверь", club="Ратник"),
+    ]
+    plan = bracket_domain.build_plan(field, rng=random.Random(8))
+    assert plan.separation_satisfied, [
+        (c.kind, c.value) for c in plan.unavoidable_collisions
+    ]
+
+
+# ------------------------------------------------- reporting without fixing
+
+
+def test_separate_false_reports_but_does_not_reorder():
+    """What the group-stage playoff needs: keep the seeding, name the clash.
+
+    Swapping fighters there would destroy the cross-seeding that puts group
+    winners in opposite halves, so the collision is reported instead.
+    """
+    field = [
+        entrant("Иван", city="Новгород", seed=1),
+        entrant("Сергей", city="Новгород", seed=2),
+        entrant("Пётр", city="Псков", seed=3),
+        entrant("Фёдор", city="Тверь", seed=4),
+    ]
+    fixed = bracket_domain.build_plan(field, separate=True)
+    reported = bracket_domain.build_plan(field, separate=False)
+
+    # Seeds 1 and 4 meet, 2 and 3 meet — untouched by the reporting run.
+    slots = [
+        [pair.a.display_name if pair.a else None, pair.b.display_name if pair.b else None]
+        for pair in reported.first_round
+    ]
+    assert slots == [["Иван", "Фёдор"], ["Сергей", "Пётр"]]
+    # Nothing collides in this arrangement either way; the point is the order.
+    assert reported.unavoidable_collisions == []
+    assert fixed.bracket_size == reported.bracket_size
+
+
+def test_separate_false_still_names_what_collides():
+    field = [
+        entrant("Иван", city="Новгород", seed=1),
+        entrant("Фёдор", city="Новгород", seed=2),
+    ]
+    plan = bracket_domain.build_plan(field, separate=False)
+    assert [c.kind for c in plan.unavoidable_collisions] == ["CITY"]
+    assert plan.unavoidable_collisions[0].value == "Новгород"

@@ -42,6 +42,8 @@ type Entry = {
   athleteId: string | null;
   name: string;
   city: string;
+  /** Free text: the draw separates clubmates before fellow-townsmen. */
+  club: string;
   seed: string;
 };
 
@@ -58,7 +60,7 @@ function describeError(error: unknown): string {
 }
 
 function newEntry(): Entry {
-  return { key: crypto.randomUUID(), athleteId: null, name: "", city: "", seed: "" };
+  return { key: crypto.randomUUID(), athleteId: null, name: "", city: "", club: "", seed: "" };
 }
 
 // ------------------------------------------------------------ athlete search
@@ -202,6 +204,7 @@ export function TournamentWizard() {
           athleteId: row.athleteId,
           name: row.name,
           city: row.city,
+          club: "",
           seed: "",
         }));
         return [...kept, ...imported];
@@ -256,6 +259,7 @@ export function TournamentWizard() {
           athlete_id: entry.athleteId,
           display_name: entry.athleteId ? null : entry.name.trim(),
           city: entry.city.trim() || null,
+          club_name: entry.club.trim() || null,
           seed: entry.seed ? Number(entry.seed) : null,
         });
       }
@@ -435,7 +439,7 @@ export function TournamentWizard() {
               {entries.map((entry, index) => (
                 <li
                   key={entry.key}
-                  className="grid gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] p-2 sm:grid-cols-[1.5rem_1fr_1fr_5rem_2rem] sm:items-center"
+                  className="grid gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] p-2 sm:grid-cols-[1.5rem_1.4fr_1fr_1fr_4.5rem_2rem] sm:items-center"
                 >
                   <span className="font-record text-xs text-[var(--muted)]">{index + 1}</span>
                   <span className="min-w-0">
@@ -459,6 +463,12 @@ export function TournamentWizard() {
                     onChange={(event) => updateEntry(entry.key, { city: event.target.value })}
                     placeholder="Город"
                     aria-label={`Город участника ${index + 1}`}
+                  />
+                  <Input
+                    value={entry.club}
+                    onChange={(event) => updateEntry(entry.key, { club: event.target.value })}
+                    placeholder="Клуб"
+                    aria-label={`Клуб участника ${index + 1}`}
                   />
                   <Input
                     value={entry.seed}

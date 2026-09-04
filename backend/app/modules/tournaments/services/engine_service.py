@@ -105,6 +105,7 @@ class TournamentEngineService:
             status=data["status"],
             city=data.get("city"),
             club_id=parse_id(data["club_id"], "club") if data.get("club_id") else None,
+            club_name=data.get("club_name"),
             # Only meaningful for an entrant with no athlete profile; when one is
             # linked the read side resolves the name from that profile instead.
             display_name=data.get("display_name") if athlete_id is None else None,

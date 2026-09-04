@@ -124,6 +124,7 @@ class BracketService:
                     participant_id=str(participant.id),
                     display_name=BracketService._display_name(participant, athletes, users),
                     city=participant.city,
+                    club=participant.club_name,
                     seed=participant.seed,
                 )
             )
@@ -167,10 +168,14 @@ class BracketService:
             "round_count": plan.round_count,
             "strategy": plan.strategy,
             "city_constraint_satisfied": plan.city_constraint_satisfied,
+            "separation_satisfied": plan.separation_satisfied,
             "unavoidable_collisions": [
                 {
                     "position": c.position,
+                    "kind": c.kind,
+                    "value": c.value,
                     "city": c.city,
+                    "club": c.club,
                     "participant_a_id": c.participant_a_id,
                     "participant_b_id": c.participant_b_id,
                     "participant_a_name": c.participant_a_name,

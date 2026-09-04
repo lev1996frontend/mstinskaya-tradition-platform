@@ -25,7 +25,10 @@ class ParticipantView(BaseModel):
     athlete_id: str | None = None
     team_id: str | None = None
     club_id: str | None = None
-    #: Registration city — what the first-round city constraint works from.
+    #: Club as written on the entry. The first-round separation compares this,
+    #: not `club_id`, because entries name clubs that may not exist as rows.
+    club_name: str | None = None
+    #: Registration city — the other half of that separation.
     city: str | None = None
     seed: int | None = None
     status: str

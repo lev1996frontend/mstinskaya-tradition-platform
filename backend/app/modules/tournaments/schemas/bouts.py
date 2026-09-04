@@ -38,8 +38,18 @@ class FirstRoundPairPlan(BaseModel):
 
 
 class CityCollisionView(BaseModel):
+    """A pair the draw could not separate.
+
+    ``kind`` says what they share; ``value`` is that club or city. ``city`` and
+    ``club`` are the same value narrowed to one kind each, so a client can show
+    "земляки" and "одноклубники" differently without parsing ``kind``.
+    """
+
     position: int
-    city: str
+    kind: str = "CITY"
+    value: str
+    city: str | None = None
+    club: str | None = None
     participant_a_id: str
     participant_b_id: str
     participant_a_name: str
@@ -57,6 +67,8 @@ class BracketPlanView(BaseModel):
     #: False when same-city first-round pairs could not all be avoided. The
     #: collisions are then listed rather than silently accepted.
     city_constraint_satisfied: bool
+    #: Narrower than the above: false when *any* club or city clash is left.
+    separation_satisfied: bool = True
     unavoidable_collisions: list[CityCollisionView] = Field(default_factory=list)
     first_round: list[FirstRoundPairPlan] = Field(default_factory=list)
 

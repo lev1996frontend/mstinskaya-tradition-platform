@@ -201,6 +201,7 @@ class TournamentReadService:
                 athlete_id=str(participant.athlete_id) if participant.athlete_id else None,
                 team_id=str(participant.team_id) if participant.team_id else None,
                 club_id=club_id or (str(participant.club_id) if participant.club_id else None),
+                club_name=participant.club_name,
                 city=participant.city,
                 seed=participant.seed,
                 status=participant.status,

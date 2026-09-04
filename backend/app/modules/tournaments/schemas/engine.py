@@ -130,9 +130,12 @@ class EngineParticipantCreateRequest(BaseModel):
     type: Literal["ATHLETE", "TEAM"] | None = None
     seed: int | None = Field(default=None, ge=1)
     status: ParticipantEngineStatus = "REGISTERED"
-    #: Registration city — the input to the first-round city constraint.
+    #: Registration city — one input to the first-round separation.
     city: str | None = Field(default=None, max_length=100)
     club_id: IdStr | None = None
+    #: Club as written on the entry, and the higher-priority half of that
+    #: separation. Free text: a spreadsheet names a club that may match no row.
+    club_name: str | None = Field(default=None, max_length=150)
     #: Only for an entrant with no platform profile. When ``athlete_id`` is set
     #: the name is always resolved from that profile instead, so linking an
     #: existing athlete can never create a duplicate identity.
@@ -150,6 +153,7 @@ class EngineParticipantResponse(BaseModel):
     status: str
     city: str | None = None
     club_id: IdStr | None = None
+    club_name: str | None = None
     display_name: str | None = None
 
 

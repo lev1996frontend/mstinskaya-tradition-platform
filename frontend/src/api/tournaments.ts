@@ -281,6 +281,8 @@ export const addParticipant = (
     display_name?: string | null;
     city?: string | null;
     club_id?: string | null;
+    /** Free text, and what the first-round separation actually compares. */
+    club_name?: string | null;
     seed?: number | null;
   },
 ) =>

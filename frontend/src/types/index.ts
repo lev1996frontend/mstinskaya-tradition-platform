@@ -146,7 +146,10 @@ export interface ParticipantView {
   athlete_id: string | null;
   team_id: string | null;
   club_id: string | null;
-  /** Registration city — what the first-round city constraint works from. */
+  /** Club as written on the entry. The first-round separation compares this,
+   *  not `club_id`, because entries name clubs that may not exist as rows. */
+  club_name: string | null;
+  /** Registration city — the other half of that separation. */
   city: string | null;
   seed: number | null;
   status: ParticipantStatus;
@@ -406,9 +409,16 @@ export interface FirstRoundPairPlan {
   participant_b_city: string | null;
 }
 
+/** A first-round pair the draw could not separate, and what they share. */
 export interface CityCollisionView {
   position: number;
-  city: string;
+  /** What they have in common. Club outranks city, so only one is reported. */
+  kind: "CLUB" | "CITY" | "GROUP";
+  value: string;
+  /** The same value narrowed to one kind each, so a client can phrase
+   *  "земляки" and "одноклубники" differently without switching on `kind`. */
+  city: string | null;
+  club: string | null;
   participant_a_id: string;
   participant_b_id: string;
   participant_a_name: string;
@@ -424,6 +434,8 @@ export interface BracketPlanView {
   /** False when same-city first-round pairs could not all be avoided; the
    *  collisions are then listed rather than silently accepted. */
   city_constraint_satisfied: boolean;
+  /** Wider: false when any club *or* city pair is left unseparated. */
+  separation_satisfied: boolean;
   unavoidable_collisions: CityCollisionView[];
   first_round: FirstRoundPairPlan[];
 }
