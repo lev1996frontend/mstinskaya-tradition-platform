@@ -9,7 +9,7 @@ import {
   listCategories,
   listCompetitions,
   listDocuments,
-  listParticipants,
+  listRegistrations,
 } from "@/api/tournaments";
 import {
   Badge,
@@ -38,12 +38,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function TournamentPage({ params }: PageProps) {
   const { id } = await params;
-  const [tournament, competitions, categories, documents, legacyParticipants] = await Promise.all([
+  const [tournament, competitions, categories, documents, registrations] = await Promise.all([
     getTournament(id),
     listCompetitions(id),
     listCategories(id),
     listDocuments(id),
-    listParticipants(id),
+    listRegistrations(id),
   ]);
   if (!tournament) notFound();
 
@@ -76,7 +76,10 @@ export default async function TournamentPage({ params }: PageProps) {
               { term: "Дисциплин", value: competitions.length },
               {
                 term: "Заявлено участников",
-                value: legacyParticipants.length,
+                /* People, not entries: the list is one row per athlete *per
+                   category*, so a fighter entered in both палка and нож is two
+                   rows and one participant. */
+                value: new Set(registrations.map((entry) => entry.athlete_id)).size,
               },
             ]}
           />

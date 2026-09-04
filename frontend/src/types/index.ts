@@ -108,6 +108,21 @@ export interface TournamentDocument {
   type: "RULES" | "POSITION" | "RESULTS";
 }
 
+/**
+ * A registration on the tournament itself — the entry list, filed against a
+ * category before any discipline has been drawn. Distinct from
+ * `ParticipantView`, which is an entrant *inside* one competition and carries
+ * seeding, club and city; the two live at different levels and are read from
+ * different endpoints.
+ */
+export interface TournamentRegistration {
+  id: string;
+  tournament_id: string;
+  category_id: string;
+  athlete_id: string;
+  status: "REGISTERED" | "APPROVED" | "DISQUALIFIED";
+}
+
 export interface CompetitionView {
   id: string;
   tournament_id: string;

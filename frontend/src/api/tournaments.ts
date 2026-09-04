@@ -1,4 +1,4 @@
-import { cache } from "react";
+﻿import { cache } from "react";
 
 import { apiListOrEmpty, apiListWithOffline, apiRequest, apiRequestOrNull } from "@/lib/api";
 import type {
@@ -26,6 +26,7 @@ import type {
   Tournament,
   TournamentCategory,
   TournamentDocument,
+  TournamentRegistration,
   WeaponCategory,
   WeaponRulesView,
 } from "@/types";
@@ -46,6 +47,18 @@ export const listCategories = (tournamentId: string) =>
 
 export const listDocuments = (tournamentId: string) =>
   apiListOrEmpty<TournamentDocument>(`/api/v1/tournaments/${tournamentId}/documents`);
+
+/**
+ * The tournament's own entry list — who has been entered, and in which category,
+ * before any discipline is drawn.
+ *
+ * Named apart from `listParticipants` below on purpose: that one takes a
+ * *competition* id, and the tournament page was calling it with a tournament id
+ * — a shape the API answers with an empty list rather than an error, so
+ * "Заявлено участников" read 0 no matter how many had entered.
+ */
+export const listRegistrations = (tournamentId: string) =>
+  apiListOrEmpty<TournamentRegistration>(`/api/v1/tournaments/${tournamentId}/participants`);
 
 export const listCompetitions = (tournamentId: string) =>
   apiListOrEmpty<CompetitionView>(`/api/v1/tournaments/${tournamentId}/competitions`);
