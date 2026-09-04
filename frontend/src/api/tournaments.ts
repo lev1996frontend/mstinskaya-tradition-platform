@@ -1,6 +1,13 @@
 ﻿import { cache } from "react";
 
-import { apiListOrEmpty, apiListWithOffline, apiRequest, apiRequestOrNull } from "@/lib/api";
+import {
+  apiDownload,
+  apiListOrEmpty,
+  apiListWithOffline,
+  apiRequest,
+  apiRequestOrNull,
+  apiUpload,
+} from "@/lib/api";
 import type {
   AthleteParticipationView,
   BoutDetailView,
@@ -14,6 +21,9 @@ import type {
   CompetitionType,
   CompetitionView,
   DrawView,
+  ImportCommitResponse,
+  ImportReport,
+  ImportRow,
   LotMethod,
   LotView,
   MatchResultView,
@@ -160,6 +170,34 @@ export const withdrawParticipant = (
 
 export const getMatch = (matchId: string) =>
   apiRequest<MatchView>(`/api/v1/competition-matches/${matchId}`);
+
+// ---------------------------------------------------- entry list from Excel
+// The template and the parser are generated from one column definition on the
+// server, so the file handed out and the file expected back cannot drift.
+
+/** The .xlsx to fill in. Guarded, so it cannot be a plain download link. */
+export const downloadImportTemplate = (tournamentId: string) =>
+  apiDownload(`/api/v1/tournaments/${tournamentId}/participants/template.xlsx`);
+
+/** Reads the file and reports every problem per row. Writes nothing. */
+export const previewParticipantImport = (tournamentId: string, file: File) =>
+  apiUpload<ImportReport>(
+    `/api/v1/tournaments/${tournamentId}/participants/import/preview`,
+    file,
+  );
+
+/**
+ * Enter the reviewed rows.
+ *
+ * Sends rows rather than the file again, because the organizer may have fixed
+ * a discipline or a birth year in the review table. The server re-validates
+ * them and refuses the whole batch if anything is still wrong.
+ */
+export const commitParticipantImport = (tournamentId: string, rows: ImportRow[]) =>
+  apiRequest<ImportCommitResponse>(
+    `/api/v1/tournaments/${tournamentId}/participants/import/commit`,
+    { method: "POST", body: { rows } },
+  );
 
 // ------------------------------------------------- bracket / жребий / соступ
 // Every one of these is a real backend transition. Nothing below computes an

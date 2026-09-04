@@ -6,6 +6,7 @@ import {
   Check,
   FileSpreadsheet,
   Link2,
+  Download,
   Plus,
   Search,
   Trash2,
@@ -15,15 +16,21 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { listAthletes, listRuleSets } from "@/api/catalog";
-import { addParticipant, createCompetition, createTournament } from "@/api/tournaments";
+import {
+  addParticipant,
+  createCompetition,
+  createTournament,
+  downloadImportTemplate,
+  previewParticipantImport,
+} from "@/api/tournaments";
 import { Alert, Badge, Button, ButtonLink, Card, cn } from "@/components/ui";
 import { Field, Input, Select } from "@/components/ui/form";
 import { useAuth } from "@/features/auth/auth-context";
 import { ApiError, ApiUnreachableError } from "@/lib/api";
 import { competitionFormat, competitionType } from "@/lib/labels";
-import type { Athlete, CompetitionFormat, CompetitionType } from "@/types";
+import type { Athlete, CompetitionFormat, CompetitionType, ImportReport } from "@/types";
 
-import { parseParticipantsExcel } from "./participant-import";
+import { ParticipantImportReview } from "./participant-import-review";
 
 /**
  * Organizer wizard: basic info → disciplines → entrants → done.
@@ -33,6 +40,11 @@ import { parseParticipantsExcel } from "./participant-import";
  * field, bracket and champion, and one fighter may enter more than one of them
  * — a fifty-year-old belongs in both the veterans' category and the open
  * absolute, since the open one sets no age bound at all.
+ *
+ * The tournament and its disciplines are created at the end of the second step,
+ * before anyone is entered. That order is forced by the spreadsheet import: the
+ * server checks each row's «Категория» against the tournament's real
+ * disciplines, so they have to exist before a file can be read at all.
  *
  * The wizard stops once everyone is entered. Building a bracket, drawing groups
  * and running bouts all belong to the discipline's own page, which already does
@@ -263,11 +275,14 @@ export function TournamentWizard() {
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [importBusy, setImportBusy] = useState(false);
   const [importSummary, setImportSummary] = useState<string | null>(null);
+  const [importReport, setImportReport] = useState<ImportReport | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // step 4 — what was created
   const [tournamentId, setTournamentId] = useState<string | null>(null);
-  const [created, setCreated] = useState<{ id: string; name: string; entered: number }[]>([]);
+  const [created, setCreated] = useState<
+    { id: string; name: string; key: string; entered: number }[]
+  >([]);
 
   useEffect(() => {
     void (async () => {
@@ -299,42 +314,52 @@ export function TournamentWizard() {
   }
 
   /**
-   * Reads an .xlsx file (ФИО/позывной in column A, город in column B) and turns
-   * each row into an entry in the default discipline, matching existing athlete
-   * profiles by nickname so a linked import never mints a duplicate identity.
-   * Rows land in the same editable list as manually typed ones, so the
-   * organizer can still fix a name, a city or the discipline before saving.
+   * Hands the file to the server and shows what it made of it.
+   *
+   * Nothing is parsed here on purpose. Only the backend can tell whether a name
+   * is already entered, whether a category matches a real discipline, or
+   * whether a birth year clears that discipline's age bound — and
+   * `docs/architecture.md` puts validation there for exactly that reason.
+   * Nothing is saved either: this is a report, and the organizer decides.
    */
   async function handleImportFile(file: File) {
+    if (!tournamentId) return;
     setImportBusy(true);
     setImportSummary(null);
+    setImportReport(null);
     setError(null);
     try {
-      const rows = await parseParticipantsExcel(file, athletes);
-      if (rows.length === 0) {
-        setError(
-          "В файле не найдено участников. Первая строка листа — заголовки, со второй — ФИО/позывной и город.",
-        );
+      const report = await previewParticipantImport(tournamentId, file);
+      if (report.total_rows === 0) {
+        setError("В файле не найдено ни одной строки с участником.");
         return;
       }
-      setEntries((current) => {
-        const kept = current.filter((entry) => entry.name.trim());
-        const imported = rows.map((row) => ({
-          ...newEntry(defaultDisciplineKey),
-          athleteId: row.athleteId,
-          name: row.name,
-          city: row.city,
-        }));
-        return [...kept, ...imported];
-      });
-      const matched = rows.filter((row) => row.athleteId).length;
-      setImportSummary(
-        `Импортировано участников: ${rows.length}. Сопоставлено с профилем: ${matched}.`,
-      );
-    } catch {
-      setError("Не удалось прочитать файл. Поддерживается формат .xlsx.");
+      setImportReport(report);
+    } catch (caught) {
+      setError(describeError(caught));
     } finally {
       setImportBusy(false);
+    }
+  }
+
+  /**
+   * The template is behind the same guard as everything else, so it cannot be a
+   * plain download link — a bearer token in localStorage never rides along on
+   * an anchor click.
+   */
+  async function handleDownloadTemplate() {
+    if (!tournamentId) return;
+    setError(null);
+    try {
+      const blob = await downloadImportTemplate(tournamentId);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${title.trim() || "tournament"}-participants.xlsx`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (caught) {
+      setError(describeError(caught));
     }
   }
 
@@ -350,8 +375,13 @@ export function TournamentWizard() {
     }
   }
 
-  /** Creates the tournament, each discipline, and every entry in its own one. */
-  async function submitEverything() {
+  /**
+   * Creates the tournament and its disciplines, then opens the entrants step.
+   *
+   * Has to happen before anyone is entered: the spreadsheet import validates
+   * each row's discipline against the ones that really exist.
+   */
+  async function createTournamentAndDisciplines() {
     await run(async () => {
       if (!user) throw new ApiError(401, null, "Требуется вход в систему.");
       const tournament = await createTournament({
@@ -364,7 +394,7 @@ export function TournamentWizard() {
         ruleset_id: rulesetId,
       });
 
-      const competitionByKey = new Map<string, { id: string; name: string }>();
+      const built: { id: string; name: string; key: string; entered: number }[] = [];
       for (const discipline of namedDisciplines) {
         const competition = await createCompetition(tournament.id, {
           name: discipline.name.trim(),
@@ -374,15 +404,32 @@ export function TournamentWizard() {
           min_age: discipline.minAge.trim() ? Number(discipline.minAge) : null,
           max_age: discipline.maxAge.trim() ? Number(discipline.maxAge) : null,
         });
-        competitionByKey.set(discipline.key, { id: competition.id, name: competition.name });
+        built.push({
+          id: competition.id,
+          name: competition.name,
+          key: discipline.key,
+          entered: 0,
+        });
       }
 
-      const entered = new Map<string, number>();
+      setTournamentId(tournament.id);
+      setCreated(built);
+      if (entries.length === 0) {
+        setEntries([newEntry(defaultDisciplineKey), newEntry(defaultDisciplineKey)]);
+      }
+      setStep(2);
+    });
+  }
+
+  /** Enters the manually typed rows. The imported ones go through the review. */
+  async function submitTypedEntries() {
+    await run(async () => {
+      const counts = new Map(created.map((row) => [row.id, row.entered]));
       for (const entry of filled) {
-        const competition = competitionByKey.get(entry.disciplineKey);
+        const competition = created.find((row) => row.key === entry.disciplineKey);
+        const discipline = namedDisciplines.find((row) => row.key === entry.disciplineKey);
         // A team discipline has no individual entrants; its teams are built on
         // the discipline's own page, where roles and rosters live.
-        const discipline = namedDisciplines.find((row) => row.key === entry.disciplineKey);
         if (!competition || discipline?.type === "TEAM") continue;
         await addParticipant(competition.id, {
           // A linked profile wins; the typed name is only a fallback for
@@ -394,16 +441,10 @@ export function TournamentWizard() {
           birth_year: entry.birthYear.trim() ? Number(entry.birthYear) : null,
           seed: entry.seed ? Number(entry.seed) : null,
         });
-        entered.set(competition.id, (entered.get(competition.id) ?? 0) + 1);
+        counts.set(competition.id, (counts.get(competition.id) ?? 0) + 1);
       }
-
-      setTournamentId(tournament.id);
-      setCreated(
-        [...competitionByKey.values()].map((competition) => ({
-          ...competition,
-          entered: entered.get(competition.id) ?? 0,
-        })),
-      );
+      setCreated((rows) => rows.map((row) => ({ ...row, entered: counts.get(row.id) ?? row.entered })));
+      setEntries([]);
       setStep(3);
     });
   }
@@ -641,6 +682,10 @@ export function TournamentWizard() {
               ограничения нет и год рождения вообще не спрашивается. Считается по году турнира:
               «45+» — это те, кому в год турнира исполняется 45.
             </p>
+            <p className="text-xs text-[var(--muted)]">
+              На этом шаге турнир и дисциплины создаются в базе: без них сервер не сможет
+              проверить колонку «Категория» в файле заявок.
+            </p>
 
             <Button
               type="button"
@@ -657,17 +702,12 @@ export function TournamentWizard() {
             <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
               <Button
                 type="button"
-                disabled={!canLeaveStepTwo}
-                onClick={() => {
-                  if (entries.length === 0) {
-                    setEntries([newEntry(defaultDisciplineKey), newEntry(defaultDisciplineKey)]);
-                  }
-                  setStep(2);
-                }}
+                disabled={!canLeaveStepTwo || busy}
+                onClick={() => void createTournamentAndDisciplines()}
               >
-                Дальше: участники
+                {busy ? "Создаём…" : "Создать турнир и дисциплины"}
               </Button>
-              <Button type="button" variant="ghost" onClick={() => setStep(0)}>
+              <Button type="button" variant="ghost" onClick={() => setStep(0)} disabled={busy}>
                 Назад
               </Button>
             </div>
@@ -796,11 +836,20 @@ export function TournamentWizard() {
                 type="button"
                 variant="secondary"
                 size="sm"
+                icon={<Download className="size-3.5" strokeWidth={2.25} />}
+                onClick={() => void handleDownloadTemplate()}
+              >
+                Скачать шаблон
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
                 disabled={importBusy}
                 icon={<FileSpreadsheet className="size-3.5" strokeWidth={2.25} />}
                 onClick={() => fileInputRef.current?.click()}
               >
-                {importBusy ? "Читаем файл…" : "Импорт из Excel"}
+                {importBusy ? "Проверяем файл…" : "Загрузить заявки"}
               </Button>
               <input
                 ref={fileInputRef}
@@ -815,10 +864,29 @@ export function TournamentWizard() {
               />
             </div>
             <p className="text-xs text-[var(--muted)]">
-              Файл .xlsx: первая строка — заголовки, со второй — столбец A «ФИО/позывной», столбец
-              B «Город». Импортированные строки попадают в первую дисциплину, её можно поменять в
-              списке до сохранения.
+              Скачайте шаблон и заполните его — в нём уже есть нужные колонки и второй лист со
+              списком дисциплин. Файл проверяется на сервере: он покажет ошибки по строкам и ничего
+              не сохранит, пока вы не подтвердите.
             </p>
+
+            {importReport ? (
+              <div className="border-t border-[var(--border)] pt-4">
+                <ParticipantImportReview
+                  report={importReport}
+                  onCancel={() => setImportReport(null)}
+                  onCommitted={(count, perCompetition) => {
+                    setImportReport(null);
+                    setImportSummary(`Заведено участников из файла: ${count}.`);
+                    setCreated((rows) =>
+                      rows.map((row) => ({
+                        ...row,
+                        entered: row.entered + (perCompetition[row.name] ?? 0),
+                      })),
+                    );
+                  }}
+                />
+              </div>
+            ) : null}
 
             {importSummary ? <Alert tone="success">{importSummary}</Alert> : null}
             {error ? <Alert tone="danger">{error}</Alert> : null}
@@ -826,14 +894,15 @@ export function TournamentWizard() {
             <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
               <Button
                 type="button"
-                disabled={busy || filled.length === 0}
+                disabled={busy || importBusy}
                 icon={<UserPlus className="size-3.5" strokeWidth={2.25} />}
-                onClick={() => void submitEverything()}
+                onClick={() => void submitTypedEntries()}
               >
-                {busy ? "Сохраняем…" : `Создать турнир (${filled.length})`}
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => setStep(1)} disabled={busy}>
-                Назад
+                {busy
+                  ? "Сохраняем…"
+                  : filled.length > 0
+                    ? `Завести вручную (${filled.length}) и закончить`
+                    : "Закончить"}
               </Button>
             </div>
           </Card>

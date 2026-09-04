@@ -93,6 +93,66 @@ function safeJsonParse(text: string): unknown {
 }
 
 /**
+ * Send one file as multipart form data.
+ *
+ * `apiRequest` cannot do this: it unconditionally sets a JSON content type and
+ * stringifies the body. Note that `Content-Type` is deliberately *not* set
+ * here either — the browser has to write it itself, because only it knows the
+ * multipart boundary it generated.
+ */
+export async function apiUpload<T>(path: string, file: File, field = "file"): Promise<T> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  const authToken = readBrowserToken();
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
+
+  const form = new FormData();
+  form.append(field, file);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: "POST",
+      headers,
+      body: form,
+      cache: "no-store",
+    });
+  } catch (error) {
+    throw new ApiUnreachableError(error);
+  }
+
+  const text = await response.text();
+  const payload = text ? safeJsonParse(text) : null;
+  if (!response.ok) throw new ApiError(response.status, payload, extractDetail(payload));
+  return payload as T;
+}
+
+/**
+ * Fetch a file the API generates.
+ *
+ * A plain `<a href>` cannot be used for these: the route is guarded, and a
+ * bearer token in `localStorage` never travels on a link click.
+ */
+export async function apiDownload(path: string): Promise<Blob> {
+  const headers: Record<string, string> = {};
+  const authToken = readBrowserToken();
+  if (authToken) headers.Authorization = `Bearer ${authToken}`;
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, { headers, cache: "no-store" });
+  } catch (error) {
+    throw new ApiUnreachableError(error);
+  }
+
+  if (!response.ok) {
+    const text = await response.text();
+    const payload = text ? safeJsonParse(text) : null;
+    throw new ApiError(response.status, payload, extractDetail(payload));
+  }
+  return response.blob();
+}
+
+/**
  * Server-component helper: returns `null` instead of throwing when a resource
  * is missing or the API is down, so a page can render a placeholder rather
  * than a crash screen.

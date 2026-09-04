@@ -15,6 +15,7 @@ from app.modules.rules.routers import router as rules_router
 from app.modules.tournaments.routers import (
     bout_router as tournament_bout_router,
     engine_router as tournament_engine_router,
+    intake_router as tournament_intake_router,
     read_router as tournament_read_router,
     router as tournaments_router,
 )
@@ -47,6 +48,7 @@ app.include_router(tournaments_router)
 app.include_router(tournament_engine_router)
 app.include_router(tournament_read_router)
 app.include_router(tournament_bout_router)
+app.include_router(tournament_intake_router)
 
 
 @app.get("/", tags=["meta"])

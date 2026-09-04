@@ -417,6 +417,66 @@ export interface FirstRoundPairPlan {
   participant_b_city: string | null;
 }
 
+// --------------------------------------------------------- entry-list import
+
+export interface ImportColumnSpec {
+  key: string;
+  header_ru: string;
+  required: boolean;
+  note: string;
+}
+
+export interface ImportCompetitionSpec {
+  id: string;
+  name: string;
+  age_label: string | null;
+}
+
+export interface ImportRowError {
+  code: string;
+  column: string;
+  message: string;
+}
+
+/** One spreadsheet row after the server checked it. */
+export interface ImportRow {
+  row_number: number;
+  full_name: string;
+  fight_name: string | null;
+  city: string | null;
+  club: string | null;
+  category: string | null;
+  birth_year: number | null;
+  seed: number | null;
+  /** Resolved from `category`; null when it matched no discipline. */
+  competition_id: string | null;
+  competition_name: string | null;
+  /** Set when an existing profile matched, so no second identity is minted. */
+  athlete_id: string | null;
+  athlete_display_name: string | null;
+  /** Драковое имя when there is one, otherwise ФИО. */
+  display_name: string;
+  errors: ImportRowError[];
+  valid: boolean;
+}
+
+export interface ImportReport {
+  tournament_id: string;
+  columns: ImportColumnSpec[];
+  competitions: ImportCompetitionSpec[];
+  total_rows: number;
+  valid_rows: number;
+  rows: ImportRow[];
+  /** Category names matching no discipline, listed once rather than per row. */
+  unknown_categories: string[];
+}
+
+export interface ImportCommitResponse {
+  tournament_id: string;
+  created: number;
+  per_competition: Record<string, number>;
+}
+
 /** A first-round pair the draw could not separate, and what they share. */
 export interface CityCollisionView {
   position: number;
