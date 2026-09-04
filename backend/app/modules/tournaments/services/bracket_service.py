@@ -218,6 +218,62 @@ class BracketService:
         session.add(draw)
         await session.flush()
 
+        first_round = await BracketService._write_playoff(
+            session,
+            competition,
+            draw,
+            plan,
+            final_weapon=final_weapon,
+            category_id=category.id if category else None,
+        )
+
+        payload = BracketService._plan_payload(plan)
+        session.add(
+            CompetitionEvent(
+                competition_id=competition.id,
+                event_type="BRACKET_GENERATED",
+                description=(
+                    f"Сетка на {plan.bracket_size} мест, участников {plan.participant_count}, "
+                    f"свободных проходов {plan.bye_count}"
+                ),
+                payload={**payload, "actor_id": str(actor_id) if actor_id else None},
+            )
+        )
+
+        await BracketService._open_first_round(session, first_round)
+
+        tournament = await session.get(Tournament, competition.tournament_id)
+        if tournament is not None and tournament.status in {"DRAFT", "REGISTRATION", "READY"}:
+            tournament.status = TOURNAMENT_STATUS_BRACKET_CREATED
+        if competition.status == "DRAFT":
+            competition.status = "RUNNING"
+
+        await session.flush()
+        return payload
+
+    @staticmethod
+    async def _write_playoff(
+        session: AsyncSession,
+        competition: Competition,
+        draw: Draw,
+        plan: bracket_domain.BracketPlan,
+        *,
+        final_weapon: str | None,
+        category_id: UUID | None,
+    ) -> list[Match]:
+        """Write a whole knockout tree for ``plan`` and seat its first round.
+
+        Deliberately carries **no** "already generated" guard: that belongs to
+        the caller. :meth:`generate` refuses to rebuild a bracket that exists,
+        while the group-stage path needs to add a playoff on top of a group
+        stage whose matches are already in the table — same tree-writing, two
+        different preconditions.
+
+        Returns the first round, so the caller can log its own event before
+        opening the round (see :meth:`_open_first_round`); the journal reads
+        newest-first, and the "bracket generated" entry must not end up beneath
+        the byes it caused.
+        """
         # Rounds are built back to front so every match already knows the id of
         # the match it feeds. ``rounds[0]`` ends up being the first round.
         round_sizes: list[int] = []
@@ -250,7 +306,7 @@ class BracketService:
 
                 match = Match(
                     tournament_id=competition.tournament_id,
-                    category_id=category.id if category else None,
+                    category_id=category_id,
                     competition_id=competition.id,
                     draw_id=draw.id,
                     bracket_id=bracket_row.id,
@@ -278,36 +334,20 @@ class BracketService:
             match.participant_blue_id = UUID(pair.b.participant_id) if pair.b else None
             match.is_bye = pair.is_bye
         await session.flush()
+        return first_round
 
-        payload = BracketService._plan_payload(plan)
-        session.add(
-            CompetitionEvent(
-                competition_id=competition.id,
-                event_type="BRACKET_GENERATED",
-                description=(
-                    f"Сетка на {plan.bracket_size} мест, участников {plan.participant_count}, "
-                    f"свободных проходов {plan.bye_count}"
-                ),
-                payload={**payload, "actor_id": str(actor_id) if actor_id else None},
-            )
-        )
+    @staticmethod
+    async def _open_first_round(session: AsyncSession, first_round: list[Match]) -> None:
+        """Resolve byes and mark real pairs ready.
 
-        # Byes resolve immediately: the lone fighter is through, and the win is
-        # propagated through the same wiring every real result uses.
+        Byes resolve immediately: the lone fighter is through, and the win is
+        propagated through the same wiring every real result uses.
+        """
         for match in first_round:
             if match.is_bye:
                 await BracketService._resolve_bye(session, match)
             elif match.participant_red_id and match.participant_blue_id:
                 match.status = ready_status(match)
-
-        tournament = await session.get(Tournament, competition.tournament_id)
-        if tournament is not None and tournament.status in {"DRAFT", "REGISTRATION", "READY"}:
-            tournament.status = TOURNAMENT_STATUS_BRACKET_CREATED
-        if competition.status == "DRAFT":
-            competition.status = "RUNNING"
-
-        await session.flush()
-        return payload
 
     @staticmethod
     async def _resolve_bye(session: AsyncSession, match: Match) -> None:
