@@ -42,7 +42,9 @@ export function RiverMug() {
         if (event.animationName === "strike-ring") setStruck(false);
         if (event.animationName === "mug-tip") setTipped(false);
       }}
-      className="river-symbol grid h-full w-full cursor-pointer place-items-center border-0 bg-transparent p-0 text-[var(--gold)]"
+      // Cold tin, not the boat's brass: three symbols on one strip need three
+      // materials, or they read as one ochre family (see `river-spine.tsx`).
+      className="river-symbol grid h-full w-full cursor-pointer place-items-center border-0 bg-transparent p-0 text-[var(--chrome)]"
     >
       <span
         className="river-bob relative grid place-items-center"

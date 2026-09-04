@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 
@@ -13,7 +13,7 @@ const SHIELD_SIZE = 48;
  * alongside the boat (`river-boat.tsx`) and the mug (`river-mug.tsx`),
  * standing for the "буянить" theory of the word's origin.
  *
- * It carries the real emblem (`SealDisc emblem`), which is why it's 48px
+ * It carries the real emblem (`SealDisc`), which is why it's 48px
  * against the boat's 38 and the mug's 28 — the traced logo needs the room, and
  * the strip grew to 56px to give it. The two symbols beside it were scaled up
  * with the strip so they still read as three things riding one body of water.
@@ -72,7 +72,7 @@ export function RiverWaxSeal() {
             `transform` would win and the other two would vanish. */}
         <span className={`shield-guard grid place-items-center ${open ? "shield-guard-raised" : ""}`}>
           <span className={`grid place-items-center ${struck ? "shield-brace" : ""}`}>
-            <SealDisc size={SHIELD_SIZE} emblem />
+            <SealDisc size={SHIELD_SIZE} />
           </span>
         </span>
 

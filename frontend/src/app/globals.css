@@ -102,6 +102,12 @@
   --live: #ff5c4d;
   --live-soft: #2c1917;
 
+  /* Медь — the drinking vessel's own metal (the братина on the margin river).
+     Its own token rather than a shade of --gold: the river's marks are told
+     apart by material (wax, brass, tin, linen, copper), so two of them sharing
+     one token would put the fight and the drink in the same metal. */
+  --copper: #b5763f;
+
   /* ---- semantic status -------------------------------------------- */
   --success: #6fbb8d;
   --success-soft: #16261d;
@@ -1073,24 +1079,304 @@ body::after {
   }
 }
 
-/* затон (river-berth) — a symbol moored in one of the margin river's bays
-   (`components/layout/river-spine.tsx`). Same rest/hover dimming as the header
-   strip's own symbols (`.river-symbol` above), and gated to fine pointers for
-   the same reason: on touch there is no hover to reveal them with, and the
-   rail is hidden below `lg` anyway. */
+/* знак на воде (river-berth) — a mark standing in the margin river
+   (`components/layout/river-spine.tsx`). Rests dimmed and lights up under the
+   pointer, like the header strip's own symbols (`.river-symbol` above), and
+   gated to fine pointers for the same reason: on touch there is no hover to
+   reveal them with, and the rail is hidden below `lg` anyway.
+
+   Dimmed with `filter`, not `opacity` — that's the difference between a mark
+   standing *in* the water and one you can see the water through. Each mark's
+   plate is deliberately opaque so the river disappears behind it and can be
+   drawn parting around it instead; at 0.72 opacity the hairline came straight
+   back through the middle of every glyph, which is the exact thing the plate
+   exists to prevent. */
 @media (hover: hover) and (pointer: fine) {
   .river-berth {
-    /* Higher than the header strip's own 0.45: one of these three is the boat
-       carrying the reader's position, so it has to stay legible at rest rather
-       than waiting to be hovered. */
-    opacity: 0.72;
-    transition: opacity 200ms ease;
+    filter: brightness(0.78) saturate(0.85);
+    transition: filter 200ms ease;
   }
 
   .river-berth:hover,
   .river-berth:focus-visible {
+    filter: none;
+  }
+}
+
+/* плеск (bratina-liquid) — the drink moving in the братина when it's handed
+   round (`river-spine.tsx`; the shape itself is `bratina-icon.tsx`, drawn wider
+   than the bowl and clipped to it, so the surface can slide without a bare
+   corner showing at the far wall).
+
+   Damped, not a loop: the vessel is passed, it rocks, it settles. The surface
+   swings further than it tilts — liquid climbs the wall it's thrown against
+   before the whole body follows — which is the difference between "there's a
+   drink in it" and "the icon is wobbling". */
+@keyframes bratina-slosh {
+  0% {
+    transform: translateX(0) rotate(0deg);
+  }
+
+  20% {
+    transform: translateX(2.6px) rotate(3deg);
+  }
+
+  46% {
+    transform: translateX(-2.2px) rotate(-2.4deg);
+  }
+
+  70% {
+    transform: translateX(1.2px) rotate(1.2deg);
+  }
+
+  86% {
+    transform: translateX(-0.5px) rotate(-0.5deg);
+  }
+
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+}
+
+.bratina-liquid {
+  animation: bratina-slosh 1100ms cubic-bezier(0.3, 0.7, 0.3, 1) both;
+  transform-origin: 50% 100%;
+}
+
+/* качнуло (bratina-rock) — the vessel itself, handed across. The bowl swings
+   first and the drink follows it a beat later (`bratina-slosh` above peaks at
+   20%, this at 18% in the other direction), which is what makes the two read as
+   a heavy thing with liquid in it rather than one icon wobbling. Pivot low, at
+   the foot, because that's where a passed bowl is held. */
+@keyframes bratina-rock {
+  0% {
+    rotate: 0deg;
+  }
+
+  18% {
+    rotate: -8deg;
+  }
+
+  44% {
+    rotate: 6deg;
+  }
+
+  68% {
+    rotate: -3deg;
+  }
+
+  86% {
+    rotate: 1.2deg;
+  }
+
+  100% {
+    rotate: 0deg;
+  }
+}
+
+.bratina-rock {
+  animation: bratina-rock 1100ms cubic-bezier(0.3, 0.7, 0.3, 1) both;
+  transform-origin: 50% 82%;
+}
+
+/* до дна (bratina-tip) — the vessel put to the lips and drunk from: tipped
+   away, held there while the level runs out (`.bratina-level` below is slower
+   than the tip on purpose, so the drink is still leaving as the bowl comes
+   back), then set down. Deeper and slower than `bratina-rock` above, which is
+   the same vessel merely handed on. */
+@keyframes bratina-tip {
+  0% {
+    rotate: 0deg;
+  }
+
+  28% {
+    rotate: -30deg;
+  }
+
+  55% {
+    rotate: -26deg;
+  }
+
+  82% {
+    rotate: 5deg;
+  }
+
+  100% {
+    rotate: 0deg;
+  }
+}
+
+.bratina-tip {
+  animation: bratina-tip 1100ms cubic-bezier(0.3, 0.7, 0.3, 1) both;
+  transform-origin: 50% 82%;
+}
+
+/* уровень (bratina-level) — how much is left in it. Transitioned rather than
+   keyframed: the level is a *state* the vessel keeps between clicks (drunk to
+   the bottom, it stays empty until someone fills it), and a keyframe would snap
+   it back to its start every time something else on the mark animated. */
+.bratina-level {
+  transition: transform 700ms cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+
+/* через край (bratina-drop) — what actually says "there's a drink in it": the
+   surface tilting inside a 22px bowl is nearly invisible at rail size, so some
+   of it goes over the rim. Each drop is thrown out and up, then falls past the
+   bowl — `--drop-x` sets which way and `animation-delay` staggers them, so
+   three copies of one keyframe read as a spill rather than a pulse. */
+@keyframes bratina-drop {
+  0% {
+    transform: translate(0, 0) scale(0.5);
+    opacity: 0;
+  }
+
+  18% {
     opacity: 1;
   }
+
+  45% {
+    transform: translate(var(--drop-x, -8px), -7px) scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(calc(var(--drop-x, -8px) * 1.6), 15px) scale(0.7);
+    opacity: 0;
+  }
+}
+
+.bratina-drop {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--copper);
+  pointer-events: none;
+  animation: bratina-drop 900ms cubic-bezier(0.3, 0.6, 0.4, 1) both;
+}
+
+/* затон (river-pool) — the still water a mark's berth opens into, shown only
+   while the boat is actually lying in it (`river-spine.tsx` sets `.is-open`
+   from the scroll loop). Drawn as an upright oval rather than a circle because
+   the rail is a tall, narrow margin: a circle wide enough to hold the boat
+   would run out of rail sideways. */
+.river-pool {
+  position: absolute;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: var(--background-deep);
+  border: 1px solid color-mix(in srgb, var(--chrome) 48%, transparent);
+  box-shadow: inset 0 0 8px rgb(0 0 0 / 0.55);
+  opacity: 0;
+  transition: opacity 320ms ease;
+  pointer-events: none;
+}
+
+.river-pool.is-open {
+  opacity: 1;
+}
+
+/* якорь (river-anchor) — dropped as the boat comes to rest in a berth, so
+   putting in reads as putting in rather than as drifting to a halt.
+
+   Hangs off the hull, inside the boat's own bobbing wrapper, and not off the
+   pool underneath it: on the water the rope has to ride with the boat, and a
+   line pinned to the berth while the hull rose and fell above it read as a
+   stick planted in the riverbed. Short on purpose — from just under the keel to
+   the anchor, nothing sticking out past the boat — and gone the moment the boat
+   is under way again. */
+.river-anchor {
+  position: absolute;
+  top: 82%;
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--chrome);
+  opacity: 0;
+  transition: opacity 160ms ease;
+  pointer-events: none;
+}
+
+.river-anchor.is-down {
+  opacity: 0.9;
+}
+
+/* Канат отдаётся сверху вниз: the line grows from the hull's end, not the
+   anchor's, so it reads as rope paying out rather than a stick rising out of
+   the water. Scaled rather than resized, so nothing below it shifts. */
+@keyframes rode-pay {
+  0% {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scaleY(1);
+    opacity: 0.55;
+  }
+}
+
+.river-rode {
+  opacity: 0.55;
+}
+
+.river-anchor.is-down .river-rode {
+  transform-origin: 50% 0;
+  animation: rode-pay 380ms ease-out both;
+}
+
+/* And the anchor itself falls the length of that rope, overshooting a little
+   as it takes hold. Only the fluke moves — the wrapper stays put, so the top
+   of the rope never leaves the hull. */
+@keyframes anchor-drop {
+  0% {
+    transform: translateY(-9px) scale(0.7);
+    opacity: 0;
+  }
+
+  40% {
+    opacity: 1;
+  }
+
+  70% {
+    transform: translateY(2px) scale(1);
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.river-anchor.is-down .river-anchor-fluke {
+  animation: anchor-drop 520ms cubic-bezier(0.25, 0.9, 0.35, 1) 140ms both;
+}
+
+/* раскрыться (river-berth-open) — a mark giving way as the boat comes up to
+   it: widening out and going, leaving its own circle behind as the berth
+   (`.river-pool`) the boat lies in. One shape that was a mark and is now a
+   place, rather than a plate shuffling out of the boat's way (an earlier
+   version stepped it aside; it read as two objects trading positions and it
+   put the mark half into the page gutter).
+
+   The centring lives here rather than on Tailwind's `-translate-x-1/2
+   -translate-y-1/2`: in v4 those compile to the `translate` property, which the
+   step-aside then silently overwrote — every berthed mark jumped half its own
+   size down and right. One declaration owns `translate`; motion uses `scale`
+   and `opacity`, which compose with it instead of replacing it. */
+.river-berth {
+  translate: -50% -50%;
+  transition:
+    scale 320ms cubic-bezier(0.2, 0.8, 0.3, 1),
+    opacity 260ms ease;
+}
+
+.river-berth-open {
+  scale: 1.4;
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* The bay's name, stated only when asked. Sits outside the rail's own width on
