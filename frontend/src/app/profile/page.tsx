@@ -64,9 +64,9 @@ export default function ProfilePage() {
         </p>
         <Link
           href="/tournaments"
-          className="record-label label-link text-[var(--accent)]"
+          className="record-label label-link label-link-fwd text-[var(--accent)]"
         >
-          Перейти к турнирам →
+          Перейти к турнирам
         </Link>
       </div>
     </Container>

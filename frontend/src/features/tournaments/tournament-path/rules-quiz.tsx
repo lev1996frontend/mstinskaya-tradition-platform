@@ -126,9 +126,9 @@ export function RulesQuiz() {
             </p>
             <Link
               href="/rules"
-              className="record-label label-link mt-auto pt-4 text-[var(--accent)]"
+              className="record-label label-link label-link-fwd mt-auto pt-4 text-[var(--accent)]"
             >
-              Полный регламент →
+              Полный регламент
             </Link>
           </aside>
         </div>

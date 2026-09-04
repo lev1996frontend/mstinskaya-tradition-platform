@@ -89,9 +89,9 @@ export default async function ClubsPage() {
                     href={club.website_url}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="record-label label-link mt-auto pt-2 text-[var(--accent)]"
+                    className="record-label label-link label-link-fwd mt-auto pt-2 text-[var(--accent)]"
                   >
-                    Сайт клуба →
+                    Сайт клуба
                   </a>
                 ) : null}
               </div>

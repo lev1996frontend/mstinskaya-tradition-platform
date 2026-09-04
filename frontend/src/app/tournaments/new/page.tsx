@@ -14,8 +14,8 @@ export default function NewTournamentPage() {
     <Container className="space-y-8 py-10">
       <PageHeader
         eyebrow={
-          <Link href="/tournaments" className="label-link">
-            ← Турниры
+          <Link href="/tournaments" className="label-link label-link-back">
+            Турниры
           </Link>
         }
         title="Новый турнир"

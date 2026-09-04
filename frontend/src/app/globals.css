@@ -366,57 +366,95 @@ body::after {
    plain inline box.
 
    Not for links inside running text — a word that swells mid-sentence pushes
-   the line around; those keep the underline. */
+   the line around; those keep the underline.
+
+   The arrow is drawn here rather than typed into the label (`.label-link-fwd`
+   / `.label-link-back` below) — it has to move on its own, and a character
+   inside the string moves only with the string. */
 .label-link {
   position: relative;
   display: inline-block;
+  padding-bottom: 3px;
+  /* Some of these are `<button>`, and a button keeps the arrow cursor by
+     default while a link turns the pointer into a hand. Reading identically and
+     behaving differently is the worse half of that: the hero's toggle looked
+     exactly like "Все турниры →" beside it and gave no sign it could be
+     clicked. */
+  cursor: pointer;
   transform-origin: left center;
+  /* стамеска — the groove, as a background rather than a pseudo-element: both
+     pseudo-elements are spoken for by the arrows. A two-stop gradient, one
+     pixel of shadow over one of bone: a chisel cut in a plank is dark along
+     the top of the channel and lit on its far lip. It opens from the left,
+     where the label itself grows from, so hover and press read as one gesture.
+     Hovering only scores the line; pressing deepens it (see `:active`). */
+  --groove: rgb(0 0 0 / 0.35);
+  --groove-lip: transparent;
+  background-image: linear-gradient(to bottom, var(--groove) 0 1px, var(--groove-lip) 1px 2px);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0 2px;
   transition:
     transform 200ms var(--ease-out),
     filter 200ms ease,
-    text-shadow 120ms ease;
+    text-shadow 120ms ease,
+    background-size 180ms var(--ease-out);
 }
 
 .label-link:hover,
 .label-link:focus-visible {
   transform: scale(1.08);
   filter: brightness(1.25);
+  background-size: 100% 2px;
 }
 
-/* стамеска (label-link::after) — the groove the press cuts under the label: a
-   dark channel with a lit lower edge, the way a chisel cut in a plank catches
-   light on its far lip. Opens from the left, which is where the label itself
-   grows from, so press and hover read as one gesture rather than two.
+/* Стрелка отъезжает, надпись стоит — the one movement here that's visible
+   without looking for it: 8% of an 11px label is a pixel, and a pixel is not a
+   state anyone notices. Each direction gets the side it points to, so a
+   back-link's arrow leads away to the left and a forward one to the right. */
+.label-link-fwd::after,
+.label-link-back::before {
+  display: inline-block;
+  transition: translate 200ms var(--ease-out);
+}
 
-   Held on `:active` only — it belongs to the press, not to the destination. */
-.label-link::after {
-  content: "";
-  position: absolute;
-  inset: auto 0 -2px 0;
-  height: 1px;
-  background: rgb(0 0 0 / 0.55);
-  box-shadow: 0 1px 0 rgb(232 220 196 / 0.09);
-  transform: scaleX(0);
-  transform-origin: left center;
-  transition: transform 180ms var(--ease-out);
-  pointer-events: none;
+/* The empty alt text keeps the arrow out of the accessible name: it's a
+   direction for the eye, and "Все турниры →" must not be announced as
+   "Все турниры rightwards arrow". */
+.label-link-fwd::after {
+  content: "→" / "";
+  margin-left: 0.55em;
+}
+
+.label-link-back::before {
+  content: "←" / "";
+  margin-right: 0.55em;
+}
+
+.label-link-fwd:hover::after,
+.label-link-fwd:focus-visible::after {
+  translate: 4px 0;
+}
+
+.label-link-back:hover::before,
+.label-link-back:focus-visible::before {
+  translate: -4px 0;
 }
 
 /* врез — the label pressed into the plank: down a pixel, its glow gone, a dark
    line above it and a bone-coloured one below, which is the whole trick of a
-   cut edge — the top of the groove is in shadow and the bottom catches the
-   light. Ordered after :hover so a press always beats the hover it comes out
-   of. */
+   cut edge. The groove darkens and gets its lit lip at the same moment, so the
+   line scored on hover reads as having been cut through. Ordered after `:hover`
+   so a press always beats the hover it comes out of. */
 .label-link:active {
+  --groove: rgb(0 0 0 / 0.6);
+  --groove-lip: rgb(232 220 196 / 0.12);
   transform: scale(1.02) translateY(1px);
   filter: brightness(0.9);
+  background-size: 100% 2px;
   text-shadow:
     0 1px 0 rgb(232 220 196 / 0.14),
     0 -1px 1px rgb(0 0 0 / 0.55);
-}
-
-.label-link:active::after {
-  transform: scaleX(1);
 }
 
 /*

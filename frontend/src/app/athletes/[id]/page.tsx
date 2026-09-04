@@ -25,8 +25,8 @@ export default async function AthletePage({ params }: PageProps) {
 
   return (
     <Container className="max-w-3xl space-y-8 py-10">
-      <Link href="/athletes" className="record-label label-link text-[var(--accent)]">
-        ← Все спортсмены
+      <Link href="/athletes" className="record-label label-link label-link-back text-[var(--accent)]">
+        Все спортсмены
       </Link>
 
       {/* Dossier masthead: the photo mounted on paper like an ID card, name
