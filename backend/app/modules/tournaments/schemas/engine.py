@@ -68,6 +68,14 @@ class CompetitionCreateRequest(BaseModel):
     tournament_id: IdStr
     name: str = Field(..., min_length=2, max_length=200)
     description: str | None = Field(default=None, max_length=4000)
+    #: The tournament category this discipline is. «Абсолютная детская» and
+    #: «Ветераны» are two disciplines of one tournament, each with its own field.
+    category_id: IdStr | None = None
+    #: Independently optional, and both usually absent. 45+ for «Ветераны», an
+    #: upper bound for a children's category, neither for the open absolute —
+    #: which is what lets a fifty-year-old enter both.
+    min_age: int | None = Field(default=None, ge=0, le=120)
+    max_age: int | None = Field(default=None, ge=0, le=120)
     type: CompetitionType = "INDIVIDUAL"
     competition_type: CompetitionType | None = None
     format: CompetitionFormat = "SINGLE_ELIMINATION"
@@ -86,6 +94,9 @@ class CompetitionResponse(BaseModel):
     tournament_id: IdStr
     name: str
     description: str | None = None
+    category_id: IdStr | None = None
+    min_age: int | None = None
+    max_age: int | None = None
     type: CompetitionType
     format: CompetitionFormat
     status: CompetitionStatus
@@ -130,6 +141,11 @@ class EngineParticipantCreateRequest(BaseModel):
     type: Literal["ATHLETE", "TEAM"] | None = None
     seed: int | None = Field(default=None, ge=1)
     status: ParticipantEngineStatus = "REGISTERED"
+    #: Only consulted where the discipline sets an age bound.
+    birth_year: int | None = Field(default=None, ge=1900, le=2100)
+    #: Lets an organizer admit someone the age bound excludes. Recorded in
+    #: the journal, never silent; without it the entry is refused.
+    age_override_reason: str | None = Field(default=None, min_length=3, max_length=2000)
     #: Registration city — one input to the first-round separation.
     city: str | None = Field(default=None, max_length=100)
     club_id: IdStr | None = None
@@ -154,6 +170,7 @@ class EngineParticipantResponse(BaseModel):
     city: str | None = None
     club_id: IdStr | None = None
     club_name: str | None = None
+    birth_year: int | None = None
     display_name: str | None = None
 
 

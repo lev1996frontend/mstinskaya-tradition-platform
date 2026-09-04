@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.athletes.models import Athlete
 from app.modules.identity.models import User
+from app.modules.tournaments.domain import eligibility
 from app.modules.tournaments.models import (
     Bracket,
     Competition,
@@ -241,6 +242,10 @@ class TournamentReadService:
             tournament_id=str(competition.tournament_id),
             name=competition.name,
             description=competition.description,
+            category_id=str(competition.category_id) if competition.category_id else None,
+            min_age=competition.min_age,
+            max_age=competition.max_age,
+            age_label=eligibility.describe_bounds(competition.min_age, competition.max_age),
             type=competition.competition_type,
             format=competition.format,
             status=competition.status,

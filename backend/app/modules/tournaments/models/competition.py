@@ -27,6 +27,23 @@ class Competition(Base):
     tournament_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("tournaments.id", ondelete="CASCADE"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: The tournament category this discipline *is*. «Абсолютная детская» and
+    #: «Ветераны» are two disciplines of one tournament, each with its own
+    #: field, its own bracket and its own champion, so the category belongs
+    #: here rather than being guessed per entry.
+    category_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("tournament_categories.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    #: Age bounds, each independently optional and both usually absent. 45+ for
+    #: «Ветераны», an upper bound for a children's category, neither for the
+    #: open adult absolute — which is what lets a fifty-year-old enter both.
+    #: Counted as whole years reached during the year of the event; see
+    #: `domain/eligibility.py`.
+    min_age: Mapped[int | None] = mapped_column(nullable=True)
+    max_age: Mapped[int | None] = mapped_column(nullable=True)
     competition_type: Mapped[str] = mapped_column(String(20), nullable=False, default="INDIVIDUAL")
     format: Mapped[str] = mapped_column(String(30), nullable=False, default="SINGLE_ELIMINATION")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="DRAFT")

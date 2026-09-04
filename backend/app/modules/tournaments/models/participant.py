@@ -63,6 +63,10 @@ class Participant(Base):
     #: represented at this event. ``club_id`` is set additionally when the name
     #: does resolve, but the constraint never depends on it.
     club_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    #: Only consulted where the discipline sets an age bound. Kept on the entry
+    #: because an entrant imported from a spreadsheet has no profile to read it
+    #: from; a year rather than a date, matching what `Athlete` already stores.
+    birth_year: Mapped[int | None] = mapped_column(nullable=True)
     #: Only for an entrant with no platform profile yet. When ``athlete_id`` is
     #: set the name always comes from that profile, so linking an existing
     #: athlete can never produce a duplicate identity.

@@ -15,6 +15,7 @@ import random
 import pytest
 
 from app.modules.tournaments.domain import bracket as bracket_domain
+from app.modules.tournaments.domain import eligibility
 
 
 def entrant(
@@ -292,3 +293,44 @@ def test_separate_false_still_names_what_collides():
     plan = bracket_domain.build_plan(field, separate=False)
     assert [c.kind for c in plan.unavoidable_collisions] == ["CITY"]
     assert plan.unavoidable_collisions[0].value == "Новгород"
+
+
+# ----------------------------------------------------------- age eligibility
+
+
+def test_an_unbounded_category_accepts_anyone_even_with_no_year():
+    verdict = eligibility.check_age(None, min_age=None, max_age=None, event_year=2026)
+    assert verdict.ok
+    assert verdict.code is None
+
+
+def test_age_is_the_year_reached_during_the_event_year():
+    assert eligibility.age_in_year(1981, 2026) == 45
+
+
+def test_a_bound_makes_the_birth_year_required():
+    verdict = eligibility.check_age(None, min_age=45, max_age=None, event_year=2026)
+    assert not verdict.ok
+    assert verdict.code == eligibility.MISSING_BIRTH_YEAR
+
+
+def test_the_minimum_is_inclusive():
+    assert eligibility.check_age(1981, min_age=45, max_age=None, event_year=2026).ok
+    below = eligibility.check_age(1982, min_age=45, max_age=None, event_year=2026)
+    assert not below.ok
+    assert below.code == eligibility.AGE_BELOW_MINIMUM
+    assert below.age == 44
+
+
+def test_the_maximum_is_inclusive():
+    assert eligibility.check_age(2012, min_age=None, max_age=14, event_year=2026).ok
+    above = eligibility.check_age(2011, min_age=None, max_age=14, event_year=2026)
+    assert not above.ok
+    assert above.code == eligibility.AGE_ABOVE_MAXIMUM
+
+
+def test_bounds_get_a_short_russian_label():
+    assert eligibility.describe_bounds(45, None) == "45+"
+    assert eligibility.describe_bounds(None, 14) == "до 14 лет"
+    assert eligibility.describe_bounds(12, 14) == "12–14 лет"
+    assert eligibility.describe_bounds(None, None) is None

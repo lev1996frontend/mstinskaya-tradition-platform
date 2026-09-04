@@ -99,6 +99,14 @@ class CompetitionView(BaseModel):
     tournament_id: str
     name: str
     description: str | None = None
+    category_id: str | None = None
+    #: Age bounds of this discipline, each independently optional. Both null
+    #: means it never asks for a birth year at all.
+    min_age: int | None = None
+    max_age: int | None = None
+    #: Short Russian label for those bounds («45+», «до 14 лет»), or null when
+    #: unbounded — computed once here so every surface phrases it identically.
+    age_label: str | None = None
     type: str
     format: str
     status: str

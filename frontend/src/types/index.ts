@@ -128,6 +128,14 @@ export interface CompetitionView {
   tournament_id: string;
   name: string;
   description: string | null;
+  category_id: string | null;
+  /** Age bounds of this discipline, each independently optional. Both null
+   *  means it never asks for a birth year at all. */
+  min_age: number | null;
+  max_age: number | null;
+  /** Short Russian label for those bounds («45+», «до 14 лет»), or null when
+   *  unbounded — computed on the server so every surface phrases it alike. */
+  age_label: string | null;
   type: CompetitionType;
   format: CompetitionFormat;
   status: CompetitionStatus;

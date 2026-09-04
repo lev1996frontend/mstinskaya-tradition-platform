@@ -109,7 +109,15 @@ export default async function TournamentPage({ params }: PageProps) {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <h3 className="min-w-0 font-semibold leading-snug">{competition.name}</h3>
-                      <Badge>{labelOf(competitionType, competition.type)}</Badge>
+                      <span className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                        {/* An age bound is the difference between «Ветераны» and
+                            the open absolute, so it belongs beside the name and
+                            not buried inside the discipline. */}
+                        {competition.age_label ? (
+                          <Badge tone="info">{competition.age_label}</Badge>
+                        ) : null}
+                        <Badge>{labelOf(competitionType, competition.type)}</Badge>
+                      </span>
                     </div>
                     <p className="text-sm text-[var(--muted)]">
                       {labelOf(competitionFormat, competition.format)}

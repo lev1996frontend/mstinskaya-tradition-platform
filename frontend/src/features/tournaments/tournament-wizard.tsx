@@ -1,66 +1,174 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { Check, FileSpreadsheet, Link2, Plus, Search, Trash2, UserPlus } from "lucide-react";
-import { useRouter } from "next/navigation";
+import {
+  ArrowRight,
+  Check,
+  FileSpreadsheet,
+  Link2,
+  Plus,
+  Search,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { listAthletes, listRuleSets } from "@/api/catalog";
-import {
-  addParticipant,
-  createCompetition,
-  createTournament,
-  generateBracket,
-  previewBracket,
-} from "@/api/tournaments";
-import { Alert, Badge, Button, Card, cn } from "@/components/ui";
+import { addParticipant, createCompetition, createTournament } from "@/api/tournaments";
+import { Alert, Badge, Button, ButtonLink, Card, cn } from "@/components/ui";
 import { Field, Input, Select } from "@/components/ui/form";
 import { useAuth } from "@/features/auth/auth-context";
 import { ApiError, ApiUnreachableError } from "@/lib/api";
-import { competitionFormat, weaponCategory } from "@/lib/labels";
-import type { Athlete, BracketPlanView, CompetitionFormat, WeaponCategory } from "@/types";
+import { competitionFormat, competitionType } from "@/lib/labels";
+import type { Athlete, CompetitionFormat, CompetitionType } from "@/types";
 
-import { CityVerdict, PairPreview, PlanSummary } from "./bracket-generator";
 import { parseParticipantsExcel } from "./participant-import";
-import { WeaponGlyph } from "./weapon-mark";
 
 /**
- * Organizer wizard: basic info → participants → distribution review → bracket.
+ * Organizer wizard: basic info → disciplines → entrants → done.
  *
- * The participants step links an **existing** athlete profile whenever there is
- * one — that is the whole reason for the search box. A person is only entered
- * by bare name when they have no profile on the platform at all, so the wizard
- * can never mint a second identity for someone who already exists.
+ * A tournament is several disciplines, not one. «Абсолютная детская»,
+ * «Абсолютная взрослая», «Ветераны» and «Трое на трое» each hold their own
+ * field, bracket and champion, and one fighter may enter more than one of them
+ * — a fifty-year-old belongs in both the veterans' category and the open
+ * absolute, since the open one sets no age bound at all.
  *
- * Nothing is written until each step's own action runs, and the distribution
- * review is a real backend dry run, not a local guess.
+ * The wizard stops once everyone is entered. Building a bracket, drawing groups
+ * and running bouts all belong to the discipline's own page, which already does
+ * them properly; carrying an N-discipline tournament through a single bracket
+ * step here would either force one discipline to be "the" one or turn the
+ * wizard into a nested flow.
+ *
+ * The entrants step links an **existing** athlete profile whenever there is one
+ * — that is the whole reason for the search box. A person is entered by bare
+ * name only when they have no profile on the platform at all, so the wizard can
+ * never mint a second identity for someone who already exists.
  */
+
+type Discipline = {
+  key: string;
+  name: string;
+  type: CompetitionType;
+  format: CompetitionFormat;
+  /** Blank means unbounded, which is the usual case. */
+  minAge: string;
+  maxAge: string;
+};
 
 type Entry = {
   key: string;
   /** Set when this row is linked to an existing platform profile. */
   athleteId: string | null;
+  /** Which discipline this person is entered in. */
+  disciplineKey: string;
   name: string;
   city: string;
   /** Free text: the draw separates clubmates before fellow-townsmen. */
   club: string;
+  /** Only consulted where the discipline sets an age bound. */
+  birthYear: string;
   seed: string;
 };
 
-const STEPS = ["Основное", "Участники", "Распределение", "Сетка"] as const;
+const STEPS = ["Основное", "Дисциплины", "Участники", "Готово"] as const;
+
+/**
+ * Ready-made disciplines, offered as buttons rather than baked in as rules.
+ *
+ * `docs/domain-model.md` §5 forbids inventing tournament formats, so nothing
+ * here is enforced: every field stays editable and the organizer can type any
+ * name and any bounds. These only save the typing for the four that come up
+ * every time.
+ */
+const PRESETS: { label: string; discipline: Omit<Discipline, "key"> }[] = [
+  {
+    label: "Абсолютная детская",
+    discipline: {
+      name: "Абсолютная детская",
+      type: "INDIVIDUAL",
+      format: "SINGLE_ELIMINATION",
+      minAge: "",
+      maxAge: "14",
+    },
+  },
+  {
+    label: "Абсолютная взрослая",
+    discipline: {
+      name: "Абсолютная взрослая",
+      type: "INDIVIDUAL",
+      format: "SINGLE_ELIMINATION",
+      minAge: "",
+      maxAge: "",
+    },
+  },
+  {
+    label: "Ветераны 45+",
+    discipline: {
+      name: "Ветераны",
+      type: "INDIVIDUAL",
+      format: "SINGLE_ELIMINATION",
+      minAge: "45",
+      maxAge: "",
+    },
+  },
+  {
+    label: "Трое на трое",
+    discipline: {
+      name: "Трое на трое",
+      type: "TEAM",
+      format: "ROUND_ROBIN",
+      minAge: "",
+      maxAge: "",
+    },
+  },
+];
 
 function describeError(error: unknown): string {
   if (error instanceof ApiUnreachableError) return "Не удалось связаться с API.";
   if (error instanceof ApiError) {
     if (error.status === 401) return "Требуется вход в систему.";
     if (error.status === 403) return "Действие доступно организатору или инструктору.";
+    // The age check answers with a structured body naming the row's problem.
+    const detail = error.detail as { message?: string } | null;
+    if (error.status === 400 && detail?.message) return detail.message;
     return error.message;
   }
   return "Не удалось сохранить.";
 }
 
-function newEntry(): Entry {
-  return { key: crypto.randomUUID(), athleteId: null, name: "", city: "", club: "", seed: "" };
+function newDiscipline(name = ""): Discipline {
+  return {
+    key: crypto.randomUUID(),
+    name,
+    type: "INDIVIDUAL",
+    format: "SINGLE_ELIMINATION",
+    minAge: "",
+    maxAge: "",
+  };
+}
+
+function newEntry(disciplineKey: string): Entry {
+  return {
+    key: crypto.randomUUID(),
+    athleteId: null,
+    disciplineKey,
+    name: "",
+    city: "",
+    club: "",
+    birthYear: "",
+    seed: "",
+  };
+}
+
+/** Short label for a discipline's age bounds — the same phrasing the API uses. */
+function ageLabel(discipline: Discipline): string | null {
+  const min = discipline.minAge.trim();
+  const max = discipline.maxAge.trim();
+  if (min && max) return `${min}–${max} лет`;
+  if (min) return `${min}+`;
+  if (max) return `до ${max} лет`;
+  return null;
 }
 
 // ------------------------------------------------------------ athlete search
@@ -133,34 +241,33 @@ function AthletePicker({
 
 export function TournamentWizard() {
   const { user } = useAuth();
-  const router = useRouter();
   const reduceMotion = useReducedMotion();
 
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // step 1
+  // step 1 — the tournament itself
   const [title, setTitle] = useState("");
   const [startDate, setStartDate] = useState("");
   const [location, setLocation] = useState("");
   const [city, setCity] = useState("");
-  const [format, setFormat] = useState<CompetitionFormat>("SINGLE_ELIMINATION");
   const [rulesetId, setRulesetId] = useState("");
   const [rulesets, setRulesets] = useState<{ id: string; title: string }[]>([]);
 
-  // step 2
-  const [entries, setEntries] = useState<Entry[]>([newEntry(), newEntry()]);
+  // step 2 — its disciplines
+  const [disciplines, setDisciplines] = useState<Discipline[]>([newDiscipline()]);
+
+  // step 3 — who is entered, and where
+  const [entries, setEntries] = useState<Entry[]>([]);
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [importBusy, setImportBusy] = useState(false);
   const [importSummary, setImportSummary] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // step 3/4
-  const [competitionId, setCompetitionId] = useState<string | null>(null);
+  // step 4 — what was created
   const [tournamentId, setTournamentId] = useState<string | null>(null);
-  const [plan, setPlan] = useState<BracketPlanView | null>(null);
-  const [finalWeapon, setFinalWeapon] = useState<WeaponCategory | null>(null);
+  const [created, setCreated] = useState<{ id: string; name: string; entered: number }[]>([]);
 
   useEffect(() => {
     void (async () => {
@@ -171,19 +278,32 @@ export function TournamentWizard() {
     })();
   }, []);
 
+  // A discipline with no name is a half-typed row, not an event.
+  const namedDisciplines = disciplines.filter((discipline) => discipline.name.trim());
   const filled = entries.filter((entry) => entry.name.trim());
   const takenAthleteIds = new Set(entries.map((e) => e.athleteId).filter(Boolean) as string[]);
+
+  /** The default discipline for a new row — the first one, when there is only one. */
+  const defaultDisciplineKey = namedDisciplines[0]?.key ?? disciplines[0]?.key ?? "";
+
+  function updateDiscipline(key: string, patch: Partial<Discipline>) {
+    setDisciplines((rows) => rows.map((row) => (row.key === key ? { ...row, ...patch } : row)));
+  }
 
   function updateEntry(key: string, patch: Partial<Entry>) {
     setEntries((rows) => rows.map((row) => (row.key === key ? { ...row, ...patch } : row)));
   }
 
+  function addEntry(patch: Partial<Entry> = {}) {
+    setEntries((rows) => [...rows, { ...newEntry(defaultDisciplineKey), ...patch }]);
+  }
+
   /**
-   * Reads an .xlsx file (ФИО/позывной in column A, город in column B) and
-   * turns each row into an entry, matching existing athlete profiles by
-   * nickname so a linked import never mints a duplicate identity. Rows land
-   * in the same editable list as manually typed ones, so the organizer can
-   * still fix a name or city before anything is saved.
+   * Reads an .xlsx file (ФИО/позывной in column A, город in column B) and turns
+   * each row into an entry in the default discipline, matching existing athlete
+   * profiles by nickname so a linked import never mints a duplicate identity.
+   * Rows land in the same editable list as manually typed ones, so the
+   * organizer can still fix a name, a city or the discipline before saving.
    */
   async function handleImportFile(file: File) {
     setImportBusy(true);
@@ -200,12 +320,10 @@ export function TournamentWizard() {
       setEntries((current) => {
         const kept = current.filter((entry) => entry.name.trim());
         const imported = rows.map((row) => ({
-          key: crypto.randomUUID(),
+          ...newEntry(defaultDisciplineKey),
           athleteId: row.athleteId,
           name: row.name,
           city: row.city,
-          club: "",
-          seed: "",
         }));
         return [...kept, ...imported];
       });
@@ -232,8 +350,8 @@ export function TournamentWizard() {
     }
   }
 
-  /** Creates the tournament + competition and enters everyone, then previews. */
-  async function submitParticipants() {
+  /** Creates the tournament, each discipline, and every entry in its own one. */
+  async function submitEverything() {
     await run(async () => {
       if (!user) throw new ApiError(401, null, "Требуется вход в систему.");
       const tournament = await createTournament({
@@ -245,14 +363,27 @@ export function TournamentWizard() {
         organizer_id: user.id,
         ruleset_id: rulesetId,
       });
-      const competition = await createCompetition(tournament.id, {
-        name: title.trim(),
-        type: "INDIVIDUAL",
-        format,
-        status: "REGISTRATION",
-      });
 
+      const competitionByKey = new Map<string, { id: string; name: string }>();
+      for (const discipline of namedDisciplines) {
+        const competition = await createCompetition(tournament.id, {
+          name: discipline.name.trim(),
+          type: discipline.type,
+          format: discipline.format,
+          status: "REGISTRATION",
+          min_age: discipline.minAge.trim() ? Number(discipline.minAge) : null,
+          max_age: discipline.maxAge.trim() ? Number(discipline.maxAge) : null,
+        });
+        competitionByKey.set(discipline.key, { id: competition.id, name: competition.name });
+      }
+
+      const entered = new Map<string, number>();
       for (const entry of filled) {
+        const competition = competitionByKey.get(entry.disciplineKey);
+        // A team discipline has no individual entrants; its teams are built on
+        // the discipline's own page, where roles and rosters live.
+        const discipline = namedDisciplines.find((row) => row.key === entry.disciplineKey);
+        if (!competition || discipline?.type === "TEAM") continue;
         await addParticipant(competition.id, {
           // A linked profile wins; the typed name is only a fallback for
           // someone with no profile at all.
@@ -260,28 +391,25 @@ export function TournamentWizard() {
           display_name: entry.athleteId ? null : entry.name.trim(),
           city: entry.city.trim() || null,
           club_name: entry.club.trim() || null,
+          birth_year: entry.birthYear.trim() ? Number(entry.birthYear) : null,
           seed: entry.seed ? Number(entry.seed) : null,
         });
+        entered.set(competition.id, (entered.get(competition.id) ?? 0) + 1);
       }
 
       setTournamentId(tournament.id);
-      setCompetitionId(competition.id);
-      setPlan(await previewBracket(competition.id));
-      setStep(2);
-    });
-  }
-
-  async function commitBracket() {
-    await run(async () => {
-      if (!competitionId || !tournamentId) return;
-      await generateBracket(competitionId, { final_weapon: finalWeapon });
+      setCreated(
+        [...competitionByKey.values()].map((competition) => ({
+          ...competition,
+          entered: entered.get(competition.id) ?? 0,
+        })),
+      );
       setStep(3);
-      router.push(`/tournaments/${tournamentId}/competitions/${competitionId}`);
     });
   }
 
-  const canLeaveStepOne = title.trim().length >= 2 && rulesetId;
-  const canLeaveStepTwo = filled.length >= 2;
+  const canLeaveStepOne = title.trim().length >= 2 && Boolean(rulesetId);
+  const canLeaveStepTwo = namedDisciplines.length >= 1;
 
   if (!user) {
     return (
@@ -310,10 +438,9 @@ export function TournamentWizard() {
                       : "border-[var(--border)] text-[var(--muted)]",
                 )}
               >
-                <span className="font-record">
-                  {done ? <Check className="size-3.5" strokeWidth={2.5} /> : index + 1}
-                </span>
-                {label}
+                {done ? <Check className="size-3.5" strokeWidth={2.5} /> : null}
+                <span className="font-record">{index + 1}</span>
+                <span>{label}</span>
               </div>
             </li>
           );
@@ -340,7 +467,10 @@ export function TournamentWizard() {
               )}
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Дата начала">
+              <Field
+                label="Дата начала"
+                hint="От неё считается возраст в категориях с ограничением"
+              >
                 {(props) => (
                   <Input
                     {...props}
@@ -371,13 +501,101 @@ export function TournamentWizard() {
                 />
               )}
             </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Формат">
-                {(props) => (
+            <Field label="Регламент">
+              {(props) => (
+                <Select
+                  {...props}
+                  value={rulesetId}
+                  onChange={(event) => setRulesetId(event.target.value)}
+                >
+                  {rulesets.length === 0 ? <option value="">Регламенты не заведены</option> : null}
+                  {rulesets.map((set) => (
+                    <option key={set.id} value={set.id}>
+                      {set.title}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+            {error ? <Alert tone="danger">{error}</Alert> : null}
+            <div className="pt-1">
+              <Button type="button" disabled={!canLeaveStepOne} onClick={() => setStep(1)}>
+                Дальше: дисциплины
+              </Button>
+            </div>
+          </Card>
+        ) : null}
+
+        {/* -------------------------------------------- step 2: disciplines */}
+        {step === 1 ? (
+          <Card className="space-y-4 p-5">
+            <div>
+              <h3 className="font-display text-lg font-semibold tracking-tight">Дисциплины</h3>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                У каждой дисциплины свой состав, своя сетка и свой чемпион. Один боец может
+                заявиться в несколько — например, и в ветеранов, и в общую абсолютку.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              {PRESETS.map((preset) => (
+                <Button
+                  key={preset.label}
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  icon={<Plus className="size-3.5" strokeWidth={2.5} />}
+                  onClick={() =>
+                    setDisciplines((rows) => {
+                      const seeded = { ...preset.discipline, key: crypto.randomUUID() };
+                      // Fill the first blank row rather than leaving it behind.
+                      const blank = rows.find((row) => !row.name.trim());
+                      return blank
+                        ? rows.map((row) => (row.key === blank.key ? { ...seeded, key: row.key } : row))
+                        : [...rows, seeded];
+                    })
+                  }
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </div>
+
+            <ul className="space-y-2">
+              {disciplines.map((discipline, index) => (
+                <li
+                  key={discipline.key}
+                  className="grid gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] p-2 sm:grid-cols-[1.6fr_1fr_1fr_4.5rem_4.5rem_2rem] sm:items-center"
+                >
+                  <Input
+                    value={discipline.name}
+                    onChange={(event) => updateDiscipline(discipline.key, { name: event.target.value })}
+                    placeholder="Название дисциплины"
+                    aria-label={`Дисциплина ${index + 1}`}
+                  />
                   <Select
-                    {...props}
-                    value={format}
-                    onChange={(event) => setFormat(event.target.value as CompetitionFormat)}
+                    value={discipline.type}
+                    onChange={(event) =>
+                      updateDiscipline(discipline.key, {
+                        type: event.target.value as CompetitionType,
+                      })
+                    }
+                    aria-label={`Тип дисциплины ${index + 1}`}
+                  >
+                    {(Object.keys(competitionType) as CompetitionType[]).map((key) => (
+                      <option key={key} value={key}>
+                        {competitionType[key]}
+                      </option>
+                    ))}
+                  </Select>
+                  <Select
+                    value={discipline.format}
+                    onChange={(event) =>
+                      updateDiscipline(discipline.key, {
+                        format: event.target.value as CompetitionFormat,
+                      })
+                    }
+                    aria-label={`Формат дисциплины ${index + 1}`}
                   >
                     {(Object.keys(competitionFormat) as CompetitionFormat[]).map((key) => (
                       <option key={key} value={key}>
@@ -385,42 +603,86 @@ export function TournamentWizard() {
                       </option>
                     ))}
                   </Select>
-                )}
-              </Field>
-              <Field label="Регламент">
-                {(props) => (
-                  <Select
-                    {...props}
-                    value={rulesetId}
-                    onChange={(event) => setRulesetId(event.target.value)}
+                  <Input
+                    value={discipline.minAge}
+                    onChange={(event) =>
+                      updateDiscipline(discipline.key, { minAge: event.target.value })
+                    }
+                    placeholder="от"
+                    inputMode="numeric"
+                    aria-label={`Минимальный возраст в дисциплине ${index + 1}`}
+                  />
+                  <Input
+                    value={discipline.maxAge}
+                    onChange={(event) =>
+                      updateDiscipline(discipline.key, { maxAge: event.target.value })
+                    }
+                    placeholder="до"
+                    inputMode="numeric"
+                    aria-label={`Максимальный возраст в дисциплине ${index + 1}`}
+                  />
+                  <button
+                    type="button"
+                    aria-label={`Удалить дисциплину ${index + 1}`}
+                    disabled={disciplines.length === 1}
+                    onClick={() =>
+                      setDisciplines((rows) => rows.filter((row) => row.key !== discipline.key))
+                    }
+                    className="justify-self-end rounded-full p-1.5 text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--danger)] disabled:opacity-40"
                   >
-                    {rulesets.length === 0 ? <option value="">Регламенты не заведены</option> : null}
-                    {rulesets.map((set) => (
-                      <option key={set.id} value={set.id}>
-                        {set.title}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-              </Field>
-            </div>
+                    <Trash2 className="size-4" strokeWidth={2} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            <p className="text-xs text-[var(--muted)]">
+              Возраст «от» и «до» — необязательные и независимые. Пусто с обеих сторон значит, что
+              ограничения нет и год рождения вообще не спрашивается. Считается по году турнира:
+              «45+» — это те, кому в год турнира исполняется 45.
+            </p>
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              icon={<Plus className="size-3.5" strokeWidth={2.5} />}
+              onClick={() => setDisciplines((rows) => [...rows, newDiscipline()])}
+            >
+              Добавить дисциплину
+            </Button>
+
             {error ? <Alert tone="danger">{error}</Alert> : null}
-            <div className="pt-1">
-              <Button type="button" disabled={!canLeaveStepOne} onClick={() => setStep(1)}>
+
+            <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
+              <Button
+                type="button"
+                disabled={!canLeaveStepTwo}
+                onClick={() => {
+                  if (entries.length === 0) {
+                    setEntries([newEntry(defaultDisciplineKey), newEntry(defaultDisciplineKey)]);
+                  }
+                  setStep(2);
+                }}
+              >
                 Дальше: участники
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setStep(0)}>
+                Назад
               </Button>
             </div>
           </Card>
         ) : null}
 
-        {/* ------------------------------------------ step 2: participants */}
-        {step === 1 ? (
+        {/* ------------------------------------------ step 3: participants */}
+        {step === 2 ? (
           <Card className="space-y-4 p-5">
             <div>
               <h3 className="font-display text-lg font-semibold tracking-tight">Участники</h3>
               <p className="mt-1 text-sm text-[var(--muted)]">
-                Если у бойца уже есть профиль на платформе — найдите и привяжите его, чтобы не
-                создавать дубль. Город нужен, чтобы развести земляков в первом круге.
+                Если у бойца уже есть профиль — найдите и привяжите его, чтобы не создавать дубль.
+                Город и клуб нужны, чтобы развести своих в первом круге; год рождения — только там,
+                где у дисциплины есть возрастное ограничение.
               </p>
             </div>
 
@@ -428,65 +690,96 @@ export function TournamentWizard() {
               athletes={athletes}
               taken={takenAthleteIds}
               onPick={(athlete) => {
+                const patch = {
+                  athleteId: athlete.id,
+                  name: athlete.nickname ?? "Спортсмен",
+                  birthYear: athlete.birth_year ? String(athlete.birth_year) : "",
+                };
                 const empty = entries.find((entry) => !entry.name.trim());
-                const patch = { athleteId: athlete.id, name: athlete.nickname ?? "Спортсмен" };
                 if (empty) updateEntry(empty.key, patch);
-                else setEntries((rows) => [...rows, { ...newEntry(), ...patch }]);
+                else addEntry(patch);
               }}
             />
 
             <ul className="space-y-2">
-              {entries.map((entry, index) => (
-                <li
-                  key={entry.key}
-                  className="grid gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] p-2 sm:grid-cols-[1.5rem_1.4fr_1fr_1fr_4.5rem_2rem] sm:items-center"
-                >
-                  <span className="font-record text-xs text-[var(--muted)]">{index + 1}</span>
-                  <span className="min-w-0">
-                    <Input
-                      value={entry.name}
-                      onChange={(event) =>
-                        updateEntry(entry.key, { name: event.target.value, athleteId: null })
-                      }
-                      placeholder="Фамилия и имя"
-                      aria-label={`Участник ${index + 1}`}
-                    />
-                    {entry.athleteId ? (
-                      <span className="mt-1 inline-flex items-center gap-1 text-[11px] text-[var(--accent)]">
-                        <Link2 className="size-3" strokeWidth={2} />
-                        привязан существующий профиль
-                      </span>
-                    ) : null}
-                  </span>
-                  <Input
-                    value={entry.city}
-                    onChange={(event) => updateEntry(entry.key, { city: event.target.value })}
-                    placeholder="Город"
-                    aria-label={`Город участника ${index + 1}`}
-                  />
-                  <Input
-                    value={entry.club}
-                    onChange={(event) => updateEntry(entry.key, { club: event.target.value })}
-                    placeholder="Клуб"
-                    aria-label={`Клуб участника ${index + 1}`}
-                  />
-                  <Input
-                    value={entry.seed}
-                    onChange={(event) => updateEntry(entry.key, { seed: event.target.value })}
-                    placeholder="Посев"
-                    inputMode="numeric"
-                    aria-label={`Посев участника ${index + 1}`}
-                  />
-                  <button
-                    type="button"
-                    aria-label={`Удалить участника ${index + 1}`}
-                    onClick={() => setEntries((rows) => rows.filter((row) => row.key !== entry.key))}
-                    className="justify-self-end rounded-full p-1.5 text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--danger)]"
+              {entries.map((entry, index) => {
+                const discipline = disciplines.find((row) => row.key === entry.disciplineKey);
+                const needsYear = Boolean(discipline?.minAge.trim() || discipline?.maxAge.trim());
+                return (
+                  <li
+                    key={entry.key}
+                    className="grid gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] p-2 sm:grid-cols-[1.5rem_1.4fr_1fr_1fr_1fr_5rem_4rem_2rem] sm:items-center"
                   >
-                    <Trash2 className="size-4" strokeWidth={2} />
-                  </button>
-                </li>
-              ))}
+                    <span className="font-record text-xs text-[var(--muted)]">{index + 1}</span>
+                    <span className="min-w-0">
+                      <Input
+                        value={entry.name}
+                        onChange={(event) =>
+                          updateEntry(entry.key, { name: event.target.value, athleteId: null })
+                        }
+                        placeholder="Фамилия и имя"
+                        aria-label={`Участник ${index + 1}`}
+                      />
+                      {entry.athleteId ? (
+                        <span className="mt-1 inline-flex items-center gap-1 text-[11px] text-[var(--accent)]">
+                          <Link2 className="size-3" strokeWidth={2} />
+                          привязан существующий профиль
+                        </span>
+                      ) : null}
+                    </span>
+                    <Select
+                      value={entry.disciplineKey}
+                      onChange={(event) =>
+                        updateEntry(entry.key, { disciplineKey: event.target.value })
+                      }
+                      aria-label={`Дисциплина участника ${index + 1}`}
+                    >
+                      {namedDisciplines.map((row) => (
+                        <option key={row.key} value={row.key}>
+                          {row.name}
+                          {ageLabel(row) ? ` · ${ageLabel(row)}` : ""}
+                        </option>
+                      ))}
+                    </Select>
+                    <Input
+                      value={entry.city}
+                      onChange={(event) => updateEntry(entry.key, { city: event.target.value })}
+                      placeholder="Город"
+                      aria-label={`Город участника ${index + 1}`}
+                    />
+                    <Input
+                      value={entry.club}
+                      onChange={(event) => updateEntry(entry.key, { club: event.target.value })}
+                      placeholder="Клуб"
+                      aria-label={`Клуб участника ${index + 1}`}
+                    />
+                    <Input
+                      value={entry.birthYear}
+                      onChange={(event) => updateEntry(entry.key, { birthYear: event.target.value })}
+                      placeholder={needsYear ? "год р. *" : "год р."}
+                      inputMode="numeric"
+                      aria-label={`Год рождения участника ${index + 1}`}
+                    />
+                    <Input
+                      value={entry.seed}
+                      onChange={(event) => updateEntry(entry.key, { seed: event.target.value })}
+                      placeholder="Посев"
+                      inputMode="numeric"
+                      aria-label={`Посев участника ${index + 1}`}
+                    />
+                    <button
+                      type="button"
+                      aria-label={`Удалить участника ${index + 1}`}
+                      onClick={() =>
+                        setEntries((rows) => rows.filter((row) => row.key !== entry.key))
+                      }
+                      className="justify-self-end rounded-full p-1.5 text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--danger)]"
+                    >
+                      <Trash2 className="size-4" strokeWidth={2} />
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -495,7 +788,7 @@ export function TournamentWizard() {
                 variant="secondary"
                 size="sm"
                 icon={<Plus className="size-3.5" strokeWidth={2.5} />}
-                onClick={() => setEntries((rows) => [...rows, newEntry()])}
+                onClick={() => addEntry()}
               >
                 Добавить участника
               </Button>
@@ -523,7 +816,8 @@ export function TournamentWizard() {
             </div>
             <p className="text-xs text-[var(--muted)]">
               Файл .xlsx: первая строка — заголовки, со второй — столбец A «ФИО/позывной», столбец
-              B «Город». Импортированные строки можно поправить перед сохранением.
+              B «Город». Импортированные строки попадают в первую дисциплину, её можно поменять в
+              списке до сохранения.
             </p>
 
             {importSummary ? <Alert tone="success">{importSummary}</Alert> : null}
@@ -532,101 +826,55 @@ export function TournamentWizard() {
             <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
               <Button
                 type="button"
-                disabled={!canLeaveStepTwo || busy}
+                disabled={busy || filled.length === 0}
                 icon={<UserPlus className="size-3.5" strokeWidth={2.25} />}
-                onClick={() => void submitParticipants()}
+                onClick={() => void submitEverything()}
               >
-                {busy ? "Сохраняем…" : `Дальше: распределение (${filled.length})`}
+                {busy ? "Сохраняем…" : `Создать турнир (${filled.length})`}
               </Button>
-              <Button type="button" variant="ghost" onClick={() => setStep(0)} disabled={busy}>
+              <Button type="button" variant="ghost" onClick={() => setStep(1)} disabled={busy}>
                 Назад
               </Button>
             </div>
           </Card>
         ) : null}
 
-        {/* ------------------------------------------- step 3: review plan */}
-        {step === 2 && plan ? (
+        {/* ------------------------------------------------- step 4: result */}
+        {step === 3 && tournamentId ? (
           <Card className="space-y-4 p-5">
             <div>
-              <h3 className="font-display text-lg font-semibold tracking-tight">
-                Проверка распределения
-              </h3>
+              <h3 className="font-display text-lg font-semibold tracking-tight">Турнир создан</h3>
               <p className="mt-1 text-sm text-[var(--muted)]">
-                Так будет выглядеть первый круг. Сетку ещё не построена — можно вернуться и
-                поправить состав.
+                Сетка и подгруппы настраиваются в каждой дисциплине отдельно — там же жребий,
+                судейство и итоги.
               </p>
             </div>
 
-            <PlanSummary plan={plan} />
-            <CityVerdict plan={plan} />
-            <PairPreview plan={plan} />
-
-            <div className="space-y-2 border-t border-[var(--border)] pt-3">
-              <p className="record-label text-[var(--chrome-muted)]">Оружие финала</p>
-              <p className="text-xs text-[var(--muted)]">
-                В финале жребий не бросается — оружие определяется правилами турнира.
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setFinalWeapon(null)}
-                  aria-pressed={finalWeapon === null}
-                  className={cn(
-                    "rounded-[var(--radius-sm)] border px-2.5 py-1.5 text-xs transition-colors",
-                    finalWeapon === null
-                      ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
-                      : "border-[var(--border-strong)] text-[var(--muted)] hover:bg-[var(--surface-muted)]",
-                  )}
-                >
-                  Не задавать
-                </button>
-                {(["PALKA", "NOZH", "HANDS", "KISTEN"] as WeaponCategory[]).map((weapon) => (
-                  <button
-                    key={weapon}
-                    type="button"
-                    onClick={() => setFinalWeapon(weapon)}
-                    aria-pressed={finalWeapon === weapon}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border px-2.5 py-1.5 text-xs transition-colors",
-                      finalWeapon === weapon
-                        ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
-                        : "border-[var(--border-strong)] text-[var(--muted)] hover:bg-[var(--surface-muted)]",
-                    )}
+            <ul className="space-y-2">
+              {created.map((competition) => (
+                <li key={competition.id}>
+                  <Link
+                    href={`/tournaments/${tournamentId}/competitions/${competition.id}`}
+                    className="flex items-center gap-3 rounded-[var(--radius-sm)] border border-[var(--border-strong)] px-3 py-2.5 transition-colors hover:bg-[var(--surface-muted)]"
                   >
-                    <WeaponGlyph weapon={weapon} size={14} />
-                    {weaponCategory[weapon]}
-                  </button>
-                ))}
-              </div>
-            </div>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                      {competition.name}
+                    </span>
+                    <span className="font-record text-xs text-[var(--muted)]">
+                      заявлено {competition.entered}
+                    </span>
+                    <ArrowRight className="size-4 shrink-0 text-[var(--muted)]" strokeWidth={2} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
 
-            {error ? <Alert tone="danger">{error}</Alert> : null}
-
-            <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
-              <Button type="button" disabled={busy} onClick={() => void commitBracket()}>
-                {busy ? "Строим сетку…" : "Построить сетку"}
-              </Button>
-              {competitionId && tournamentId ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={busy}
-                  onClick={() =>
-                    router.push(`/tournaments/${tournamentId}/competitions/${competitionId}`)
-                  }
-                >
-                  Открыть дисциплину без сетки
-                </Button>
-              ) : null}
+            <div className="border-t border-[var(--border)] pt-3">
+              <ButtonLink href={`/tournaments/${tournamentId}`} variant="secondary">
+                Открыть турнир целиком
+              </ButtonLink>
             </div>
           </Card>
-        ) : null}
-
-        {step === 3 ? (
-          <Alert tone="success" title="Сетка построена">
-            Открываем дисциплину…
-          </Alert>
         ) : null}
       </motion.div>
     </div>

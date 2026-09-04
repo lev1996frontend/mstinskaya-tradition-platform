@@ -9,6 +9,9 @@ import type {
   BracketTreeView,
   ChampionSummaryView,
   CompetitionEventView,
+  CompetitionFormat,
+  CompetitionStatus,
+  CompetitionType,
   CompetitionView,
   DrawView,
   LotMethod,
@@ -258,11 +261,26 @@ export const createTournament = (body: {
   ruleset_id: string;
 }) => apiRequest<Tournament>("/api/v1/tournaments", { method: "POST", body });
 
+/**
+ * Create one discipline of a tournament.
+ *
+ * `min_age`/`max_age` are independently optional and usually both absent: 45+
+ * for «Ветераны», an upper bound for a children's category, neither for the
+ * open absolute — which is what lets one fighter enter both.
+ */
 export const createCompetition = (
   tournamentId: string,
-  body: { name: string; type: "INDIVIDUAL" | "TEAM"; format: string; status?: string },
+  body: {
+    name: string;
+    type: CompetitionType;
+    format: CompetitionFormat;
+    status?: CompetitionStatus;
+    category_id?: string | null;
+    min_age?: number | null;
+    max_age?: number | null;
+  },
 ) =>
-  apiRequest<{ id: string }>(`/api/v1/tournaments/${tournamentId}/competitions`, {
+  apiRequest<CompetitionView>(`/api/v1/tournaments/${tournamentId}/competitions`, {
     method: "POST",
     body: { tournament_id: tournamentId, ...body },
   });
@@ -283,6 +301,10 @@ export const addParticipant = (
     club_id?: string | null;
     /** Free text, and what the first-round separation actually compares. */
     club_name?: string | null;
+    /** Only consulted where the discipline sets an age bound. */
+    birth_year?: number | null;
+    /** Admits someone the bound excludes; recorded in the journal. */
+    age_override_reason?: string | null;
     seed?: number | null;
   },
 ) =>

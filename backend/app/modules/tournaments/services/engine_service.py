@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.athletes.models import Athlete
+from app.modules.tournaments.domain import eligibility
 from app.modules.tournaments.models import (
     Bracket,
     Competition,
@@ -44,7 +45,25 @@ class TournamentEngineService:
         tournament = await session.get(Tournament, parse_id(data["tournament_id"], "tournament"))
         if tournament is None:
             raise HTTPException(status_code=404, detail="Tournament not found")
-        item = Competition(tournament_id=tournament.id, name=data["name"], description=data.get("description"), competition_type=data["type"], format=data["format"], status=data["status"])
+        category_id = parse_id(data["category_id"], "category") if data.get("category_id") else None
+        if category_id is not None:
+            category = await session.get(TournamentCategory, category_id)
+            if category is None or category.tournament_id != tournament.id:
+                raise HTTPException(status_code=404, detail="Category not found in tournament")
+        min_age, max_age = data.get("min_age"), data.get("max_age")
+        if min_age is not None and max_age is not None and min_age > max_age:
+            raise HTTPException(status_code=400, detail="min_age cannot exceed max_age")
+        item = Competition(
+            tournament_id=tournament.id,
+            name=data["name"],
+            description=data.get("description"),
+            category_id=category_id,
+            min_age=min_age,
+            max_age=max_age,
+            competition_type=data["type"],
+            format=data["format"],
+            status=data["status"],
+        )
         session.add(item)
         await session.flush()
         return item
@@ -94,10 +113,17 @@ class TournamentEngineService:
             team = await session.get(Team, team_id)
             if team is None or team.competition_id != competition.id:
                 raise HTTPException(status_code=404, detail="Team not found in competition")
-        category = await session.scalar(select(TournamentCategory).where(TournamentCategory.tournament_id == competition.tournament_id).order_by(TournamentCategory.created_at.asc()))
+        birth_year = data.get("birth_year")
+        await TournamentEngineService._check_eligibility(
+            session,
+            competition,
+            birth_year=birth_year,
+            athlete_id=athlete_id,
+            override_reason=data.get("age_override_reason"),
+        )
         item = Participant(
             tournament_id=competition.tournament_id,
-            category_id=category.id if category else None,
+            category_id=await TournamentEngineService._category_for(session, competition),
             competition_id=competition.id,
             athlete_id=athlete_id,
             team_id=team_id,
@@ -106,6 +132,7 @@ class TournamentEngineService:
             city=data.get("city"),
             club_id=parse_id(data["club_id"], "club") if data.get("club_id") else None,
             club_name=data.get("club_name"),
+            birth_year=birth_year,
             # Only meaningful for an entrant with no athlete profile; when one is
             # linked the read side resolves the name from that profile instead.
             display_name=data.get("display_name") if athlete_id is None else None,
@@ -113,6 +140,90 @@ class TournamentEngineService:
         session.add(item)
         await session.flush()
         return item
+
+    @staticmethod
+    async def _category_for(session: AsyncSession, competition: Competition) -> UUID | None:
+        """The category an entry or bout in this discipline belongs to.
+
+        Reads ``Competition.category_id`` when it is set. The fallback — the
+        tournament's oldest category — is what this used to do
+        unconditionally, which quietly stamped the wrong category on
+        everything as soon as a tournament had more than one. It survives
+        only for disciplines created before the column existed.
+        """
+        if competition.category_id is not None:
+            return competition.category_id
+        category = await session.scalar(
+            select(TournamentCategory)
+            .where(TournamentCategory.tournament_id == competition.tournament_id)
+            .order_by(TournamentCategory.created_at.asc())
+        )
+        return category.id if category else None
+
+    @staticmethod
+    async def _check_eligibility(
+        session: AsyncSession,
+        competition: Competition,
+        *,
+        birth_year: int | None,
+        athlete_id: UUID | None,
+        override_reason: str | None,
+    ) -> None:
+        """Refuse an entry the discipline's age bounds exclude.
+
+        Enforced here as well as in the importer, or the rule would guard
+        only one of the two doors into the entry list. Costs nothing for a
+        discipline with no bounds, which is all of them until an organizer
+        sets one.
+
+        ``age_override_reason`` lets the organizer admit someone anyway —
+        the edge cases are real (a birthday days after the event, a year
+        nobody can produce) and a platform that cannot be overruled just
+        gets worked around. The override is recorded, never silent.
+        """
+        if competition.min_age is None and competition.max_age is None:
+            return
+
+        year = birth_year
+        if year is None and athlete_id is not None:
+            athlete = await session.get(Athlete, athlete_id)
+            year = athlete.birth_year if athlete is not None else None
+
+        tournament = await session.get(Tournament, competition.tournament_id)
+        event_year = (
+            tournament.start_date.year
+            if tournament is not None and tournament.start_date is not None
+            else datetime.now(timezone.utc).year
+        )
+        verdict = eligibility.check_age(
+            year,
+            min_age=competition.min_age,
+            max_age=competition.max_age,
+            event_year=event_year,
+        )
+        if verdict.ok:
+            return
+        if override_reason:
+            session.add(
+                CompetitionEvent(
+                    competition_id=competition.id,
+                    event_type="AGE_LIMIT_OVERRIDDEN",
+                    description=override_reason,
+                    payload={
+                        "code": verdict.code,
+                        "message": verdict.message,
+                        "birth_year": year,
+                        "min_age": competition.min_age,
+                        "max_age": competition.max_age,
+                        "reason": override_reason,
+                    },
+                )
+            )
+            return
+        raise HTTPException(
+            status_code=400,
+            detail={"code": verdict.code, "message": verdict.message},
+        )
 
     @staticmethod
     async def create_draw(session: AsyncSession, **data) -> Draw:
@@ -138,14 +249,14 @@ class TournamentEngineService:
     @staticmethod
     async def create_match(session: AsyncSession, **data) -> Match:
         competition = await TournamentEngineService.competition(session, data["competition_id"])
-        category = await session.scalar(select(TournamentCategory).where(TournamentCategory.tournament_id == competition.tournament_id).order_by(TournamentCategory.created_at.asc()))
+        category_id = await TournamentEngineService._category_for(session, competition)
         draw_id = parse_id(data["draw_id"], "draw") if data.get("draw_id") else None
         bracket_id = parse_id(data["bracket_id"], "bracket") if data.get("bracket_id") else None
         if draw_id and (await session.get(Draw, draw_id) is None):
             raise HTTPException(status_code=404, detail="Draw not found")
         if bracket_id and (await session.get(Bracket, bracket_id) is None):
             raise HTTPException(status_code=404, detail="Bracket not found")
-        item = Match(tournament_id=competition.tournament_id, category_id=category.id if category else None, competition_id=competition.id, draw_id=draw_id, bracket_id=bracket_id, participant_red_id=parse_id(data["participant_a_id"], "participant") if data.get("participant_a_id") else None, participant_blue_id=parse_id(data["participant_b_id"], "participant") if data.get("participant_b_id") else None, stage_name=data["stage"], status="IN_PROGRESS" if data["status"] == "RUNNING" else data["status"])
+        item = Match(tournament_id=competition.tournament_id, category_id=category_id, competition_id=competition.id, draw_id=draw_id, bracket_id=bracket_id, participant_red_id=parse_id(data["participant_a_id"], "participant") if data.get("participant_a_id") else None, participant_blue_id=parse_id(data["participant_b_id"], "participant") if data.get("participant_b_id") else None, stage_name=data["stage"], status="IN_PROGRESS" if data["status"] == "RUNNING" else data["status"])
         session.add(item)
         await session.flush()
         return item
