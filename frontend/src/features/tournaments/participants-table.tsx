@@ -1,18 +1,39 @@
-import { Users } from "lucide-react";
+"use client";
 
-import { EmptyState, Table, Td, Th } from "@/components/ui";
+import { UserMinus, Users } from "lucide-react";
+import { useState } from "react";
+
+import { Button, EmptyState, Table, Td, Th } from "@/components/ui";
 import { Avatar } from "@/components/ui/avatar";
-import type { ParticipantView } from "@/types";
+import type { MatchView, ParticipantView } from "@/types";
 
 import { ParticipantStatusBadge } from "./badges";
+import { WithdrawDialog } from "./withdraw-dialog";
+
+/** Statuses that mean the fighter is already out; nothing left to withdraw. */
+const OUT_STATUSES = new Set(["WITHDRAWN", "DISQUALIFIED"]);
 
 export function ParticipantsTable({
   participants,
   showSeed = true,
+  canManage = false,
+  matches = [],
+  onChanged,
 }: {
   participants: ParticipantView[];
   showSeed?: boolean;
+  /**
+   * Shows the withdraw control. The backend refuses the call regardless of
+   * what the browser renders, so this only decides whether an organizer is
+   * shown a button they can actually use.
+   */
+  canManage?: boolean;
+  /** Used only to preview which bouts a withdrawal would hand over. */
+  matches?: MatchView[];
+  onChanged?: () => void;
 }) {
+  const [withdrawing, setWithdrawing] = useState<ParticipantView | null>(null);
+  const showActions = canManage && Boolean(onChanged);
   if (participants.length === 0) {
     return (
       <EmptyState
@@ -23,7 +44,7 @@ export function ParticipantsTable({
     );
   }
 
-  return (
+  const table = (
     <Table>
       <thead>
         <tr>
@@ -31,6 +52,7 @@ export function ParticipantsTable({
           <Th>Участник</Th>
           <Th className="hidden w-32 sm:table-cell">Тип</Th>
           <Th className="w-52">Статус</Th>
+          {showActions ? <Th className="w-32" align="right">Действия</Th> : null}
         </tr>
       </thead>
       <tbody>
@@ -57,9 +79,41 @@ export function ParticipantsTable({
             <Td>
               <ParticipantStatusBadge status={participant.status} />
             </Td>
+            {showActions ? (
+              <Td align="right">
+                {OUT_STATUSES.has(participant.status) ? null : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    icon={<UserMinus className="size-3.5" strokeWidth={2} />}
+                    onClick={() => setWithdrawing(participant)}
+                  >
+                    Снять
+                  </Button>
+                )}
+              </Td>
+            ) : null}
           </tr>
         ))}
       </tbody>
     </Table>
+  );
+
+  return (
+    <>
+      {table}
+      {withdrawing ? (
+        <WithdrawDialog
+          participant={withdrawing}
+          matches={matches}
+          onClose={() => setWithdrawing(null)}
+          onSaved={() => {
+            setWithdrawing(null);
+            onChanged?.();
+          }}
+        />
+      ) : null}
+    </>
   );
 }

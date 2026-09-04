@@ -23,18 +23,21 @@ from app.modules.tournaments.schemas.bouts import (
     LotOverrideRequest,
     LotView,
     MatchRoundView,
+    ParticipantWithdrawRequest,
     RoundCompleteRequest,
     RoundScoreRequest,
     ScoringActionView,
     TeamBoutView,
     TeamPairingResultRequest,
     WeaponRulesView,
+    WithdrawalView,
 )
 from app.modules.tournaments.schemas.views import MatchView
 from app.modules.tournaments.security.deps import (
     TournamentManager,
     ensure_can_manage_competition,
     ensure_can_manage_match,
+    ensure_can_manage_participant,
     get_current_manager,
 )
 from app.modules.tournaments.services.bout_service import BoutService
@@ -106,6 +109,35 @@ async def generate_bracket(
 @router.get("/competitions/{competition_id}/champion", response_model=ChampionSummaryView)
 async def get_champion(competition_id: str, session: AsyncSession = Depends(get_db)) -> ChampionSummaryView:
     return ChampionSummaryView(**await BracketService.champion_summary(session, competition_id))
+
+
+# --------------------------------------------------------------- withdrawal
+
+
+@router.post("/participants/{participant_id}/withdraw", response_model=WithdrawalView)
+async def withdraw_participant(
+    participant_id: str,
+    payload: ParticipantWithdrawRequest,
+    manager: TournamentManager = Depends(get_current_manager),
+    session: AsyncSession = Depends(get_db),
+) -> WithdrawalView:
+    """Take a fighter out and award their unfought bouts to their opponents.
+
+    Not the same thing as ``POST /participant-status-history``, which only
+    records a status: that route leaves the bracket holding a fighter who will
+    never appear, and the bout stuck forever. This one settles the bouts too.
+    """
+    participant = await TournamentReadService.get_participant(session, participant_id)
+    await ensure_can_manage_participant(session, manager, participant)
+    result = await BracketService.withdraw_participant(
+        session,
+        participant_id,
+        reason=payload.reason,
+        to_status=payload.status,
+        actor_id=manager.user.id,
+    )
+    await session.commit()
+    return WithdrawalView(**result)
 
 
 # ---------------------------------------------------------------- bout view

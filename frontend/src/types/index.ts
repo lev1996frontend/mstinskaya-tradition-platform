@@ -308,6 +308,28 @@ export interface ParticipantStatusHistoryView {
   created_at: string;
 }
 
+/** One bout awarded to the opponent because a fighter left. */
+export interface WalkoverView {
+  match_id: string;
+  stage: string | null;
+  opponent_id: string;
+}
+
+export interface WithdrawalView {
+  participant_id: string;
+  from_status: string;
+  to_status: string;
+  reason: string;
+  walkovers: WalkoverView[];
+  /**
+   * Bouts that could not be awarded yet because the opponent is still
+   * undecided. The backend settles these on its own the moment the other half
+   * of the draw produces someone; they are reported so the organizer is not
+   * left wondering why a match is still open.
+   */
+  pending_walkovers: { match_id: string; stage: string | null }[];
+}
+
 export interface Athlete {
   id: string;
   user_id: string;

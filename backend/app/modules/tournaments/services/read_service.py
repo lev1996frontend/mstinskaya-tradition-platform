@@ -141,6 +141,13 @@ class TournamentReadService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
         return item
 
+    @staticmethod
+    async def get_participant(session: AsyncSession, participant_id: str) -> Participant:
+        item = await session.get(Participant, parse_id(participant_id, "participant"))
+        if item is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Participant not found")
+        return item
+
     # ------------------------------------------------------------------ #
     # name resolution
     # ------------------------------------------------------------------ #

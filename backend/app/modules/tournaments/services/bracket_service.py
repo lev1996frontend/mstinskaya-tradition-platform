@@ -29,7 +29,9 @@ from app.modules.tournaments.models import (
     CompetitionEvent,
     Draw,
     Match,
+    MatchResult,
     Participant,
+    ParticipantStatusHistory,
     Tournament,
     TournamentCategory,
 )
@@ -43,6 +45,21 @@ BOUT_STATUSES: frozenset[str] = frozenset(
 
 #: Bouts that have not started and can still accept an incoming fighter.
 PENDING_STATUSES: frozenset[str] = frozenset({"SCHEDULED", "READY_FOR_LOT", "READY"})
+
+#: A fighter who is out of the draw. Both spellings behave identically for the
+#: bracket; only the recorded reason differs.
+OUT_STATUSES: frozenset[str] = frozenset({"WITHDRAWN", "DISQUALIFIED"})
+
+#: A bout that has already been drawn for or started belongs to the judge until
+#: it is finished or cancelled. Withdrawing out from under it would overwrite a
+#: lot that was really thrown, so it is refused instead.
+IN_FLIGHT_STATUSES: frozenset[str] = frozenset({"LOT_COMPLETED", "IN_PROGRESS"})
+
+#: How a walkover is recorded, per the reason the fighter left.
+WALKOVER_RESULT_TYPE: dict[str, str] = {
+    "WITHDRAWN": "WITHDRAWAL",
+    "DISQUALIFIED": "DISQUALIFICATION",
+}
 
 TOURNAMENT_STATUS_BRACKET_CREATED = "BRACKET_CREATED"
 
@@ -411,7 +428,232 @@ class BracketService:
                 )
             )
         await session.flush()
+        await BracketService._walkover_if_opponent_out(session, target)
         return target
+
+    @staticmethod
+    async def _walkover_if_opponent_out(session: AsyncSession, target: Match) -> None:
+        """Close ``target`` when the fighter already sitting in it has withdrawn.
+
+        Withdrawing only settles the bouts a fighter is *currently* seated in.
+        Someone who pulls out of a quarterfinal before the other half of the draw
+        has produced their opponent leaves a match that cannot be settled yet —
+        there is nobody to award it to. So the check runs again here, the moment
+        a winner is seated opposite them, and the newcomer walks through.
+        Recursion is bounded by the tree: each step moves one round closer to the
+        final.
+        """
+        if target.is_bye or target.status not in PENDING_STATUSES:
+            return
+        red, blue = target.participant_red_id, target.participant_blue_id
+        if red is None or blue is None:
+            return
+
+        rows = {
+            p.id: p
+            for p in await session.scalars(select(Participant).where(Participant.id.in_([red, blue])))
+        }
+        red_out = red in rows and rows[red].status in OUT_STATUSES
+        blue_out = blue in rows and rows[blue].status in OUT_STATUSES
+        # Both gone is not a walkover: there is no winner to name, and inventing
+        # one would put a fighter in the next round who never fought for it.
+        if red_out == blue_out:
+            return
+
+        loser = rows[red] if red_out else rows[blue]
+        await BracketService._record_walkover(
+            session,
+            target,
+            winner_id=blue if red_out else red,
+            loser=loser,
+            reason=f"Соперник выбыл ({loser.status})",
+        )
+
+    # ------------------------------------------------------------------ #
+    # withdrawal
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    async def _record_walkover(
+        session: AsyncSession,
+        match: Match,
+        *,
+        winner_id: UUID,
+        loser: Participant,
+        reason: str,
+    ) -> None:
+        """Award an unfought bout to ``winner_id`` and push them onward.
+
+        Writes a real :class:`MatchResult` rather than a special case, so a
+        walkover reads back through every existing projection — standings, the
+        journal, the champion's path — as the recorded decision it is. Never
+        touches a bout that already carries a result.
+        """
+        existing = await session.scalar(select(MatchResult).where(MatchResult.match_id == match.id))
+        if existing is not None:
+            return
+
+        result_type = WALKOVER_RESULT_TYPE.get(loser.status, "WITHDRAWAL")
+        session.add(
+            MatchResult(
+                match_id=match.id,
+                winner_participant_id=winner_id,
+                result_type=result_type,
+                notes=reason,
+                recorded_at=datetime.now(timezone.utc),
+            )
+        )
+        match.status = "FINISHED"
+        match.winner_id = winner_id
+        if match.competition_id is not None:
+            session.add(
+                CompetitionEvent(
+                    competition_id=match.competition_id,
+                    event_type="WALKOVER_GRANTED",
+                    description=f"Проход без боя: соперник выбыл ({loser.status})",
+                    payload={
+                        "match_id": str(match.id),
+                        "stage": match.stage_name,
+                        "winner_id": str(winner_id),
+                        "withdrawn_participant_id": str(loser.id),
+                        "result_type": result_type,
+                        "reason": reason,
+                    },
+                )
+            )
+        await session.flush()
+        await BracketService.advance_winner(session, match)
+        await BracketService.sync_tournament_state(session, match)
+
+    @staticmethod
+    async def withdraw_participant(
+        session: AsyncSession,
+        participant_id: str,
+        *,
+        reason: str,
+        to_status: str = "WITHDRAWN",
+        actor_id: UUID | None = None,
+    ) -> dict:
+        """Take a fighter out of a competition that is already under way.
+
+        Deliberately **not** a regeneration. Rebuilding the draw would rewrite
+        pairings that were already announced and, worse, invalidate bouts that
+        really happened, which the documentation forbids. So the structure is
+        left exactly as it is — same match ids, same numbering — and every bout
+        of theirs that has not been fought is settled as a walkover for the
+        opponent, which is how a real tournament handles it.
+
+        Group bouts need no special case: they are ordinary matches whose
+        ``next_match_id`` is ``None``, so the walkover is recorded and nothing
+        advances.
+        """
+        if to_status not in OUT_STATUSES:
+            raise HTTPException(status_code=400, detail=f"Unsupported withdrawal status: {to_status}")
+
+        participant = await session.get(Participant, parse_id(participant_id, "participant"))
+        if participant is None:
+            raise HTTPException(status_code=404, detail="Participant not found")
+        if participant.status in OUT_STATUSES:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Participant is already out of the draw ({participant.status})",
+            )
+
+        matches = list(
+            await session.scalars(
+                select(Match)
+                .where(
+                    (Match.participant_red_id == participant.id)
+                    | (Match.participant_blue_id == participant.id)
+                )
+                .order_by(Match.round_number.asc().nulls_last(), Match.position.asc().nulls_last())
+            )
+        )
+
+        in_flight = [m for m in matches if m.status in IN_FLIGHT_STATUSES]
+        if in_flight:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "BOUT_IN_FLIGHT",
+                    "message": (
+                        "У бойца есть начатый бой — судья должен завершить или отменить его, "
+                        "иначе уже брошенный жребий будет переписан"
+                    ),
+                    "match_ids": [str(m.id) for m in in_flight],
+                },
+            )
+
+        from_status = participant.status
+        participant.status = to_status
+        session.add(
+            ParticipantStatusHistory(
+                participant_id=participant.id,
+                from_status=from_status,
+                to_status=to_status,
+                reason=reason,
+            )
+        )
+        await session.flush()
+
+        walkovers: list[dict] = []
+        deferred: list[dict] = []
+        for match in matches:
+            if match.status not in PENDING_STATUSES:
+                continue  # a finished bout stays exactly as it was fought
+            opponent_id = (
+                match.participant_blue_id
+                if match.participant_red_id == participant.id
+                else match.participant_red_id
+            )
+            if opponent_id is None:
+                # The opponent is not known yet, so there is nobody to award the
+                # bout to. Settled later by `_walkover_if_opponent_out`, the
+                # moment a winner is seated opposite them.
+                deferred.append({"match_id": str(match.id), "stage": match.stage_name})
+                continue
+            await BracketService._record_walkover(
+                session, match, winner_id=opponent_id, loser=participant, reason=reason
+            )
+            walkovers.append(
+                {
+                    "match_id": str(match.id),
+                    "stage": match.stage_name,
+                    "opponent_id": str(opponent_id),
+                }
+            )
+
+        competition_ids = {m.competition_id for m in matches if m.competition_id is not None}
+        if participant.competition_id is not None:
+            competition_ids.add(participant.competition_id)
+        event_type = "PARTICIPANT_WITHDRAWN" if to_status == "WITHDRAWN" else "PARTICIPANT_DISQUALIFIED"
+        for competition_id in competition_ids:
+            session.add(
+                CompetitionEvent(
+                    competition_id=competition_id,
+                    event_type=event_type,
+                    description=reason,
+                    payload={
+                        "participant_id": str(participant.id),
+                        "from_status": from_status,
+                        "to_status": to_status,
+                        "reason": reason,
+                        "walkovers": walkovers,
+                        "pending_walkovers": deferred,
+                        "actor_id": str(actor_id) if actor_id else None,
+                    },
+                )
+            )
+        await session.flush()
+
+        return {
+            "participant_id": str(participant.id),
+            "from_status": from_status,
+            "to_status": to_status,
+            "reason": reason,
+            "walkovers": walkovers,
+            "pending_walkovers": deferred,
+        }
 
     # ------------------------------------------------------------------ #
     # tournament-level state

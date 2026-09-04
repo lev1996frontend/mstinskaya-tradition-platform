@@ -37,7 +37,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.modules.identity.models import Role, User, UserRole
 from app.modules.identity.security.depends import get_current_user
-from app.modules.tournaments.models import Competition, Match, Tournament
+from app.modules.tournaments.models import Competition, Match, Participant, Tournament
 
 #: Role codes that may run any tournament. "INSTRUCTOR" is the code the client
 #: asked for; "ADMIN" is included because an instance without it would have no
@@ -93,6 +93,22 @@ async def ensure_can_manage_competition(
     session: AsyncSession, manager: TournamentManager, competition: Competition
 ) -> Tournament:
     tournament = await session.get(Tournament, competition.tournament_id)
+    if tournament is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+    await ensure_can_manage_tournament(session, manager, tournament)
+    return tournament
+
+
+async def ensure_can_manage_participant(
+    session: AsyncSession, manager: TournamentManager, participant: Participant
+) -> Tournament:
+    """Guard an action on one entry.
+
+    Goes through the entry's own ``tournament_id`` rather than its competition:
+    a tournament-level entry has no competition yet, and whoever runs the event
+    runs its entries either way.
+    """
+    tournament = await session.get(Tournament, participant.tournament_id)
     if tournament is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
     await ensure_can_manage_tournament(session, manager, tournament)

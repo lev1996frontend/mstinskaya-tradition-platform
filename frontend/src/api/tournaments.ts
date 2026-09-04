@@ -29,6 +29,7 @@ import type {
   TournamentRegistration,
   WeaponCategory,
   WeaponRulesView,
+  WithdrawalView,
 } from "@/types";
 
 // ---------------------------------------------------------------- reads ---
@@ -135,6 +136,24 @@ export const updateParticipantStatus = (body: {
   method: "POST",
   body,
 });
+
+/**
+ * Take a fighter out of a competition that is already under way.
+ *
+ * Not the same call as `updateParticipantStatus`: that one only records a
+ * status, leaving the bracket holding someone who will never appear and a bout
+ * that can never finish. This one also settles every bout of theirs that has
+ * not been fought, as a walkover for the opponent — the backend decides which
+ * bouts those are and who they go to.
+ */
+export const withdrawParticipant = (
+  participantId: string,
+  body: { reason: string; status?: "WITHDRAWN" | "DISQUALIFIED" },
+) =>
+  apiRequest<WithdrawalView>(`/api/v1/participants/${participantId}/withdraw`, {
+    method: "POST",
+    body,
+  });
 
 export const getMatch = (matchId: string) =>
   apiRequest<MatchView>(`/api/v1/competition-matches/${matchId}`);

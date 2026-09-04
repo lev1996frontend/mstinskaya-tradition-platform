@@ -197,7 +197,12 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
 
       <div id={`panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
         {activeTab === "participants" ? (
-          <ParticipantsTable participants={participants} />
+          <ParticipantsTable
+            participants={participants}
+            canManage={canManage}
+            matches={matches}
+            onChanged={refresh}
+          />
         ) : null}
         {activeTab === "teams" ? <TeamsList teams={teams} /> : null}
         {activeTab === "standings" ? (

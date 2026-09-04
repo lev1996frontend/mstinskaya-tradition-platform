@@ -222,3 +222,40 @@ class WeaponRulesView(BaseModel):
     round_target_points: int
     max_rounds_per_bout: int
     staging_note_nozh_vs_palka: str
+
+
+# ----------------------------------------------------------------- withdrawal
+
+
+class ParticipantWithdrawRequest(BaseModel):
+    """Taking a fighter out of a competition that has already started.
+
+    ``reason`` is required, not optional: a walkover changes who reaches the
+    next round, and the journal has to be able to say why. The same rule the
+    lot override already follows.
+    """
+
+    reason: str = Field(min_length=3, max_length=2000)
+    status: Literal["WITHDRAWN", "DISQUALIFIED"] = "WITHDRAWN"
+
+
+class WalkoverView(BaseModel):
+    match_id: str
+    stage: str | None = None
+    opponent_id: str
+
+
+class PendingWalkoverView(BaseModel):
+    """A bout that cannot be awarded yet, because the opponent is undecided."""
+
+    match_id: str
+    stage: str | None = None
+
+
+class WithdrawalView(BaseModel):
+    participant_id: str
+    from_status: str
+    to_status: str
+    reason: str
+    walkovers: list[WalkoverView] = Field(default_factory=list)
+    pending_walkovers: list[PendingWalkoverView] = Field(default_factory=list)
