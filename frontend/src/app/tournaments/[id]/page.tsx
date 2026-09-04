@@ -52,7 +52,7 @@ export default async function TournamentPage({ params }: PageProps) {
       <Container wide className="space-y-10 py-10">
         <PageHeader
           eyebrow={
-            <Link href="/tournaments" transitionTypes={["nav-back"]}>
+            <Link href="/tournaments" className="label-link" transitionTypes={["nav-back"]}>
               ← Все турниры
             </Link>
           }

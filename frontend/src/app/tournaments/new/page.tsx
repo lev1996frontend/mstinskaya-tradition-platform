@@ -13,7 +13,11 @@ export default function NewTournamentPage() {
   return (
     <Container className="space-y-8 py-10">
       <PageHeader
-        eyebrow={<Link href="/tournaments">← Турниры</Link>}
+        eyebrow={
+          <Link href="/tournaments" className="label-link">
+            ← Турниры
+          </Link>
+        }
         title="Новый турнир"
         description="Заведите турнир, внесите участников и постройте сетку. Существующие профили спортсменов привязываются, а не дублируются."
       />

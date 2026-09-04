@@ -41,7 +41,7 @@ export default async function RuleSetPage({ params }: PageProps) {
     <Container className="max-w-3xl space-y-8 py-10">
       <PageHeader
         eyebrow={
-          <Link href="/rules" className="hover:underline">
+          <Link href="/rules" className="label-link">
             ← Все регламенты
           </Link>
         }

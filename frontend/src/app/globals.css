@@ -352,6 +352,73 @@ body::after {
   font-variant-numeric: tabular-nums slashed-zero;
 }
 
+/* шаг вперёд (label-link) — the one hover for a stamped label that leads
+   somewhere: it steps toward the reader and brightens. Ported from the hero's
+   "Показать снаряжение →" toggle, which had it inline, and now shared by every
+   arrow link in that register (back-links, "Все турниры →", "Сайт клуба →") —
+   before this each one had invented its own, mostly `hover:underline`, and an
+   underline on a wide-tracked mono label reads as a mistake rather than a
+   state.
+
+   Scaled from the left edge, not the centre: these labels sit flush against a
+   column edge or an eyebrow's tick, and growing both ways pushed the text over
+   the mark beside it. `inline-block` because a transform does nothing to a
+   plain inline box.
+
+   Not for links inside running text — a word that swells mid-sentence pushes
+   the line around; those keep the underline. */
+.label-link {
+  position: relative;
+  display: inline-block;
+  transform-origin: left center;
+  transition:
+    transform 200ms var(--ease-out),
+    filter 200ms ease,
+    text-shadow 120ms ease;
+}
+
+.label-link:hover,
+.label-link:focus-visible {
+  transform: scale(1.08);
+  filter: brightness(1.25);
+}
+
+/* стамеска (label-link::after) — the groove the press cuts under the label: a
+   dark channel with a lit lower edge, the way a chisel cut in a plank catches
+   light on its far lip. Opens from the left, which is where the label itself
+   grows from, so press and hover read as one gesture rather than two.
+
+   Held on `:active` only — it belongs to the press, not to the destination. */
+.label-link::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -2px 0;
+  height: 1px;
+  background: rgb(0 0 0 / 0.55);
+  box-shadow: 0 1px 0 rgb(232 220 196 / 0.09);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 180ms var(--ease-out);
+  pointer-events: none;
+}
+
+/* врез — the label pressed into the plank: down a pixel, its glow gone, a dark
+   line above it and a bone-coloured one below, which is the whole trick of a
+   cut edge — the top of the groove is in shadow and the bottom catches the
+   light. Ordered after :hover so a press always beats the hover it comes out
+   of. */
+.label-link:active {
+  transform: scale(1.02) translateY(1px);
+  filter: brightness(0.9);
+  text-shadow:
+    0 1px 0 rgb(232 220 196 / 0.14),
+    0 -1px 1px rgb(0 0 0 / 0.55);
+}
+
+.label-link:active::after {
+  transform: scaleX(1);
+}
+
 /*
  * Kinetic word reveal — a large culturally-loaded word (ПОЕДИНОК, etc.)
  * unmasking left-to-right once on mount, via a swept clip-path rather than an
@@ -1483,6 +1550,139 @@ body::after {
 .mug-tip {
   animation: mug-tip 420ms cubic-bezier(0.2, 0.8, 0.3, 1);
   transform-origin: 50% 88%;
+}
+
+/* выемка (rule-row) — a row of the register of rule editions (`/rules`) being
+   drawn out from under the pointer. The plain state change it replaced (border
+   colour + a 4px arrow nudge) told you the row was a link but nothing about
+   what the row *is*, and this register is about one thing: which edition.
+   So the choreography converges on the number in the left margin —
+   a wash pulled in from the gutter, the column divider drawn open beside it,
+   the numeral swelling, and last the arrow carrying the row toward its page.
+   (A hairline tail behind that arrow was tried and cut: at this size it read
+   as a second stroke sitting next to the glyph, not as its shaft.)
+   Four parts, 40ms apart, so it reads as one gesture unfolding rather than
+   four properties flipping at once; delays live only on the lit rules, so
+   letting go snaps everything back together.
+
+   The ledger rule under each row lives on the <li>, not on the <a>, precisely
+   so this slide can happen — with the border on the link, a hovered row shifted
+   its own rule 6px right and put a jog in an otherwise continuous register. */
+.rule-row {
+  position: relative;
+  isolation: isolate;
+  transition: transform 160ms var(--ease-out);
+}
+
+/* Bleeds into the gutter (and over the rules above and below) so a lit row
+   reads as the page opening around it, not as a boxed cell. */
+.rule-row::before {
+  content: "";
+  position: absolute;
+  inset: -1px -0.75rem;
+  z-index: -1;
+  background: linear-gradient(to right, var(--accent-soft), transparent 78%);
+  opacity: 0;
+  transform: scaleX(0.92);
+  transform-origin: left center;
+  transition:
+    opacity 160ms ease,
+    transform 160ms var(--ease-out);
+}
+
+.rule-row-edition {
+  position: relative;
+}
+
+/* Rides on top of the column's static hairline and opens from the middle out —
+   a divider being parted, which is why the origin is the centre and not an
+   end. */
+.rule-row-edition::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  right: -1px;
+  width: 2px;
+  background: var(--accent);
+  transform: scaleY(0);
+  transition: transform 160ms var(--ease-out);
+}
+
+/* Origin at the right edge: the numeral is right-aligned against the divider,
+   so it has to grow away from it, not drift across the column. */
+.rule-row-number {
+  transform-origin: right center;
+  transition: transform 160ms var(--ease-out);
+}
+
+/* Colour is transitioned here rather than by Tailwind's `transition-colors`:
+   unlayered rules beat the utilities layer, so this shorthand would otherwise
+   replace the utility's transition-property outright and make the arrow snap
+   red. */
+.rule-row-arrow {
+  position: relative;
+  transition:
+    transform 160ms var(--ease-out),
+    color 160ms ease;
+}
+
+/* Keyboard focus rides along inside the pointer gate: on touch a tap leaves a
+   stuck :hover, and an ungated focus rule here would be the same declarations
+   twice. A focus ring is drawn by the global :focus-visible outline either
+   way, so nothing is lost where the gate doesn't match. */
+@media (hover: hover) and (pointer: fine) {
+  .rule-row:hover,
+  .rule-row:focus-visible {
+    transform: translateX(6px);
+  }
+
+  .rule-row:hover::before,
+  .rule-row:focus-visible::before {
+    opacity: 1;
+    transform: none;
+    transition-duration: 200ms;
+  }
+
+  .rule-row:hover .rule-row-edition::after,
+  .rule-row:focus-visible .rule-row-edition::after {
+    transform: scaleY(1);
+    transition:
+      transform 200ms var(--ease-out) 40ms;
+  }
+
+  .rule-row:hover .rule-row-number,
+  .rule-row:focus-visible .rule-row-number {
+    transform: scale(1.08);
+    transition:
+      transform 200ms var(--ease-out) 60ms;
+  }
+
+  .rule-row:hover .rule-row-arrow,
+  .rule-row:focus-visible .rule-row-arrow {
+    transform: translateX(7px);
+    transition:
+      transform 200ms var(--ease-out) 80ms,
+      color 200ms ease;
+  }
+
+  /* Pressing seats the row back down before the route change. */
+  .rule-row:active {
+    transform: translateX(3px);
+    transition-duration: 100ms;
+  }
+}
+
+/* Colour and the divider still answer the pointer; nothing travels. */
+@media (prefers-reduced-motion: reduce) {
+  .rule-row:hover,
+  .rule-row:focus-visible,
+  .rule-row:active,
+  .rule-row:hover .rule-row-number,
+  .rule-row:focus-visible .rule-row-number,
+  .rule-row:hover .rule-row-arrow,
+  .rule-row:focus-visible .rule-row-arrow {
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

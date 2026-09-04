@@ -54,7 +54,9 @@ export default async function CompetitionPage({ params }: PageProps) {
     <Container wide className="space-y-8 py-10">
       <PageHeader
         eyebrow={
-          <Link href={`/tournaments/${id}`}>← {tournament?.title ?? "Турнир"}</Link>
+          <Link href={`/tournaments/${id}`} className="label-link">
+            ← {tournament?.title ?? "Турнир"}
+          </Link>
         }
         title={competition.name}
         description={competition.description ?? undefined}

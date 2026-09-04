@@ -55,7 +55,7 @@ export default async function HomePage() {
               <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-[var(--rule)] opacity-70" />
               <Link
                 href="/tournaments"
-                className="record-label shrink-0 text-[var(--accent)] hover:underline"
+                className="record-label label-link shrink-0 text-[var(--accent)]"
               >
                 Все турниры →
               </Link>

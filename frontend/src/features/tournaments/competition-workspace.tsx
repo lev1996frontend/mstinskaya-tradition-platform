@@ -158,7 +158,7 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
 
       <div className="sticky top-16 z-20 -mx-4 border-b border-[var(--border)] bg-[var(--background)]/95 px-4 backdrop-blur sm:-mx-6 sm:px-6">
         <div
-          className="scroll-x -mb-px flex gap-1"
+          className="scroll-x -mb-px flex gap-1 overflow-y-hidden"
           role="tablist"
           aria-label="Разделы дисциплины"
         >

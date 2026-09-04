@@ -50,14 +50,17 @@ export default async function RulesPage() {
           {ruleSets.map((ruleSet) => {
             const status = STATUS[ruleSet.status] ?? { label: ruleSet.status, tone: "neutral" };
             return (
-              <li key={ruleSet.id}>
+              <li
+                key={ruleSet.id}
+                className="border-b border-[var(--border)] transition-colors hover:border-[var(--accent)]"
+              >
                 <Link
                   href={`/rules/${ruleSet.id}`}
-                  className="group flex gap-5 border-b border-[var(--border)] py-5 transition-colors hover:border-[var(--accent)] sm:gap-8"
+                  className="rule-row group flex gap-5 py-5 sm:gap-8"
                 >
-                  <span className="w-16 shrink-0 border-r border-[var(--border)] pr-4 text-right sm:w-24">
+                  <span className="rule-row-edition w-16 shrink-0 border-r border-[var(--border)] pr-4 text-right sm:w-24">
                     <span className="record-label block text-[var(--muted)]">Ред.</span>
-                    <span className="font-record mt-1 block text-xl leading-none text-[var(--accent)]">
+                    <span className="rule-row-number font-record mt-1 block text-xl leading-none text-[var(--accent)]">
                       {ruleSet.version}
                     </span>
                   </span>
@@ -83,7 +86,7 @@ export default async function RulesPage() {
 
                   <span
                     aria-hidden="true"
-                    className="shrink-0 self-center text-[var(--muted)] transition-transform group-hover:translate-x-1 group-hover:text-[var(--accent)]"
+                    className="rule-row-arrow shrink-0 self-center text-[var(--muted)] group-hover:text-[var(--accent)]"
                   >
                     →
                   </span>

@@ -99,7 +99,7 @@ export function HeroIllustrationToggle() {
     <button
       type="button"
       onClick={toggleMode}
-      className="record-label inline-block text-[var(--accent)] transition-transform duration-200 ease-out hover:scale-110 hover:brightness-125 focus-visible:scale-110 focus-visible:brightness-125"
+      className="record-label label-link text-[var(--accent)]"
     >
       {mode === "mask" ? "Показать снаряжение →" : "← Показать маску"}
     </button>

@@ -64,7 +64,7 @@ export default function ProfilePage() {
         </p>
         <Link
           href="/tournaments"
-          className="record-label inline-block text-[var(--accent)] hover:underline"
+          className="record-label label-link text-[var(--accent)]"
         >
           Перейти к турнирам →
         </Link>

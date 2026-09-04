@@ -25,7 +25,7 @@ export default async function AthletePage({ params }: PageProps) {
 
   return (
     <Container className="max-w-3xl space-y-8 py-10">
-      <Link href="/athletes" className="record-label text-[var(--accent)] hover:underline">
+      <Link href="/athletes" className="record-label label-link text-[var(--accent)]">
         ← Все спортсмены
       </Link>
 

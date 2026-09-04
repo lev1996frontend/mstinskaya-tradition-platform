@@ -89,7 +89,7 @@ export default async function ClubsPage() {
                     href={club.website_url}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="record-label mt-auto pt-2 text-[var(--accent)] hover:underline"
+                    className="record-label label-link mt-auto pt-2 text-[var(--accent)]"
                   >
                     Сайт клуба →
                   </a>

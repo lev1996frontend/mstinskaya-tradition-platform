@@ -126,7 +126,7 @@ export function RulesQuiz() {
             </p>
             <Link
               href="/rules"
-              className="record-label mt-auto inline-block pt-4 text-[var(--accent)] hover:underline"
+              className="record-label label-link mt-auto pt-4 text-[var(--accent)]"
             >
               Полный регламент →
             </Link>
