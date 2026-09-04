@@ -165,9 +165,23 @@ class TournamentService:
 
     @staticmethod
     async def list_participants(session: AsyncSession, tournament_id: str) -> list[Participant]:
+        """The tournament's own entry list.
+
+        Entries filed against the tournament and entrants of its competitions
+        share one table (``Participant.competition_id`` tells them apart), so
+        without the filter this returned both and every fighter appeared once
+        per discipline they had been drawn into as well — a six-man competition
+        inside a six-entry tournament read as twelve participants.
+
+        Competition entrants have their own read path
+        (``TournamentReadService.list_participants``), which carries the seed,
+        club and city this projection has no columns for.
+        """
         tournament = await TournamentService.get_tournament(session, tournament_id)
         result = await session.execute(
-            select(Participant).where(Participant.tournament_id == tournament.id).order_by(Participant.created_at.asc())
+            select(Participant)
+            .where(Participant.tournament_id == tournament.id, Participant.competition_id.is_(None))
+            .order_by(Participant.created_at.asc())
         )
         return list(result.scalars().all())
 

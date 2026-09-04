@@ -200,3 +200,97 @@ def test_tournament_foundation_flow():
     assert document.json()["type"] == "RULES"
 
     app.dependency_overrides.clear()
+
+
+def test_tournament_entry_list_excludes_competition_entrants():
+    """The tournament's entry list is the tournament's own, not its disciplines'.
+
+    Entries and competition entrants share one table, so the list has to filter
+    on ``competition_id``; without it the same fighter was counted once as an
+    entry and once more for every discipline they had been drawn into.
+    """
+    client = setup_app_for_tests()
+
+    organizer = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "entry-list@example.com",
+            "password": "StrongPassword123!",
+            "first_name": "Entry",
+            "last_name": "Organizer",
+        },
+    )
+    assert organizer.status_code == 201, organizer.text
+    organizer_id = client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {organizer.json()['access_token']}"},
+    ).json()["id"]
+
+    athlete = client.post(
+        "/api/v1/athletes",
+        json={
+            "user_id": organizer_id,
+            "nickname": "OnlyFighter",
+            "experience_years": 1,
+            "level": "PRACTITIONER",
+        },
+    )
+    assert athlete.status_code == 201, athlete.text
+    athlete_id = athlete.json()["id"]
+
+    ruleset = client.post(
+        "/api/v1/rulesets",
+        json={"title": "Entry list rules", "version": "1.0", "status": "ACTIVE"},
+    )
+    assert ruleset.status_code == 201, ruleset.text
+
+    tournament = client.post(
+        "/api/v1/tournaments",
+        json={
+            "title": "Entry List Open",
+            "status": "REGISTRATION",
+            "organizer_id": organizer_id,
+            "ruleset_id": ruleset.json()["id"],
+        },
+    )
+    assert tournament.status_code == 201, tournament.text
+    tournament_id = tournament.json()["id"]
+
+    category = client.post(f"/api/v1/tournaments/{tournament_id}/categories", json={"name": "Stick"})
+    assert category.status_code == 201, category.text
+
+    entry = client.post(
+        f"/api/v1/tournaments/{tournament_id}/participants",
+        json={"category_id": category.json()["id"], "athlete_id": athlete_id, "status": "APPROVED"},
+    )
+    assert entry.status_code == 201, entry.text
+    entry_id = entry.json()["id"]
+
+    competition = client.post(
+        "/api/v1/competitions",
+        json={
+            "tournament_id": tournament_id,
+            "name": "Stick individual",
+            "type": "INDIVIDUAL",
+            "format": "SINGLE_ELIMINATION",
+        },
+    )
+    assert competition.status_code == 201, competition.text
+    competition_id = competition.json()["id"]
+
+    entrant = client.post(
+        f"/api/v1/competitions/{competition_id}/participants",
+        json={"competition_id": competition_id, "athlete_id": athlete_id, "type": "ATHLETE", "seed": 1},
+    )
+    assert entrant.status_code == 201, entrant.text
+
+    listed = client.get(f"/api/v1/tournaments/{tournament_id}/participants")
+    assert listed.status_code == 200, listed.text
+    assert [p["id"] for p in listed.json()] == [entry_id]
+
+    # The entrant is still reachable where it belongs.
+    in_competition = client.get(f"/api/v1/competitions/{competition_id}/participants")
+    assert in_competition.status_code == 200, in_competition.text
+    assert [p["id"] for p in in_competition.json()] == [entrant.json()["id"]]
+
+    app.dependency_overrides.clear()
