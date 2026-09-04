@@ -1,13 +1,20 @@
-import { HelmetIcon } from "@/components/brand/helmet-icon";
+import { MaskMark } from "@/components/brand/mask-mark";
 
 import { cn } from "./index";
 
 /**
- * Helmet-in-disc avatar used for every participant/athlete/team slot —
- * every fighter shows up to a bout wearing the tradition's mask, so it reads
- * truer than initials. Swaps to a real `<img>` transparently once a
- * `photoUrl` exists (already on the `Athlete.photo_url` / `Club.logo_url`
- * fields) — no call-site changes needed when real photography arrives.
+ * Mask-in-plate mark used for every athlete/participant/team slot — every
+ * fighter shows up to a bout wearing the tradition's mask, so it reads truer
+ * than initials. Swaps to a real `<img>` transparently once a `photoUrl`
+ * exists (already on `Athlete.photo_url` / `Club.logo_url`) — no call-site
+ * changes needed when real photography arrives.
+ *
+ * One register for everyone. An earlier version tinted each mark by hashing the
+ * name across six pastel pairs — including a blue and a green that exist
+ * nowhere else in this palette — so a roster came out as a column of randomly
+ * coloured tiles carrying no information at all. Identity here is the драковое
+ * имя; the mark is the same bone-on-coal plate for every person, and the only
+ * thing that ever changes its colour is the row it sits in lighting up.
  */
 
 type AvatarSize = "xs" | "sm" | "md" | "lg";
@@ -25,34 +32,6 @@ const ICON_SIZE: Record<AvatarSize, number> = {
   md: 22,
   lg: 32,
 };
-
-// Soft/foreground pairs drawn from the existing token system — no new colors
-// introduced, just a deterministic rotation across the tints already used
-// for badges elsewhere in the UI.
-const AVATAR_PALETTE: { bg: string; fg: string }[] = [
-  { bg: "var(--accent-soft)", fg: "var(--accent)" },
-  { bg: "var(--gold-soft)", fg: "var(--gold-strong)" },
-  { bg: "var(--info-soft)", fg: "var(--info)" },
-  { bg: "var(--success-soft)", fg: "var(--success)" },
-  { bg: "var(--warning-soft)", fg: "var(--warning)" },
-  { bg: "var(--neutral-200)", fg: "var(--neutral-700)" },
-];
-
-function hashString(value: string): number {
-  let hash = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash << 5) - hash + value.charCodeAt(index);
-    hash |= 0;
-  }
-  return Math.abs(hash);
-}
-
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
-  return `${parts[0]![0]}${parts[1]![0]}`.toUpperCase();
-}
 
 export function Avatar({
   name,
@@ -81,22 +60,22 @@ export function Avatar({
     );
   }
 
-  const palette = AVATAR_PALETTE[hashString(name) % AVATAR_PALETTE.length]!;
-
   return (
     <span
       title={name}
+      /* Decorative: every place this mark appears, the name it stands for is
+         written beside it, and the sr-only copy it used to carry made screen
+         readers announce each roster row's name twice. */
+      aria-hidden="true"
       className={cn(
         // Square-cut and set in the record face: an ID photo mounted on a
         // record, not a social-app circle.
-        "inline-flex shrink-0 select-none items-center justify-center rounded-[var(--radius-sm)]",
+        "inline-flex shrink-0 select-none items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-strong)] bg-[var(--background-deep)] text-[var(--muted)]",
         SIZE_CLASSES[size],
         className,
       )}
-      style={{ backgroundColor: palette.bg, color: palette.fg }}
     >
-      <HelmetIcon size={ICON_SIZE[size]} />
-      <span className="sr-only">{initialsOf(name)}</span>
+      <MaskMark size={ICON_SIZE[size]} />
     </span>
   );
 }

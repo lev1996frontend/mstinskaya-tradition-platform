@@ -1,4 +1,4 @@
-﻿// Demo data for a local stack: enough of a real archive that every page has
+// Demo data for a local stack: enough of a real archive that every page has
 // something to show — clubs, athletes, three tournaments in different states,
 // and one running competition carried all the way to recorded results.
 //
@@ -77,18 +77,24 @@ const iso = (days) => new Date(Date.now() + days * 864e5).toISOString();
 
 console.log("-> users");
 const organizer = await makeUser("organizer@mstina-demo.ru", "Пётр", "Замятин");
+/**
+ * Драковое имя — earned in a fight and for something, never cut down from a
+ * surname: the point of it was that death would take longer to find you, and a
+ * name that plainly says whose son you are defeats that. So each one here comes
+ * from how the man fights or what happened to him, and the bio says which.
+ */
 const roster = [
-  ["gorbunov", "Илья", "Горбунов", "Горбун", "Боровичи", 1994, "INSTRUCTOR"],
-  ["zhilin", "Никита", "Жилин", "Жила", "Валдай", 1998, "PRACTITIONER"],
-  ["shatalov", "Артём", "Шаталов", "Шатун", "Вышний Волочёк", 1991, "INSTRUCTOR"],
-  ["kudrin", "Роман", "Кудрин", "Кудря", "Боровичи", 2000, "PRACTITIONER"],
-  ["lomov", "Фёдор", "Ломов", "Лом", "Валдай", 1989, "MASTER"],
-  ["sizov", "Глеб", "Сизов", "Сизый", "Вышний Волочёк", 2002, "BEGINNER"],
+  ["gorbunov", "Илья", "Горбунов", "Полымя", "Боровичи", 1994, "INSTRUCTOR", "Заводится с первого удара и гаснет только к концу схода."],
+  ["zhilin", "Никита", "Жилин", "Молчун", "Валдай", 1998, "PRACTITIONER", "За весь круг не сказал ни слова — ни до, ни после."],
+  ["shatalov", "Артём", "Шаталов", "Кистень", "Вышний Волочёк", 1991, "INSTRUCTOR", "Бьёт с оттяжкой, будто на цепи: отсюда и имя."],
+  ["kudrin", "Роман", "Кудрин", "Косой", "Боровичи", 2000, "PRACTITIONER", "Заходит всегда со стороны, прямо не идёт никогда."],
+  ["lomov", "Фёдор", "Ломов", "Сажа", "Валдай", 1989, "MASTER", "Работал в кузне, на сход приходил не отмывшись."],
+  ["sizov", "Глеб", "Сизов", "Репей", "Вышний Волочёк", 2002, "BEGINNER", "Вцепится в рукав — так до конца круга и не отдерёшь."],
 ];
 const fighters = [];
-for (const [slug, first, last, nick, city, year, level] of roster) {
+for (const [slug, first, last, nick, city, year, level, why] of roster) {
   const user = await makeUser(`${slug}@mstina-demo.ru`, first, last);
-  fighters.push({ ...user, nick, city, year, level });
+  fighters.push({ ...user, nick, city, year, level, why });
 }
 
 console.log("-> ruleset");
@@ -122,7 +128,7 @@ for (const [index, fighter] of fighters.entries()) {
       birth_year: fighter.year,
       experience_years: 2 + index * 2,
       level: fighter.level,
-      bio: `${fighter.name} — ${fighter.city}.`,
+      bio: `${fighter.why} ${fighter.name}, ${fighter.city}.`,
     }),
   );
 }

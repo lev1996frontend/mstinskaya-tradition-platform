@@ -4,9 +4,9 @@ import Link from "next/link";
 
 import { listAthletesWithStatus } from "@/api/catalog";
 import { ApiOfflineNotice } from "@/components/api-status";
-import { Badge, Container, EmptyState, PageHeader, Table, Td, Th } from "@/components/ui";
+import { Badge, Container, EmptyState, PageHeader } from "@/components/ui";
 import { Avatar } from "@/components/ui/avatar";
-import { athleteLevel, labelOf } from "@/lib/labels";
+import { athleteLevel, athleteLevelTone, labelOf } from "@/lib/labels";
 
 export const metadata: Metadata = {
   title: "Спортсмены",
@@ -14,11 +14,18 @@ export const metadata: Metadata = {
 };
 
 /**
- * A roster is a register, so it is set as one rather than as a grid of
- * identical profile cards: one ruled row per person, values (experience, birth
- * year) in the record face so the columns of digits line up, and the short
- * bio kept as a second line under the name so nothing from the old card is
- * lost. Every athlete is still one link to the same detail route.
+ * A roster is a register, so it is set as one: a ruled row per person, the
+ * mask in the left margin, values in the record face so the columns of digits
+ * line up down the page.
+ *
+ * One structure at every width, and one link per row. It used to be a table
+ * from `sm` up and a stacked list below it, with the link wrapped around the
+ * name only — so the row looked clickable and mostly wasn't, and the same
+ * roster existed twice in the markup. Now the whole row is the anchor and the
+ * columns are a grid inside it, which is also what lets a row carry the
+ * register's shared hover (`.ledger-row`, the treatment the rule editions
+ * already use): the wash pulled in from the gutter, the row drawn out under
+ * the pointer, the mark lighting up in the margin.
  */
 export default async function AthletesPage() {
   const { items: athletes, offline } = await listAthletesWithStatus();
@@ -28,7 +35,7 @@ export default async function AthletesPage() {
       <PageHeader
         eyebrow="Сообщество"
         title="Спортсмены"
-        description="Участники традиции: уровень подготовки, опыт и краткая справка."
+        description="Драковое имя давали в драке и за дело, а не от фамилии: чтобы смерть искала дольше. Рядом — уровень подготовки, опыт и краткая справка."
         actions={
           athletes.length > 0 ? (
             <span className="record-label self-end text-[var(--muted)]">
@@ -48,77 +55,39 @@ export default async function AthletesPage() {
           />
         </div>
       ) : (
-        <>
-          {/*
-            Two forms of the same register, because a four-column table on a
-            390px screen is a 576px-wide sideways scroll — the reader has to
-            drag the roster around to read a row. Below `sm` the same records
-            are stacked as ruled entries with the values on their own line;
-            from `sm` up the table proper takes over. Same links, same data,
-            same order.
-          */}
-          <ul className="border-t-2 border-[var(--rule)] sm:hidden">
-            {athletes.map((athlete) => (
-              <li key={athlete.id}>
-                <Link
-                  href={`/athletes/${athlete.id}`}
-                  className="flex gap-3 border-b border-[var(--border)] py-4"
-                >
-                  <Avatar name={athlete.nickname ?? "?"} photoUrl={athlete.photo_url} size="sm" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <span
-                        className="min-w-0 truncate font-medium"
-                        title={athlete.nickname ?? "Без псевдонима"}
-                      >
-                        {athlete.nickname ?? "Без псевдонима"}
-                      </span>
-                      <Badge tone="info">{labelOf(athleteLevel, athlete.level)}</Badge>
-                    </div>
-                    {athlete.bio ? (
-                      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--muted)]">
-                        {athlete.bio}
-                      </p>
-                    ) : null}
-                    <p className="font-record mt-2 text-xs text-[var(--muted)]">
-                      Опыт {athlete.experience_years}
-                      {athlete.birth_year ? ` · ${athlete.birth_year} г. р.` : ""}
-                    </p>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
+        <div>
+          {/* The column heads are a row of the same grid, not a <thead>: they
+              have to sit exactly over the values they name, and the values live
+              inside the links below. Hidden below `sm`, where the row stacks
+              and each value is read from its own line instead. */}
+          <div className="record-label hidden gap-5 border-b-2 border-[var(--rule)] px-1 pb-2 text-[var(--text-4)] sm:grid sm:grid-cols-[2.5rem_minmax(0,1fr)_9rem_5rem_5rem_1rem] sm:items-end sm:gap-6">
+            <span />
+            <span>Драковое имя</span>
+            <span>Уровень</span>
+            <span className="text-right">Опыт, лет</span>
+            <span className="text-right">Год рожд.</span>
+            <span />
+          </div>
 
-          <div className="hidden sm:block">
-            <Table>
-              <thead>
-            <tr>
-              <Th>Спортсмен</Th>
-              <Th>Уровень</Th>
-              <Th align="right">
-                Опыт, лет
-              </Th>
-              <Th align="right">
-                Год рожд.
-              </Th>
-            </tr>
-          </thead>
-          <tbody>
-            {athletes.map((athlete) => (
-              <tr key={athlete.id} className="transition-colors hover:bg-[var(--surface-muted)]/60">
-                <Td>
+          <ul>
+            {athletes.map((athlete) => {
+              const name = athlete.nickname ?? "Без имени";
+              return (
+                <li
+                  key={athlete.id}
+                  className="border-b border-[var(--border)] transition-colors hover:border-[var(--accent)]"
+                >
                   <Link
                     href={`/athletes/${athlete.id}`}
-                    className="flex min-w-0 items-start gap-3 hover:text-[var(--accent)]"
+                    className="ledger-row group grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-x-5 gap-y-3 py-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_9rem_5rem_5rem_1rem] sm:gap-6"
                   >
-                    <Avatar name={athlete.nickname ?? "?"} photoUrl={athlete.photo_url} size="sm" />
+                    <span className="ledger-row-edge row-span-2 self-start sm:row-span-1 sm:self-center">
+                      <Avatar name={name} photoUrl={athlete.photo_url} size="sm" />
+                    </span>
+
                     <span className="min-w-0">
-                      <span
-                        className="block truncate font-medium"
-                        title={athlete.nickname ?? "Без псевдонима"}
-                      >
-                        {athlete.nickname ?? "Без псевдонима"}
+                      <span className="block truncate font-medium transition-colors group-hover:text-[var(--accent)]">
+                        {name}
                       </span>
                       {athlete.bio ? (
                         <span className="mt-0.5 line-clamp-1 block text-xs text-[var(--muted)]">
@@ -126,23 +95,39 @@ export default async function AthletesPage() {
                         </span>
                       ) : null}
                     </span>
+
+                    {/* Below `sm` the three values share one line under the
+                        name, each labelled, since there are no column heads to
+                        read them against. */}
+                    <span className="col-start-2 flex flex-wrap items-center gap-x-4 gap-y-2 sm:col-start-auto sm:block">
+                      <Badge tone={athleteLevelTone[athlete.level]}>
+                        {labelOf(athleteLevel, athlete.level)}
+                      </Badge>
+                      <span className="font-record text-xs text-[var(--muted)] sm:hidden">
+                        Опыт {athlete.experience_years}
+                        {athlete.birth_year ? ` · ${athlete.birth_year} г. р.` : ""}
+                      </span>
+                    </span>
+
+                    <span className="font-record hidden text-right tabular-nums sm:block">
+                      {athlete.experience_years}
+                    </span>
+                    <span className="font-record hidden text-right tabular-nums text-[var(--muted)] sm:block">
+                      {athlete.birth_year ?? "—"}
+                    </span>
+
+                    <span
+                      aria-hidden="true"
+                      className="ledger-row-arrow hidden self-center text-[var(--muted)] group-hover:text-[var(--accent)] sm:block"
+                    >
+                      →
+                    </span>
                   </Link>
-                </Td>
-                <Td>
-                  <Badge tone="info">{labelOf(athleteLevel, athlete.level)}</Badge>
-                </Td>
-                <Td align="right" numeric>
-                  {athlete.experience_years}
-                </Td>
-                <Td align="right" numeric className="text-[var(--muted)]">
-                  {athlete.birth_year ?? "—"}
-                </Td>
-              </tr>
-            ))}
-              </tbody>
-            </Table>
-          </div>
-        </>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
     </Container>
   );

@@ -56,11 +56,11 @@ export default async function RulesPage() {
               >
                 <Link
                   href={`/rules/${ruleSet.id}`}
-                  className="rule-row group flex gap-5 py-5 sm:gap-8"
+                  className="ledger-row group flex gap-5 py-5 sm:gap-8"
                 >
-                  <span className="rule-row-edition w-16 shrink-0 border-r border-[var(--border)] pr-4 text-right sm:w-24">
+                  <span className="ledger-row-edge w-16 shrink-0 border-r border-[var(--border)] pr-4 text-right sm:w-24">
                     <span className="record-label block text-[var(--muted)]">Ред.</span>
-                    <span className="rule-row-number font-record mt-1 block text-xl leading-none text-[var(--accent)]">
+                    <span className="ledger-row-lead font-record mt-1 block text-xl leading-none text-[var(--accent)]">
                       {ruleSet.version}
                     </span>
                   </span>
@@ -86,7 +86,7 @@ export default async function RulesPage() {
 
                   <span
                     aria-hidden="true"
-                    className="rule-row-arrow shrink-0 self-center text-[var(--muted)] group-hover:text-[var(--accent)]"
+                    className="ledger-row-arrow shrink-0 self-center text-[var(--muted)] group-hover:text-[var(--accent)]"
                   >
                     →
                   </span>

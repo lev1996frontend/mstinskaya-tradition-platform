@@ -151,6 +151,19 @@ export const athleteLevel: Record<AthleteLevel, string> = {
   MASTER: "Мастер",
 };
 
+/**
+ * A rank is a ladder, so its marks are made of materials that climb: plain tin,
+ * then linen, then brass, then the wax seal itself. One badge tone for all four
+ * levels (they were all `info`, i.e. all blue) said nothing and looked like a
+ * component library; this way a roster shows its masters at a glance.
+ */
+export const athleteLevelTone: Record<AthleteLevel, Tone> = {
+  BEGINNER: "neutral",
+  PRACTITIONER: "info",
+  INSTRUCTOR: "success",
+  MASTER: "active",
+};
+
 export const courseType: Record<CourseType, string> = {
   GENERAL: "Общий",
   ATHLETE: "Для спортсменов",

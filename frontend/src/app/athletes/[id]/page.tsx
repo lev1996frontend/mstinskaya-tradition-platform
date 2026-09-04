@@ -37,6 +37,10 @@ export default async function AthletePage({ params }: PageProps) {
           <Avatar name={athlete.nickname ?? "?"} photoUrl={athlete.photo_url} size="lg" />
         </span>
         <div className="min-w-0 space-y-3">
+          {/* The драковое имя is the headline, and it's labelled as such: it
+              isn't a handle or a shortened surname but a name earned in a
+              fight, worn so death would take longer to find you. */}
+          <span className="record-label block text-[var(--chrome-muted)]">Драковое имя</span>
           <h1 className="font-display text-3xl font-semibold tracking-tight">
             {athlete.nickname ?? "Профиль спортсмена"}
           </h1>

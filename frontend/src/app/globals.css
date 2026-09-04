@@ -265,6 +265,18 @@ body::after {
   outline-offset: 2px;
 }
 
+/* A `<button>` keeps the arrow cursor by default while an `<a href>` turns the
+   pointer into a hand — so two controls that read identically behave
+   differently under the mouse. Set here rather than on the Button primitive's
+   class so it also covers the bare `<button>`s that never go through it (the
+   header's menu toggle, the mobile panel's close button, the lot cube). The
+   `:not(:disabled)` guard leaves `disabled:cursor-not-allowed` in
+   `components/ui/button.tsx` in charge of the disabled case. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
 /* The playoff bracket and wide tables scroll sideways; keep the scrollbar unobtrusive. */
 .scroll-x {
   overflow-x: auto;
@@ -452,6 +464,72 @@ body::after {
   transform: scale(1.02) translateY(1px);
   filter: brightness(0.9);
   background-size: 100% 2px;
+  text-shadow:
+    0 1px 0 rgb(232 220 196 / 0.14),
+    0 -1px 1px rgb(0 0 0 / 0.55);
+}
+
+/* заполнение — the signed-in name in the header. Same chisel vocabulary as
+   `.label-link` above, but a name is not an arrow link: it doesn't step
+   forward or grow, it fills. Two background layers ride the one shorthand,
+   both opening from the left in the same 200ms so they read as one gesture:
+   the ink flooding the plate, and the groove being scored under it.
+
+   The 2px inset --accent edge is what makes the fill legible at header size.
+   Without it the plate's leading edge is a soft boundary between two close
+   warm greys, which is exactly the "видно, но нечётко" the old
+   `hover:bg-[var(--surface-muted)]` had — the heated edge gives the moving
+   front a hard line to be seen by.
+
+   No `transform: scale()` here: the name sits in a fixed-height sticky header
+   next to the nav, and a swelling block would shove against the row. The
+   press below is the only movement, and it's a single pixel down. */
+.account-chip {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  --groove: rgb(0 0 0 / 0.35);
+  --groove-lip: transparent;
+  background-image:
+    linear-gradient(to bottom, var(--groove) 0 1px, var(--groove-lip) 1px 2px),
+    linear-gradient(var(--surface-muted), var(--surface-muted));
+  background-repeat: no-repeat;
+  background-position:
+    0 100%,
+    0 0;
+  background-size:
+    0 2px,
+    0 100%;
+  transition:
+    background-size 200ms var(--ease-out),
+    box-shadow 160ms ease,
+    color 200ms ease,
+    transform 160ms var(--ease-out),
+    text-shadow 120ms ease,
+    filter 160ms ease;
+}
+
+.account-chip:hover,
+.account-chip:focus-visible {
+  background-size:
+    100% 2px,
+    100% 100%;
+  box-shadow: inset 2px 0 0 var(--accent);
+  color: var(--foreground);
+}
+
+/* врез — same values as `.label-link:active`, so pressing a name and pressing
+   a stamped link are the one gesture: down a pixel, a dark line over the
+   glyphs and a bone one under them, and the scored groove cut through.
+   Ordered after `:hover` so the press always beats the hover it comes out of. */
+.account-chip:active {
+  --groove: rgb(0 0 0 / 0.6);
+  --groove-lip: rgb(232 220 196 / 0.12);
+  transform: translateY(1px);
+  filter: brightness(0.94);
+  background-size:
+    100% 2px,
+    100% 100%;
   text-shadow:
     0 1px 0 rgb(232 220 196 / 0.14),
     0 -1px 1px rgb(0 0 0 / 0.55);
@@ -1590,8 +1668,8 @@ body::after {
   transform-origin: 50% 88%;
 }
 
-/* выемка (rule-row) — a row of the register of rule editions (`/rules`) being
-   drawn out from under the pointer. The plain state change it replaced (border
+/* выемка (ledger-row) — a row of any register on the site (rule editions,
+   the roster of fighters, clubs) being drawn out from under the pointer. The plain state change it replaced (border
    colour + a 4px arrow nudge) told you the row was a link but nothing about
    what the row *is*, and this register is about one thing: which edition.
    So the choreography converges on the number in the left margin —
@@ -1606,7 +1684,7 @@ body::after {
    The ledger rule under each row lives on the <li>, not on the <a>, precisely
    so this slide can happen — with the border on the link, a hovered row shifted
    its own rule 6px right and put a jog in an otherwise continuous register. */
-.rule-row {
+.ledger-row {
   position: relative;
   isolation: isolate;
   transition: transform 160ms var(--ease-out);
@@ -1614,7 +1692,7 @@ body::after {
 
 /* Bleeds into the gutter (and over the rules above and below) so a lit row
    reads as the page opening around it, not as a boxed cell. */
-.rule-row::before {
+.ledger-row::before {
   content: "";
   position: absolute;
   inset: -1px -0.75rem;
@@ -1628,14 +1706,14 @@ body::after {
     transform 160ms var(--ease-out);
 }
 
-.rule-row-edition {
+.ledger-row-edge {
   position: relative;
 }
 
 /* Rides on top of the column's static hairline and opens from the middle out —
    a divider being parted, which is why the origin is the centre and not an
    end. */
-.rule-row-edition::after {
+.ledger-row-edge::after {
   content: "";
   position: absolute;
   inset-block: 0;
@@ -1648,7 +1726,7 @@ body::after {
 
 /* Origin at the right edge: the numeral is right-aligned against the divider,
    so it has to grow away from it, not drift across the column. */
-.rule-row-number {
+.ledger-row-lead {
   transform-origin: right center;
   transition: transform 160ms var(--ease-out);
 }
@@ -1657,7 +1735,7 @@ body::after {
    unlayered rules beat the utilities layer, so this shorthand would otherwise
    replace the utility's transition-property outright and make the arrow snap
    red. */
-.rule-row-arrow {
+.ledger-row-arrow {
   position: relative;
   transition:
     transform 160ms var(--ease-out),
@@ -1669,34 +1747,34 @@ body::after {
    twice. A focus ring is drawn by the global :focus-visible outline either
    way, so nothing is lost where the gate doesn't match. */
 @media (hover: hover) and (pointer: fine) {
-  .rule-row:hover,
-  .rule-row:focus-visible {
+  .ledger-row:hover,
+  .ledger-row:focus-visible {
     transform: translateX(6px);
   }
 
-  .rule-row:hover::before,
-  .rule-row:focus-visible::before {
+  .ledger-row:hover::before,
+  .ledger-row:focus-visible::before {
     opacity: 1;
     transform: none;
     transition-duration: 200ms;
   }
 
-  .rule-row:hover .rule-row-edition::after,
-  .rule-row:focus-visible .rule-row-edition::after {
+  .ledger-row:hover .ledger-row-edge::after,
+  .ledger-row:focus-visible .ledger-row-edge::after {
     transform: scaleY(1);
     transition:
       transform 200ms var(--ease-out) 40ms;
   }
 
-  .rule-row:hover .rule-row-number,
-  .rule-row:focus-visible .rule-row-number {
+  .ledger-row:hover .ledger-row-lead,
+  .ledger-row:focus-visible .ledger-row-lead {
     transform: scale(1.08);
     transition:
       transform 200ms var(--ease-out) 60ms;
   }
 
-  .rule-row:hover .rule-row-arrow,
-  .rule-row:focus-visible .rule-row-arrow {
+  .ledger-row:hover .ledger-row-arrow,
+  .ledger-row:focus-visible .ledger-row-arrow {
     transform: translateX(7px);
     transition:
       transform 200ms var(--ease-out) 80ms,
@@ -1704,7 +1782,7 @@ body::after {
   }
 
   /* Pressing seats the row back down before the route change. */
-  .rule-row:active {
+  .ledger-row:active {
     transform: translateX(3px);
     transition-duration: 100ms;
   }
@@ -1712,13 +1790,13 @@ body::after {
 
 /* Colour and the divider still answer the pointer; nothing travels. */
 @media (prefers-reduced-motion: reduce) {
-  .rule-row:hover,
-  .rule-row:focus-visible,
-  .rule-row:active,
-  .rule-row:hover .rule-row-number,
-  .rule-row:focus-visible .rule-row-number,
-  .rule-row:hover .rule-row-arrow,
-  .rule-row:focus-visible .rule-row-arrow {
+  .ledger-row:hover,
+  .ledger-row:focus-visible,
+  .ledger-row:active,
+  .ledger-row:hover .ledger-row-lead,
+  .ledger-row:focus-visible .ledger-row-lead,
+  .ledger-row:hover .ledger-row-arrow,
+  .ledger-row:focus-visible .ledger-row-arrow {
     transform: none;
   }
 }

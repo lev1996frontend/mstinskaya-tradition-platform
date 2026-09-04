@@ -9,7 +9,7 @@ import { MonogramFlip } from "@/components/brand/monogram-flip";
 import { MenuToggleGlyph } from "@/components/brand/menu-glyph";
 import { WEAPON_MOTIFS, randomWeaponMotif, type WeaponMotifKey } from "@/components/brand/weapon-glyphs";
 import { RiverStrip } from "@/components/layout/river-strip";
-import { Button, ButtonLink, Container, cn } from "@/components/ui";
+import { ButtonLink, Container, cn } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
 import { IMPULSE_TAP, TURN_EASE, stepIn } from "@/lib/motion";
 import { useFocusTrap } from "@/lib/use-focus-trap";
@@ -82,7 +82,7 @@ const navRestTransition = { duration: 0.25, ease: "easeOut" as const };
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const { user, loading, logout } = useAuth();
+  const { user, loading } = useAuth();
   const [open, setOpen] = useState(false);
   const [logoActive, setLogoActive] = useState(false);
   const [logoStruck, setLogoStruck] = useState(false);
@@ -205,17 +205,17 @@ export function SiteHeader() {
           {loading ? (
             <span className="font-record text-xs text-[var(--muted)]">…</span>
           ) : user ? (
-            <>
-              <Link
-                href="/profile"
-                className="max-w-[12rem] truncate rounded-[var(--radius-sm)] px-2.5 py-2 text-sm font-medium hover:bg-[var(--surface-muted)]"
-              >
-                {user.name || user.email}
-              </Link>
-              <Button type="button" variant="ghost" size="sm" onClick={() => void logout()}>
-                Выйти
-              </Button>
-            </>
+            // Name only — "Выйти" lives on the profile page this leads to, and
+            // having it here as well put two identical actions a few pixels
+            // apart. `account-chip` (globals.css) carries the fill-from-left
+            // hover and the врез press; the plain `hover:bg-*` it replaced was
+            // too soft to read as a state at header size.
+            <Link
+              href="/profile"
+              className="account-chip max-w-[12rem] truncate rounded-[var(--radius-sm)] px-2.5 py-2 text-sm font-medium"
+            >
+              {user.name || user.email}
+            </Link>
           ) : (
             <ButtonLink href="/login" size="sm">
               Войти
@@ -345,26 +345,15 @@ export function SiteHeader() {
               {loading ? (
                 <span className="font-record text-xs text-[var(--muted)]">…</span>
               ) : user ? (
-                <div className="flex items-center justify-between gap-3">
-                  <Link
-                    href="/profile"
-                    onClick={() => setOpen(false)}
-                    className="truncate rounded-[var(--radius-sm)] px-2.5 py-2 text-sm font-medium hover:bg-[var(--surface-muted)]"
-                  >
-                    {user.name || user.email}
-                  </Link>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setOpen(false);
-                      void logout();
-                    }}
-                  >
-                    Выйти
-                  </Button>
-                </div>
+                // Same single action as the desktop row above: the name, and
+                // the logout button on the page it opens.
+                <Link
+                  href="/profile"
+                  onClick={() => setOpen(false)}
+                  className="account-chip max-w-full truncate rounded-[var(--radius-sm)] px-2.5 py-2 text-sm font-medium"
+                >
+                  {user.name || user.email}
+                </Link>
               ) : (
                 <ButtonLink
                   href="/login"
