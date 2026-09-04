@@ -1,13 +1,13 @@
 ﻿import { cache } from "react";
 
 import {
-  apiDownload,
   apiListOrEmpty,
   apiListWithOffline,
   apiRequest,
   apiRequestOrNull,
   apiUpload,
 } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/config";
 import type {
   AthleteParticipationView,
   BoutDetailView,
@@ -185,9 +185,15 @@ export const getMatch = (matchId: string) =>
 // The template and the parser are generated from one column definition on the
 // server, so the file handed out and the file expected back cannot drift.
 
-/** The .xlsx to fill in. Guarded, so it cannot be a plain download link. */
-export const downloadImportTemplate = (tournamentId: string) =>
-  apiDownload(`/api/v1/tournaments/${tournamentId}/participants/template.xlsx`);
+/**
+ * Address of the blank entry form.
+ *
+ * A plain URL rather than a fetch helper because the route is public: no
+ * bearer token is involved, so an ordinary `<a download>` does the whole job
+ * and works from a server component with no client JS at all.
+ */
+export const participantTemplateUrl = (tournamentId: string) =>
+  `${API_BASE_URL}/api/v1/tournaments/${tournamentId}/participants/template.xlsx`;
 
 /** Reads the file and reports every problem per row. Writes nothing. */
 export const previewParticipantImport = (tournamentId: string, file: File) =>

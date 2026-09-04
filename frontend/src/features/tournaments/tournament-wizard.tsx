@@ -20,7 +20,7 @@ import {
   addParticipant,
   createCompetition,
   createTournament,
-  downloadImportTemplate,
+  participantTemplateUrl,
   previewParticipantImport,
 } from "@/api/tournaments";
 import { Alert, Badge, Button, ButtonLink, Card, cn } from "@/components/ui";
@@ -36,10 +36,10 @@ import { ParticipantImportReview } from "./participant-import-review";
  * Organizer wizard: basic info → disciplines → entrants → done.
  *
  * A tournament is several disciplines, not one. «Абсолютная детская»,
- * «Абсолютная взрослая», «Ветераны» and «Трое на трое» each hold their own
- * field, bracket and champion, and one fighter may enter more than one of them
- * — a fifty-year-old belongs in both the veterans' category and the open
- * absolute, since the open one sets no age bound at all.
+ * «Абсолютная мужская», «Абсолютная ветеранская» and «Трое на трое» each hold
+ * their own field, bracket and champion, and one fighter may enter more than
+ * one of them — a fifty-year-old belongs in both the veterans' category and the
+ * men's absolute, since the men's one sets no age bound at all.
  *
  * The tournament and its disciplines are created at the end of the second step,
  * before anyone is entered. That order is forced by the spreadsheet import: the
@@ -105,9 +105,9 @@ const PRESETS: { label: string; discipline: Omit<Discipline, "key"> }[] = [
     },
   },
   {
-    label: "Абсолютная взрослая",
+    label: "Абсолютная мужская",
     discipline: {
-      name: "Абсолютная взрослая",
+      name: "Абсолютная мужская",
       type: "INDIVIDUAL",
       format: "SINGLE_ELIMINATION",
       minAge: "",
@@ -115,9 +115,9 @@ const PRESETS: { label: string; discipline: Omit<Discipline, "key"> }[] = [
     },
   },
   {
-    label: "Ветераны 45+",
+    label: "Абсолютная ветеранская",
     discipline: {
-      name: "Ветераны",
+      name: "Абсолютная ветеранская",
       type: "INDIVIDUAL",
       format: "SINGLE_ELIMINATION",
       minAge: "45",
@@ -342,27 +342,6 @@ export function TournamentWizard() {
     }
   }
 
-  /**
-   * The template is behind the same guard as everything else, so it cannot be a
-   * plain download link — a bearer token in localStorage never rides along on
-   * an anchor click.
-   */
-  async function handleDownloadTemplate() {
-    if (!tournamentId) return;
-    setError(null);
-    try {
-      const blob = await downloadImportTemplate(tournamentId);
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `${title.trim() || "tournament"}-participants.xlsx`;
-      anchor.click();
-      URL.revokeObjectURL(url);
-    } catch (caught) {
-      setError(describeError(caught));
-    }
-  }
-
   async function run(action: () => Promise<void>) {
     setBusy(true);
     setError(null);
@@ -574,7 +553,7 @@ export function TournamentWizard() {
               <h3 className="font-display text-lg font-semibold tracking-tight">Дисциплины</h3>
               <p className="mt-1 text-sm text-[var(--muted)]">
                 У каждой дисциплины свой состав, своя сетка и свой чемпион. Один боец может
-                заявиться в несколько — например, и в ветеранов, и в общую абсолютку.
+                заявиться в несколько — например, и в ветеранскую, и в мужскую абсолютку.
               </p>
             </div>
 
@@ -832,15 +811,17 @@ export function TournamentWizard() {
               >
                 Добавить участника
               </Button>
-              <Button
-                type="button"
+{/* An ordinary link: the template route is public, so there is no
+                  token to attach and nothing for JavaScript to do. */}
+              <ButtonLink
+                href={tournamentId ? participantTemplateUrl(tournamentId) : "#"}
                 variant="secondary"
                 size="sm"
+                download
                 icon={<Download className="size-3.5" strokeWidth={2.25} />}
-                onClick={() => void handleDownloadTemplate()}
               >
-                Скачать шаблон
-              </Button>
+                Скачать бланк
+              </ButtonLink>
               <Button
                 type="button"
                 variant="secondary"
@@ -864,9 +845,10 @@ export function TournamentWizard() {
               />
             </div>
             <p className="text-xs text-[var(--muted)]">
-              Скачайте шаблон и заполните его — в нём уже есть нужные колонки и второй лист со
-              списком дисциплин. Файл проверяется на сервере: он покажет ошибки по строкам и ничего
-              не сохранит, пока вы не подтвердите.
+              Скачайте бланк и заполните его — в нём уже есть нужные колонки и второй лист со
+              списком дисциплин. Бланк открыт для всех, так что его можно раздать тренерам клубов.
+              Заполненный файл проверяется на сервере: он покажет ошибки по строкам и ничего не
+              сохранит, пока вы не подтвердите.
             </p>
 
             {importReport ? (

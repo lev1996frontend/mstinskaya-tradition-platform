@@ -3,12 +3,12 @@
 Two things are pinned down here.
 
 A tournament holds several disciplines — «Абсолютная детская», «Абсолютная
-взрослая», «Ветераны» — each with its own field, bracket and champion. An entry
+взрослая», «Абсолютная ветеранская» — each with its own field, bracket and champion. An entry
 now inherits the category of the discipline it is entered in, instead of being
 stamped with whichever category of the tournament happened to be created first.
 
 Age bounds live on the discipline and are independently optional. The headline
-case is that they compose: a fifty-year-old enters «Ветераны» (45+) *and* the
+case is that they compose: a fifty-year-old enters «Абсолютная ветеранская» (45+) *and* the
 open adult absolute, because the open one sets no bound at all.
 """
 
@@ -122,13 +122,13 @@ def test_a_tournament_holds_several_disciplines_each_with_its_own_field():
     tournament_id, _ = make_tournament(client)
 
     children = make_category(client, tournament_id, "Абсолютная детская")
-    adults = make_category(client, tournament_id, "Абсолютная взрослая")
+    adults = make_category(client, tournament_id, "Абсолютная мужская")
 
     child_competition = make_competition(
         client, tournament_id, "Абсолютная детская", category_id=children, max_age=14
     )
     adult_competition = make_competition(
-        client, tournament_id, "Абсолютная взрослая", category_id=adults
+        client, tournament_id, "Абсолютная мужская", category_id=adults
     )
 
     assert enter(client, child_competition, "Малой", birth_year=2014).status_code == 201
@@ -138,9 +138,9 @@ def test_a_tournament_holds_several_disciplines_each_with_its_own_field():
     assert listed.status_code == 200, listed.text
     by_name = {row["name"]: row for row in listed.json()}
     assert by_name["Абсолютная детская"]["participant_count"] == 1
-    assert by_name["Абсолютная взрослая"]["participant_count"] == 1
+    assert by_name["Абсолютная мужская"]["participant_count"] == 1
     assert by_name["Абсолютная детская"]["category_id"] == children
-    assert by_name["Абсолютная взрослая"]["category_id"] == adults
+    assert by_name["Абсолютная мужская"]["category_id"] == adults
 
 
 def test_an_entry_inherits_the_category_of_its_own_discipline():
@@ -149,8 +149,8 @@ def test_an_entry_inherits_the_category_of_its_own_discipline():
     tournament_id, _ = make_tournament(client)
 
     first = make_category(client, tournament_id, "Абсолютная детская")
-    second = make_category(client, tournament_id, "Ветераны")
-    veterans = make_competition(client, tournament_id, "Ветераны", category_id=second, min_age=45)
+    second = make_category(client, tournament_id, "Абсолютная ветеранская")
+    veterans = make_competition(client, tournament_id, "Абсолютная ветеранская", category_id=second, min_age=45)
 
     entered = enter(client, veterans, "Старшой", birth_year=1970)
     assert entered.status_code == 201, entered.text
@@ -189,7 +189,7 @@ def test_a_category_from_another_tournament_is_refused():
 def test_an_unbounded_discipline_never_asks_for_a_birth_year():
     client = setup_app_for_tests()
     tournament_id, _ = make_tournament(client)
-    absolute = make_competition(client, tournament_id, "Абсолютная взрослая")
+    absolute = make_competition(client, tournament_id, "Абсолютная мужская")
 
     assert enter(client, absolute, "Безымянный год").status_code == 201
 
@@ -199,8 +199,8 @@ def test_a_veteran_may_enter_both_his_category_and_the_open_one():
     client = setup_app_for_tests()
     tournament_id, _ = make_tournament(client)
 
-    veterans = make_competition(client, tournament_id, "Ветераны", min_age=45)
-    absolute = make_competition(client, tournament_id, "Абсолютная взрослая")
+    veterans = make_competition(client, tournament_id, "Абсолютная ветеранская", min_age=45)
+    absolute = make_competition(client, tournament_id, "Абсолютная мужская")
 
     born = EVENT_YEAR - 50
     assert enter(client, veterans, "Пётр Замятин", birth_year=born).status_code == 201
@@ -210,7 +210,7 @@ def test_a_veteran_may_enter_both_his_category_and_the_open_one():
 def test_someone_too_young_for_the_veterans_is_refused():
     client = setup_app_for_tests()
     tournament_id, _ = make_tournament(client)
-    veterans = make_competition(client, tournament_id, "Ветераны", min_age=45)
+    veterans = make_competition(client, tournament_id, "Абсолютная ветеранская", min_age=45)
 
     refused = enter(client, veterans, "Молодой", birth_year=EVENT_YEAR - 30)
     assert refused.status_code == 400, refused.text
@@ -231,7 +231,7 @@ def test_the_bound_counts_the_year_of_the_event_not_the_day():
     """45 reached anywhere in the tournament's year is 45."""
     client = setup_app_for_tests()
     tournament_id, _ = make_tournament(client)
-    veterans = make_competition(client, tournament_id, "Ветераны", min_age=45)
+    veterans = make_competition(client, tournament_id, "Абсолютная ветеранская", min_age=45)
 
     # Turns exactly 45 during EVENT_YEAR, possibly after the May start date.
     assert enter(client, veterans, "Ровно 45", birth_year=EVENT_YEAR - 45).status_code == 201
@@ -241,7 +241,7 @@ def test_the_bound_counts_the_year_of_the_event_not_the_day():
 def test_a_bounded_discipline_refuses_an_entry_with_no_year():
     client = setup_app_for_tests()
     tournament_id, _ = make_tournament(client)
-    veterans = make_competition(client, tournament_id, "Ветераны", min_age=45)
+    veterans = make_competition(client, tournament_id, "Абсолютная ветеранская", min_age=45)
 
     refused = enter(client, veterans, "Без года")
     assert refused.status_code == 400, refused.text
@@ -251,7 +251,7 @@ def test_a_bounded_discipline_refuses_an_entry_with_no_year():
 def test_the_organizer_may_admit_someone_anyway_and_it_is_recorded():
     client = setup_app_for_tests()
     tournament_id, _ = make_tournament(client)
-    veterans = make_competition(client, tournament_id, "Ветераны", min_age=45)
+    veterans = make_competition(client, tournament_id, "Абсолютная ветеранская", min_age=45)
 
     admitted = enter(
         client,
@@ -273,16 +273,16 @@ def test_the_organizer_may_admit_someone_anyway_and_it_is_recorded():
 def test_bounds_are_reported_with_a_ready_made_label():
     client = setup_app_for_tests()
     tournament_id, _ = make_tournament(client)
-    make_competition(client, tournament_id, "Ветераны", min_age=45)
+    make_competition(client, tournament_id, "Абсолютная ветеранская", min_age=45)
     make_competition(client, tournament_id, "Абсолютная детская", max_age=14)
-    make_competition(client, tournament_id, "Абсолютная взрослая")
+    make_competition(client, tournament_id, "Абсолютная мужская")
 
     rows = client.get(f"/api/v1/tournaments/{tournament_id}/competitions").json()
     labels = {row["name"]: row["age_label"] for row in rows}
     assert labels == {
-        "Ветераны": "45+",
+        "Абсолютная ветеранская": "45+",
         "Абсолютная детская": "до 14 лет",
-        "Абсолютная взрослая": None,
+        "Абсолютная мужская": None,
     }
 
 

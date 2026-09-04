@@ -10,6 +10,7 @@ import {
   listCompetitions,
   listDocuments,
   listRegistrations,
+  participantTemplateUrl,
 } from "@/api/tournaments";
 import {
   Badge,
@@ -131,6 +132,21 @@ export default async function TournamentPage({ params }: PageProps) {
               ))}
             </ul>
           )}
+
+          {/* Открыт для всех: бланк обычно заполняет тренер клуба, а он не
+              организатор и чаще всего вообще не залогинен. Второй лист бланка
+              перечисляет дисциплины этого турнира с возрастными границами — без
+              них колонка «Категория» заполняется наугад, поэтому ссылки нет,
+              пока нет дисциплин. */}
+          {competitions.length > 0 ? (
+            <a
+              href={participantTemplateUrl(tournament.id)}
+              download
+              className="label-link label-link-fwd mt-5 font-record text-xs uppercase tracking-[0.1em] text-[var(--muted)]"
+            >
+              Скачать бланк заявки
+            </a>
+          ) : null}
         </Section>
 
         {categories.length > 0 ? (

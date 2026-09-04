@@ -4,8 +4,9 @@ Its own router because this is the only place in the backend that touches
 ``UploadFile`` and ``StreamingResponse``, and the only consumer of openpyxl —
 keeping that in one file makes the blast radius visible.
 
-Every route is guarded: an entry list is not public data, and the template
-names the tournament's disciplines.
+The template is public and the two import routes are not. Reading the blank
+form is something any coach filling in a club's entry needs to do; putting
+people into a roster is the organizer's job alone.
 """
 
 from __future__ import annotations
@@ -40,16 +41,21 @@ XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.s
 @router.get("/tournaments/{tournament_id}/participants/template.xlsx")
 async def download_template(
     tournament_id: str,
-    manager: TournamentManager = Depends(get_current_manager),
     session: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
-    """The .xlsx the organizer fills in.
+    """The .xlsx an entry list is filled into.
 
     Generated from the same column definition the parser reads, so the file
     handed out and the file expected back cannot drift apart.
+
+    Public, unlike the two routes below. In practice a club's coach fills this
+    in and sends it to the organizer — and a coach is not the organizer, and
+    usually is not signed in at all. It discloses nothing that is not already
+    public either: the second sheet holds the tournament's discipline names and
+    age bounds, which ``GET /tournaments/{id}/competitions`` already serves to
+    anyone. Reading the file is open; putting anyone in the roster is not.
     """
     tournament = await TournamentReadService.get_tournament(session, tournament_id)
-    await ensure_can_manage_tournament(session, manager, tournament)
     stream = await ParticipantImportService.template(session, tournament)
     return StreamingResponse(
         stream,

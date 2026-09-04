@@ -80,8 +80,8 @@ def bootstrap(client):
     tournament_id = tournament.json()["id"]
 
     for name, extra in (
-        ("Абсолютная взрослая", {}),
-        ("Ветераны", {"min_age": 45}),
+        ("Абсолютная мужская", {}),
+        ("Абсолютная ветеранская", {"min_age": 45}),
         ("Абсолютная детская", {"max_age": 14}),
     ):
         created = client.post(
@@ -150,10 +150,10 @@ def test_the_template_can_be_filled_in_and_uploaded_back():
     # The second sheet tells the organizer which category names are accepted.
     reference = workbook["Дисциплины"]
     names = [row[0] for row in reference.iter_rows(min_row=2, values_only=True)]
-    assert "Ветераны" in names
+    assert "Абсолютная ветеранская" in names
 
     # Fill the downloaded file in and send it straight back.
-    sheet.append(["Замятин Пётр", "Кистень", "Новгород", "Буза", "Ветераны", EVENT_YEAR - 50, ""])
+    sheet.append(["Замятин Пётр", "Кистень", "Новгород", "Буза", "Абсолютная ветеранская", EVENT_YEAR - 50, ""])
     filled = BytesIO()
     workbook.save(filled)
 
@@ -162,7 +162,7 @@ def test_the_template_can_be_filled_in_and_uploaded_back():
     body = report.json()
     assert body["total_rows"] == 1, body["rows"]
     assert body["valid_rows"] == 1
-    assert body["rows"][0]["competition_name"] == "Ветераны"
+    assert body["rows"][0]["competition_name"] == "Абсолютная ветеранская"
 
 
 # ------------------------------------------------------- preview writes nothing
@@ -173,7 +173,7 @@ def test_the_preview_persists_nothing():
     tournament_id, headers = bootstrap(client)
 
     payload = sheet_of(
-        [{"full_name": "Иван Иванов", "category": "Абсолютная взрослая", "city": "Псков"}]
+        [{"full_name": "Иван Иванов", "category": "Абсолютная мужская", "city": "Псков"}]
     )
     assert preview(client, tournament_id, payload, headers).json()["valid_rows"] == 1
     assert participants(client, tournament_id) == []
@@ -193,10 +193,10 @@ def test_a_reviewed_list_is_entered_and_journalled():
                 "fight_name": "Кистень",
                 "city": "Новгород",
                 "club": "Буза",
-                "category": "Абсолютная взрослая",
+                "category": "Абсолютная мужская",
                 "seed": 1,
             },
-            {"full_name": "Сергеев Сергей", "city": "Псков", "category": "Абсолютная взрослая"},
+            {"full_name": "Сергеев Сергей", "city": "Псков", "category": "Абсолютная мужская"},
         ]
     )
     report = preview(client, tournament_id, payload, headers).json()
@@ -209,7 +209,7 @@ def test_a_reviewed_list_is_entered_and_journalled():
     )
     assert committed.status_code == 200, committed.text
     assert committed.json()["created"] == 2
-    assert committed.json()["per_competition"] == {"Абсолютная взрослая": 2}
+    assert committed.json()["per_competition"] == {"Абсолютная мужская": 2}
 
     entered = participants(client, tournament_id)
     by_name = {row["display_name"]: row for row in entered}
@@ -229,11 +229,11 @@ def test_the_commit_revalidates_what_the_browser_sends():
     client = setup_app_for_tests()
     tournament_id, headers = bootstrap(client)
 
-    payload = sheet_of([{"full_name": "Иван Иванов", "category": "Абсолютная взрослая"}])
+    payload = sheet_of([{"full_name": "Иван Иванов", "category": "Абсолютная мужская"}])
     report = preview(client, tournament_id, payload, headers).json()
     assert report["valid_rows"] == 1
 
-    tampered = report["rows"][0] | {"category": "Ветераны", "birth_year": EVENT_YEAR - 20}
+    tampered = report["rows"][0] | {"category": "Абсолютная ветеранская", "birth_year": EVENT_YEAR - 20}
     refused = client.post(
         f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
         json={"rows": [tampered]},
@@ -250,8 +250,8 @@ def test_a_batch_with_one_bad_row_is_refused_whole():
 
     payload = sheet_of(
         [
-            {"full_name": "Хороший", "category": "Абсолютная взрослая"},
-            {"full_name": "", "category": "Абсолютная взрослая"},
+            {"full_name": "Хороший", "category": "Абсолютная мужская"},
+            {"full_name": "", "category": "Абсолютная мужская"},
         ]
     )
     report = preview(client, tournament_id, payload, headers).json()
@@ -275,7 +275,7 @@ def test_a_missing_name_is_reported():
     client = setup_app_for_tests()
     tournament_id, headers = bootstrap(client)
     report = preview(
-        client, tournament_id, sheet_of([{"full_name": "", "category": "Ветераны"}]), headers
+        client, tournament_id, sheet_of([{"full_name": "", "category": "Абсолютная ветеранская"}]), headers
     ).json()
     assert "MISSING_NAME" in codes(report)
 
@@ -306,8 +306,8 @@ def test_the_age_bound_is_checked_on_import_too():
         tournament_id,
         sheet_of(
             [
-                {"full_name": "Молодой", "category": "Ветераны", "birth_year": EVENT_YEAR - 30},
-                {"full_name": "Без года", "category": "Ветераны"},
+                {"full_name": "Молодой", "category": "Абсолютная ветеранская", "birth_year": EVENT_YEAR - 30},
+                {"full_name": "Без года", "category": "Абсолютная ветеранская"},
                 {"full_name": "Взрослый", "category": "Абсолютная детская", "birth_year": EVENT_YEAR - 30},
             ]
         ),
@@ -328,7 +328,7 @@ def test_a_bad_year_or_seed_is_reported():
             [
                 {
                     "full_name": "Кривой",
-                    "category": "Абсолютная взрослая",
+                    "category": "Абсолютная мужская",
                     "birth_year": "позапрошлый",
                     "seed": "первый",
                 }
@@ -347,8 +347,8 @@ def test_a_duplicate_inside_the_file_is_reported():
         tournament_id,
         sheet_of(
             [
-                {"full_name": "Иван Иванов", "category": "Абсолютная взрослая"},
-                {"full_name": "Иван  Иванов", "category": "Абсолютная взрослая"},
+                {"full_name": "Иван Иванов", "category": "Абсолютная мужская"},
+                {"full_name": "Иван  Иванов", "category": "Абсолютная мужская"},
             ]
         ),
         headers,
@@ -362,7 +362,7 @@ def test_someone_already_entered_is_reported():
     client = setup_app_for_tests()
     tournament_id, headers = bootstrap(client)
     competitions = client.get(f"/api/v1/tournaments/{tournament_id}/competitions").json()
-    absolute = next(c for c in competitions if c["name"] == "Абсолютная взрослая")
+    absolute = next(c for c in competitions if c["name"] == "Абсолютная мужская")
     client.post(
         f"/api/v1/competitions/{absolute['id']}/participants",
         json={"competition_id": absolute["id"], "display_name": "Иван Иванов"},
@@ -371,14 +371,14 @@ def test_someone_already_entered_is_reported():
     report = preview(
         client,
         tournament_id,
-        sheet_of([{"full_name": "Иван Иванов", "category": "Абсолютная взрослая"}]),
+        sheet_of([{"full_name": "Иван Иванов", "category": "Абсолютная мужская"}]),
         headers,
     ).json()
     assert "DUPLICATE_IN_COMPETITION" in codes(report)
 
 
 def test_the_same_person_may_be_entered_in_two_disciplines():
-    """Not a duplicate: «Ветераны» and the open absolute are different fields."""
+    """Not a duplicate: «Абсолютная ветеранская» and the open absolute are different fields."""
     client = setup_app_for_tests()
     tournament_id, headers = bootstrap(client)
     report = preview(
@@ -386,8 +386,8 @@ def test_the_same_person_may_be_entered_in_two_disciplines():
         tournament_id,
         sheet_of(
             [
-                {"full_name": "Замятин Пётр", "category": "Ветераны", "birth_year": EVENT_YEAR - 50},
-                {"full_name": "Замятин Пётр", "category": "Абсолютная взрослая"},
+                {"full_name": "Замятин Пётр", "category": "Абсолютная ветеранская", "birth_year": EVENT_YEAR - 50},
+                {"full_name": "Замятин Пётр", "category": "Абсолютная мужская"},
             ]
         ),
         headers,
@@ -407,7 +407,7 @@ def test_a_reordered_sheet_still_imports():
     sheet = workbook.active
     sheet.title = SHEET_ENTRIES
     sheet.append(["Категория", "Город", "ФИО"])
-    sheet.append(["Абсолютная взрослая", "Тверь", "Фёдоров Фёдор"])
+    sheet.append(["Абсолютная мужская", "Тверь", "Фёдоров Фёдор"])
     stream = BytesIO()
     workbook.save(stream)
 
@@ -428,18 +428,54 @@ def test_a_file_that_is_not_a_spreadsheet_is_refused_clearly():
 # ------------------------------------------------------------------- guards
 
 
-def test_the_intake_requires_an_authorized_manager():
+def test_anyone_may_download_the_blank_form():
+    """A club's coach fills this in, and a coach is not the organizer.
+
+    Nothing in it is private: the second sheet holds the discipline names and
+    age bounds that ``GET /tournaments/{id}/competitions`` already serves to
+    anyone.
+    """
     client = setup_app_for_tests()
     tournament_id, _ = bootstrap(client)
 
     anonymous = client.get(f"/api/v1/tournaments/{tournament_id}/participants/template.xlsx")
+    assert anonymous.status_code == 200, anonymous.text
+    assert anonymous.headers["content-type"].startswith(XLSX)
+
+    workbook = load_workbook(BytesIO(anonymous.content))
+    assert SHEET_ENTRIES in workbook.sheetnames
+    reference = workbook["Дисциплины"]
+    names = [row[0] for row in reference.iter_rows(min_row=2, values_only=True)]
+    assert "Абсолютная ветеранская" in names
+
+
+def test_a_missing_tournament_still_has_no_blank_form():
+    client = setup_app_for_tests()
+    bootstrap(client)
+    missing = client.get(
+        "/api/v1/tournaments/00000000-0000-0000-0000-000000000001/participants/template.xlsx"
+    )
+    assert missing.status_code == 404, missing.text
+
+
+def test_entering_people_still_requires_an_authorized_manager():
+    """Reading the form is open; putting anyone in the roster is not."""
+    client = setup_app_for_tests()
+    tournament_id, _ = bootstrap(client)
+    payload = sheet_of([{"full_name": "Чужой", "category": "Абсолютная мужская"}])
+
+    anonymous = client.post(
+        f"/api/v1/tournaments/{tournament_id}/participants/import/preview",
+        files={"file": ("entries.xlsx", payload, XLSX)},
+    )
     assert anonymous.status_code == 401, anonymous.text
 
     _, stranger = register(client, "stranger@example.com")
-    forbidden = client.get(
-        f"/api/v1/tournaments/{tournament_id}/participants/template.xlsx", headers=stranger
-    )
-    assert forbidden.status_code == 403, forbidden.text
-
-    payload = sheet_of([{"full_name": "Чужой", "category": "Абсолютная взрослая"}])
     assert preview(client, tournament_id, payload, stranger).status_code == 403
+
+    committed = client.post(
+        f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
+        json={"rows": []},
+        headers=stranger,
+    )
+    assert committed.status_code == 403, committed.text

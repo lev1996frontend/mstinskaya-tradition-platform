@@ -80,7 +80,7 @@ def bootstrap(client, entrants: list[tuple[str, str]]):
         f"/api/v1/tournaments/{tournament_id}/competitions",
         json={
             "tournament_id": tournament_id,
-            "name": "Абсолютная взрослая",
+            "name": "Абсолютная мужская",
             "type": "INDIVIDUAL",
             "format": "SINGLE_ELIMINATION",
             "status": "REGISTRATION",

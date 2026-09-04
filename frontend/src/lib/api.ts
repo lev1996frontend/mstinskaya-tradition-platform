@@ -127,32 +127,6 @@ export async function apiUpload<T>(path: string, file: File, field = "file"): Pr
 }
 
 /**
- * Fetch a file the API generates.
- *
- * A plain `<a href>` cannot be used for these: the route is guarded, and a
- * bearer token in `localStorage` never travels on a link click.
- */
-export async function apiDownload(path: string): Promise<Blob> {
-  const headers: Record<string, string> = {};
-  const authToken = readBrowserToken();
-  if (authToken) headers.Authorization = `Bearer ${authToken}`;
-
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE_URL}${path}`, { headers, cache: "no-store" });
-  } catch (error) {
-    throw new ApiUnreachableError(error);
-  }
-
-  if (!response.ok) {
-    const text = await response.text();
-    const payload = text ? safeJsonParse(text) : null;
-    throw new ApiError(response.status, payload, extractDetail(payload));
-  }
-  return response.blob();
-}
-
-/**
  * Server-component helper: returns `null` instead of throwing when a resource
  * is missing or the API is down, so a page can render a placeholder rather
  * than a crash screen.
