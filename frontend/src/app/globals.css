@@ -403,14 +403,19 @@ button:not(:disabled),
      clicked. */
   cursor: pointer;
   transform-origin: left center;
-  /* стамеска — the groove, as a background rather than a pseudo-element: both
-     pseudo-elements are spoken for by the arrows. A two-stop gradient, one
-     pixel of shadow over one of bone: a chisel cut in a plank is dark along
-     the top of the channel and lit on its far lip. It opens from the left,
-     where the label itself grows from, so hover and press read as one gesture.
-     Hovering only scores the line; pressing deepens it (see `:active`). */
-  --groove: rgb(0 0 0 / 0.35);
-  --groove-lip: transparent;
+  /* The rule struck under the word, as a background rather than a pseudo-
+     element: both pseudo-elements are spoken for by the arrows. It opens from
+     the left, where the label itself grows from, so hover and press read as one
+     gesture.
+
+     Oxblood, not the black it used to be. The original was a chisel cut — a
+     pixel of shadow over a pixel of bone — which is a fine idea on a plank and
+     invisible on this archive's near-black ground, where a black line on a
+     black field is no line at all. It is now the same 2px oxblood rule the
+     footer strikes under its own links, so every mark that opens under a word
+     on this site is one mark. */
+  --groove: var(--accent);
+  --groove-lip: var(--accent);
   background-image: linear-gradient(to bottom, var(--groove) 0 1px, var(--groove-lip) 1px 2px);
   background-repeat: no-repeat;
   background-position: 0 100%;
@@ -1258,9 +1263,49 @@ button:not(:disabled),
    The rule grows from the left, the side the reading starts on, matching the
    `.label-link` groove elsewhere on the site — one direction for every mark
    that opens under a word. */
+/* The word fills as the rule draws, left to right, on the same clock — the
+   rule alone was the whole of the hover, because these links already sat at
+   full `--foreground` and the colour "lift" underneath it changed nothing
+   visible.
+
+   Two halves of one gradient twice the width of the word: the right half is
+   the resting colour, the left the oxblood, and hovering slides the window
+   from one to the other. Clipped to the glyphs, so it is the letters that
+   fill, not a box behind them.
+
+   `--accent-strong` rather than the rule's flat `--accent`: the same oxblood
+   register, lightened, because filling a word with #b02a20 on this ground
+   would make it harder to read at exactly the moment the reader reached for
+   it. The rule under it can be the darker red — nobody has to read a line. */
 .footer-link {
   position: relative;
-  transition: color 200ms ease;
+  color: var(--muted);
+  background-image: linear-gradient(
+    to right,
+    var(--accent-strong) 0 50%,
+    currentColor 50% 100%
+  );
+  background-repeat: no-repeat;
+  background-size: 200% 100%;
+  background-position: 100% 0;
+  transition:
+    background-position 220ms var(--ease-out),
+    color 200ms ease;
+}
+
+/* Guarded: without the clip the fill would paint a block behind the text, and
+   `text-fill-color: transparent` on its own would erase the word entirely. */
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .footer-link {
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+.footer-link:hover,
+.footer-link:focus-visible {
+  background-position: 0 0;
 }
 
 .footer-link::after {
@@ -1275,17 +1320,18 @@ button:not(:disabled),
   transition: transform 220ms var(--ease-out);
 }
 
-.footer-link:hover,
-.footer-link:focus-visible {
-  color: var(--foreground);
-}
-
 .footer-link:hover::after,
 .footer-link:focus-visible::after {
   transform: scaleX(1);
 }
 
+/* No `color` change on hover: `currentColor` is the gradient's own resting
+   half, so lifting it would repaint the part of the word the fill has not
+   reached yet — the trailing letters would brighten while the leading ones
+   were still filling, which is the opposite of a fill. */
+
 @media (prefers-reduced-motion: reduce) {
+  .footer-link,
   .footer-link::after {
     transition-duration: 1ms;
   }
