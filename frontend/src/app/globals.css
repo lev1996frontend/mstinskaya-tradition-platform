@@ -386,6 +386,15 @@ button:not(:disabled),
 .label-link {
   position: relative;
   display: inline-block;
+  /* An 11px label in a 16px line box is a 16px-tall tap target, under the 24px
+     floor a fingertip needs. The room is added above the text rather than
+     below: the groove is painted at the bottom edge (`background-position: 0
+     100%`), so padding underneath would push the cut away from the word it
+     belongs to, while padding on top is invisible and lands where these labels
+     already have air. Measured, not assumed: the label's own line box is 13px
+     and the 3px below was already inside the 16px it used to report, so the
+     top pad has to carry the full remaining 8. */
+  padding-top: 8px;
   padding-bottom: 3px;
   /* Some of these are `<button>`, and a button keeps the arrow cursor by
      default while a link turns the pointer into a hand. Reading identically and
@@ -409,14 +418,24 @@ button:not(:disabled),
   transition:
     transform 200ms var(--ease-out),
     filter 200ms ease,
+    color 200ms ease,
     text-shadow 120ms ease,
     background-size 180ms var(--ease-out);
 }
 
+/* Most of these labels sit at `--muted`, and `brightness(1.25)` of a muted
+   grey is a change you have to already be looking for — the download link on
+   the tournament page was reported as having no hover at all. Lifting the
+   colour to full `--foreground` is the part that reads: the label goes from
+   quiet to spoken, on top of the scale and the groove opening underneath it.
+   `--foreground` rather than an accent because these links sit on every
+   surface the site has, including accent-coloured ones, where an accent hover
+   would disappear into the ground. */
 .label-link:hover,
 .label-link:focus-visible {
   transform: scale(1.08);
   filter: brightness(1.25);
+  color: var(--foreground);
   background-size: 100% 2px;
 }
 
@@ -800,10 +819,41 @@ button:not(:disabled),
 /* The lot cube's 3D stage (`lot-cube.tsx`) is a fixed 300px box — its rings
    and cube faces are positioned/sized in px tied to that geometry, so on the
    narrowest phones it's scaled down as one unit instead of resizing any
-   single ring, which would pull the concentric circles out of registration. */
+   single ring, which would pull the concentric circles out of registration.
+
+   The scale goes on a *wrapper*, never on `.lot-cube-stage` itself. The stage
+   carries `perspective` and holds the cube, whose six faces stand out on
+   `translateZ(66px)`; giving that same element a `transform` while its
+   `transform-style` is the default `flat` makes it flatten its own 3D
+   children, and the cube collapsed into a single plate on every phone under
+   380px while reading correctly as a cube everywhere above it. Scaling an
+   ancestor is safe — the wrapper has no 3D children of its own, and the
+   stage's perspective context survives intact inside it. */
 @media (max-width: 380px) {
-  .lot-cube-stage {
+  .lot-cube-scale {
     transform: scale(0.82);
+    transform-origin: top center;
+    /* A transform does not change the box the layout reserves, so the stage
+       still occupied its full 300px and left 54px of dead floor under a cube
+       drawn 246px tall. Pulled back exactly (300 × 0.18), measured from the
+       same origin the scale works from. */
+    margin-bottom: -54px;
+  }
+}
+
+/* Карточки лицом друг к другу — the duel cards' turn toward the shared
+   vanishing point at the cube between them (`fighter-card.tsx`). Only from
+   `lg`, where `poedinok.tsx`'s row actually splits into card–cube–card: below
+   that the row is a single column, the cards are stacked, and a 16° turn has
+   nothing to converge on — it reads as a card knocked crooked, and steals
+   width a narrow screen cannot spare. */
+@media (min-width: 1024px) {
+  .duel-card[data-side="left"] {
+    transform: rotateY(16deg);
+  }
+
+  .duel-card[data-side="right"] {
+    transform: rotateY(-16deg);
   }
 }
 
@@ -1168,35 +1218,15 @@ button:not(:disabled),
   opacity: 1;
 }
 
-/* река (river-flow) — the header river strip's current line
-   (`components/layout/river-strip.tsx`), a dashed path whose dash offset
-   shifts by exactly three dash+gap cycles (stroke-dasharray "7 7" → a 14px
-   repeat, 3 × 14 = 42) so the loop has no visible seam. The offset here was
-   ported from the design handoff as -48 without checking it against the
-   dasharray — 48 isn't a multiple of 14, so the pattern jumped visibly at
-   every loop restart (reported as the river "cutting off" at the end of its
-   cycle). -42 keeps the same near-48 travel distance (so the perceived
-   speed doesn't change) while landing exactly back on a dash boundary. */
-@keyframes river-flow {
-  from {
-    stroke-dashoffset: 0;
-  }
-  to {
-    stroke-dashoffset: -42;
-  }
-}
+/* `river-flow` — the dashed current of the header's river strip — was deleted
+   with that strip. The margin river draws its own water and never used it. */
 
-.river-flow {
-  animation: river-flow 3.2s linear infinite;
-}
-
-/* на плаву (river-bob) — the gentle rise/fall every river symbol (boat,
-   wax seal, mug — `river-strip.tsx`, `river-wax-seal.tsx`,
-   `river-mug.tsx`) idles with: riding at anchor on the water, never fully
-   still. Applied to an *inner* wrapper, never the same element a symbol's
-   own `gsap.quickTo` drives — stacking it on that element would fight
-   GSAP's inline `transform` for the same property every tick. Each user
-   sets its own `animation-delay` so the three don't bob in lockstep. */
+/* на плаву (river-bob) — the gentle rise/fall a mark riding the margin river
+   idles with (`components/layout/river-spine.tsx`): at anchor on the water,
+   never fully still. Applied to an *inner* wrapper, never the same element a
+   mark's own `gsap.quickTo` drives — stacking it on that element would fight
+   GSAP's inline `transform` for the same property every tick. Each user sets
+   its own `animation-delay` so the marks don't bob in lockstep. */
 @keyframes river-bob {
   0%,
   100% {
@@ -1211,23 +1241,53 @@ button:not(:disabled),
   animation: river-bob 3.6s ease-in-out infinite;
 }
 
-/* тускло (river-symbol) — shared rest/hover dimming for the seal and the mug
-   (`river-wax-seal.tsx`, `river-mug.tsx`): present but unobtrusive until
-   hovered or focused, same register as the boat's own GSAP-driven opacity
-   in `river-strip.tsx` (that one needs JS since it's tied to position-lag
-   timing; these two don't, so plain CSS is the cheaper tool). Scoped to
-   `(hover: hover) and (pointer: fine)` — on touch there's no hover to
-   reveal them, so they just stay fully visible, matching the boat's own
-   touch fallback. */
-@media (hover: hover) and (pointer: fine) {
-  .river-symbol {
-    opacity: 0.45;
-    transition: opacity 200ms ease;
-  }
+/* `river-symbol` — rest/hover dimming for the header strip's seal and mug —
+   went with that strip. It dimmed a mark to 45% until hovered, which suited
+   three decorations but would be wrong for the one control «Буза» now has, so
+   nothing inherited it. The margin river's marks dim through `.river-berth`
+   below instead. */
 
-  .river-symbol:hover,
-  .river-symbol:focus-visible {
-    opacity: 1;
+/* Подвал отвечает шапке — the footer's links used to do nothing on hover but
+   turn oxblood, which on a dark ground is a colour swap you have to be looking
+   for, and it shared no language with the navigation above it. The header
+   marks the section you are in by striking an oxblood rule *under* the word
+   (`nav-active-pill` in `site-header.tsx`); the footer now strikes the same
+   rule under whichever word you are pointing at, and lifts the label from its
+   resting colour to full `--foreground` at the same time.
+
+   The rule grows from the left, the side the reading starts on, matching the
+   `.label-link` groove elsewhere on the site — one direction for every mark
+   that opens under a word. */
+.footer-link {
+  position: relative;
+  transition: color 200ms ease;
+}
+
+.footer-link::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 2px;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 220ms var(--ease-out);
+}
+
+.footer-link:hover,
+.footer-link:focus-visible {
+  color: var(--foreground);
+}
+
+.footer-link:hover::after,
+.footer-link:focus-visible::after {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-link::after {
+    transition-duration: 1ms;
   }
 }
 

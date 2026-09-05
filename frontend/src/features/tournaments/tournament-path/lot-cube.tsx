@@ -64,6 +64,11 @@ export function LotCube() {
   return (
     <div className="grid place-items-center gap-[22px]">
       {showCube ? (
+        // The narrow-phone scale lives on this wrapper, never on the stage
+        // itself: the stage carries the perspective the cube's faces stand out
+        // in, and giving that element its own `transform` flattens them into a
+        // plate. See `.lot-cube-scale` in globals.css.
+        <div className="lot-cube-scale">
         <div
           className={`lot-cube-stage relative grid place-items-center ${state.phase === "throw" ? "cam" : ""}`}
           style={{ width: 300, height: 300, perspective: 900 }}
@@ -146,6 +151,7 @@ export function LotCube() {
               );
             })}
           </button>
+        </div>
         </div>
       ) : null}
 

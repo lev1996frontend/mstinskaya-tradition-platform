@@ -13,7 +13,11 @@ export function KineticName({ name, align = "left" }: { name: string; align?: "l
   return (
     <p
       key={name}
-      className={`m-0 flex flex-wrap ${align === "right" ? "justify-end" : "justify-start"}`}
+      /* Centred until the duel row splits into three columns, then pulled to
+         its own side — the cards are stacked on a phone, and a name shoved
+         hard against the opposite edge from the one above it reads as
+         misalignment rather than as two fighters facing each other. */
+      className={`m-0 flex flex-wrap justify-center ${align === "right" ? "lg:justify-end" : "lg:justify-start"}`}
       style={{ perspective: 700 }}
     >
       {[...name].map((ch, i) => (

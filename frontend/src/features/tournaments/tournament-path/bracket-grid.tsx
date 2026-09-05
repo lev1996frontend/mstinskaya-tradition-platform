@@ -397,6 +397,11 @@ export function BracketGrid() {
             </button>
             <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5" role="tablist" aria-label="Раунды">
               {columns.map((column, i) => (
+                /* The dot stays 6px; the button around it does not. As a bare
+                   6×6 element this was a target smaller than a fingertip, on
+                   the one layout that is only ever used by a finger. The
+                   visible mark is now a child, and the button is a 24px box
+                   holding it — the recognised floor for a touch target. */
                 <button
                   key={column.label}
                   type="button"
@@ -404,12 +409,17 @@ export function BracketGrid() {
                   aria-selected={i === mobileRound}
                   aria-label={column.label}
                   onClick={() => goToRound(i)}
-                  className="h-1.5 rounded-full transition-[width,background-color]"
-                  style={{
-                    width: i === mobileRound ? 18 : 6,
-                    background: i === mobileRound ? "var(--gold)" : "var(--border-strong)",
-                  }}
-                />
+                  className="grid h-6 min-w-6 cursor-pointer place-items-center border-0 bg-transparent px-1"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="block h-1.5 rounded-full transition-[width,background-color]"
+                    style={{
+                      width: i === mobileRound ? 18 : 6,
+                      background: i === mobileRound ? "var(--gold)" : "var(--border-strong)",
+                    }}
+                  />
+                </button>
               ))}
             </div>
             <button

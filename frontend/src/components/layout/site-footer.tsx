@@ -61,12 +61,16 @@ export function SiteFooter() {
             <p className="record-label border-b border-[var(--border-strong)] pb-2 text-[var(--chrome-muted)]">
               {column.title}
             </p>
-            <ul className="space-y-2">
+            {/* `inline-flex` with a 24px minimum height, not a bare inline
+                link: at `text-sm` the line box is 17px tall, which is a target
+                a fingertip misses as often as it hits. The row spacing drops
+                to compensate, so the column takes the same room it did. */}
+            <ul className="space-y-0.5">
               {column.links.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm transition-colors hover:text-[var(--accent)]"
+                    className="footer-link inline-flex min-h-6 items-center text-sm"
                   >
                     {link.label}
                   </Link>

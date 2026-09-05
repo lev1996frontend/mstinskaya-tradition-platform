@@ -164,7 +164,13 @@ export function Poedinok() {
             <h2 className="font-display m-0 text-[2.5rem] font-bold leading-[1.04] tracking-tight">{runTitle}</h2>
             <p className="mt-3.5 max-w-lg text-base leading-relaxed text-[var(--text-3)]">{runIntro}</p>
             {!state.runFighter ? (
-              <div className="mt-6 flex flex-wrap gap-3">
+              /* One column of equal cards on a phone, a flowing row once there
+                 is width for one. As a `flex-wrap` row at every size each
+                 button took the width of the name inside it, so on a narrow
+                 screen they stacked into a ragged staircase — three cards of
+                 three different widths reads as a layout that broke, not as a
+                 list. */
+              <div className="mt-6 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap">
                 {RUN_FIGHTERS.map((f) => (
                   <button
                     key={f.name}

@@ -34,14 +34,29 @@ export function FighterCard({
     // reach the tilted card two levels down, so both cards read as facing a
     // single center (the lot cube) instead of each tilting in its own
     // independent 3D space.
-    <div className={`flex flex-col gap-4 ${isLeft ? "items-end" : "items-start"}`} style={{ transformStyle: "preserve-3d" }}>
+    /* Centred while the cards are stacked, hugging their own side of the cube
+       once the row splits in three: mirrored alignment on a phone put one
+       card's name hard right and the other's hard left, one under the other,
+       which read as two columns that failed to line up. */
+    <div
+      /* Written as whole class names, never `lg:${...}` — Tailwind scans the
+         source for complete strings and generates nothing for a class that is
+         only assembled at runtime. */
+      className={`flex flex-col items-center gap-4 ${isLeft ? "lg:items-end" : "lg:items-start"}`}
+      style={{ transformStyle: "preserve-3d" }}
+    >
+      {/* The tilt is a class, not an inline transform, so it can be dropped
+          below `lg` — see `.duel-card` in globals.css. The two cards only face
+          each other while they sit either side of the cube; once the row
+          collapses to one column they are stacked, and a 16° turn on a card
+          with nothing opposite it just reads as knocked askew. */}
       <div
-        className={`relative aspect-[4/3] w-full max-w-[22rem] overflow-hidden border border-[var(--iron)] ${
+        data-side={side}
+        className={`duel-card relative aspect-[4/3] w-full max-w-[22rem] overflow-hidden border border-[var(--iron)] ${
           clashing ? (isLeft ? "lunge-a" : "lunge-b") : ""
         }`}
         style={{
           transformStyle: "preserve-3d",
-          transform: `rotateY(${isLeft ? 16 : -16}deg)`,
           background: "var(--surface-muted)",
         }}
       >
@@ -85,7 +100,7 @@ export function FighterCard({
         )}
       </div>
 
-      <div className={isLeft ? "text-right" : "text-left"}>
+      <div className={`text-center ${isLeft ? "lg:text-right" : "lg:text-left"}`}>
         <span className="record-label text-[var(--text-4)]">{club}</span>
         <KineticName name={name} align={isLeft ? "right" : "left"} />
         <p className="font-record mt-2 text-[2rem] leading-none" style={{ color: isWinner ? "var(--accent)" : "var(--text-4)" }}>
