@@ -1377,10 +1377,24 @@ button:not(:disabled),
   transition: transform 260ms var(--ease-out);
 }
 
+/* `outline` and not `box-shadow` for the inner ring: the Card carries its seat
+   shadow as a Tailwind utility (`shadow-[var(--shadow-sm)]`, `--shadow-md` on
+   the featured variant), and globals.css is unlayered — a `box-shadow` here
+   wins the whole property and takes the shadow with it, so the card *sank* on
+   hover instead of lifting. An outline drawn inward leaves the shadow alone. */
 .record-card:hover,
 .record-card:focus-within {
   border-color: var(--border-strong);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--foreground) 8%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+  outline-offset: -1px;
+}
+
+/* A featured card already rests on `--border-strong`, so the border move above
+   is a no-op for it — it answered with the bottom rule alone. It gets the
+   oxblood tint the plain cards get from the rule, in the border. */
+.record-card-featured:hover,
+.record-card-featured:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-strong));
 }
 
 .record-card:hover::after,
@@ -1393,6 +1407,22 @@ button:not(:disabled),
   .record-card::after {
     transition-duration: 1ms;
   }
+
+  /* The card's contents step 6px to the right on hover. With the duration cut
+     to 1ms that stops being a nudge and becomes a teleport, which is exactly
+     what this preference asks us not to do — `.ledger-row` already refuses it
+     the same way. The bottom rule stays: it is the cue that carries the hover
+     here, and it draws rather than moves anything.
+
+     `translate` and not `transform`: Tailwind v4 compiles `translate-x-1.5` to
+     the standalone `translate` property, so `.ledger-row`'s spelling — right
+     for motion authored here in plain CSS — would have missed this one
+     entirely. Written alone, without a `transform: none` beside it: Lightning
+     CSS folds the pair into a single `transform: none` for older targets, and
+     that no longer reaches the `translate` property the utility actually sets. */
+  .record-card a {
+    translate: none;
+  }
 }
 
 /* Квадраты разряда в личных делах (`dossiers.tsx`) answered a pointer with
@@ -1403,11 +1433,18 @@ button:not(:disabled),
    `!important` is the honest tool here rather than a workaround — the inline
    style is the *resting* state, and this is the one declaration that has to
    outrank it. The alternative was lifting three colours out of the component's
-   own conditional logic purely to win a specificity argument. */
+   own conditional logic purely to win a specificity argument.
+
+   The wash matters as much as the border: the *chosen* square already rests on
+   `--accent-deep` in both border and ink, so a hover written in those two
+   properties alone left the one square you are most likely to point at
+   answering with nothing. Deepening its own fill is the answer that works for
+   a square in either state. */
 .declare-square:hover,
 .declare-square:focus-visible {
   border-color: var(--accent-deep) !important;
   color: var(--accent-deep) !important;
+  background: rgba(142, 36, 29, 0.22) !important;
 }
 
 /* Ширина поля (river-rail) — the margin river's own box, sized to the page

@@ -24,7 +24,7 @@ export function TournamentCard({
          globals.css. A border tint on its own was the whole hover here, which
          on a card this size is a change you find by accident rather than one
          that answers you. */
-      className="record-card group h-full"
+      className={cn("record-card group h-full", featured && "record-card-featured")}
     >
       <Link
         href={href}

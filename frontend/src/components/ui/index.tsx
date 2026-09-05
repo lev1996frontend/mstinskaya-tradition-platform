@@ -61,11 +61,18 @@ export function PageHeader({
 
              The tick grows with the label it belongs to. It used to stand still
              while the link beside it scaled and drew its rule, which read as
-             one half of a control answering and the other half stuck. */
+             one half of a control answering and the other half stuck.
+
+             `group-has-[a:hover]` and not `group-hover`: `.label-link` answers
+             its own hover, so hovering the tick itself — or the 8px of gap
+             between them — grew the tick while the label stayed at rest. That
+             is the same half-answer, only inverted. Keyed to the link, the two
+             now move together or not at all; an eyebrow that is plain text and
+             not a link answers with nothing, which is correct. */
           <div className="record-label group flex w-fit items-center gap-2 text-[var(--accent)]">
             <span
               aria-hidden="true"
-              className="h-3 w-px origin-center bg-[var(--accent)] transition-transform duration-200 group-hover:scale-y-150 group-focus-within:scale-y-150"
+              className="h-3 w-px origin-center bg-[var(--accent)] transition-transform duration-200 group-focus-within:scale-y-150 group-has-[a:hover]:scale-y-150"
             />
             {eyebrow}
           </div>
