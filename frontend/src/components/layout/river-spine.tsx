@@ -12,9 +12,10 @@ import { CanvasesIcon } from "@/components/brand/canvases-icon";
 import { HelmetIcon } from "@/components/brand/helmet-icon";
 import { LotIcon } from "@/components/brand/lot-icon";
 import { PaintingIcon } from "@/components/brand/painting-icon";
+import { SashIcon } from "@/components/brand/sash-icon";
 import { UstavIcon } from "@/components/brand/ustav-icon";
 import { Emblem } from "@/components/brand/emblem";
-import { KrugIcon, StenkaIcon, WEAPON_MOTIFS } from "@/components/brand/weapon-glyphs";
+import { KrugIcon, PalkaIcon, StenkaIcon, WEAPON_MOTIFS } from "@/components/brand/weapon-glyphs";
 import { useBuza } from "@/features/home/buza-context";
 
 /**
@@ -226,7 +227,7 @@ type Mark = {
    *  they're described (the shield below, the братина and the жребий at the
    *  end of this file's render). Kept as a kind rather than an `id ===` chain
    *  in the render: that chain was already four branches deep for one page. */
-  kind?: "shield" | "bratina" | "lot";
+  kind?: "shield" | "bratina" | "lot" | "sash";
   Icon?: ComponentType<{ size?: number; className?: string }>;
   /** Tailwind border/text pair — see `MARK_MATERIAL`'s note on why each mark is
    *  made of a different thing. */
@@ -292,6 +293,19 @@ const RIVER_BY_PATH: Record<string, Mark[]> = {
      * in a match card and goes straight to the server; this is the rail's own
      * object, the way the братина is. */
     { id: "zhrebiy", label: "Жребий", note: "Никому не подсуден", kind: "lot", material: MATERIAL.bone, tail: true },
+  ],
+  "/equipment": [
+    { id: "opis", label: "Опись", note: "Что в комплекте", Icon: AnnalIcon, material: MATERIAL.tin },
+    /* Палка and not the круг: this section is «Чем бьются» — the four разряды
+       themselves — and the stick is the one снаряд of the four that reads at
+       18px without being mistaken for something else. */
+    { id: "snaryazhenie", label: "Разряды", note: "Чем бьются", Icon: PalkaIcon, material: MATERIAL.brass },
+    { id: "arhiv-ekipirovki", label: "Комплект", note: "Что надевают", Icon: HelmetIcon, material: MATERIAL.copper },
+    /* Опаска — this page's братина. The sash is the one thing in the комплект
+       a fighter keeps doing something to rather than simply wearing: it is
+       pulled tight before a bout. So it stands last, leads nowhere, and
+       answers a click by cinching. */
+    { id: "opaska", label: "Опаска", note: "Затянуть потуже", kind: "sash", Icon: SashIcon, material: MATERIAL.wood, tail: true },
   ],
 };
 
@@ -461,6 +475,10 @@ export function RiverSpine() {
      own `animationend`. */
   const [lotPending, setLotPending] = useState<number | null>(null);
   const [lotFace, setLotFace] = useState<number | null>(null);
+  /* Опаска: one flag, because cinching is a gesture that replays rather than
+     a state that persists — a sash left visibly loose would be reporting
+     something about the page that isn't true. */
+  const [cinched, setCinched] = useState(false);
 
   /* A mark is a way *into* its section: it scrolls there, and "Буза" — which is
      collapsed until something opens it — is opened first, on this mark's own
@@ -790,6 +808,7 @@ export function RiverSpine() {
         const isShield = mark.kind === "shield";
         const isBratina = mark.kind === "bratina";
         const isLot = mark.kind === "lot";
+        const isSash = mark.kind === "sash";
         /* Opened: the boat is here, the mark has given way to its berth. It's
            gone visually, so it's out of the tab order and off the tree too —
            an invisible control that still answers the keyboard is a trap. */
@@ -803,6 +822,10 @@ export function RiverSpine() {
                 /* До дна, then filled again on the next click. */
                 setDrained((was) => !was);
                 setSloshing(true);
+                return;
+              }
+              if (isSash) {
+                setCinched(true);
                 return;
               }
               if (isLot) {
@@ -824,13 +847,15 @@ export function RiverSpine() {
                 ? drained
                   ? "Братина — пуста, налить"
                   : "Братина — выпить до дна"
-                : isLot
-                  ? lotFace === null
-                    ? "Жребий — бросить"
-                    : /* Nominative: «выпал нож», not the genitive the motif
-                         also carries — that one is for «жребий ножа». */
-                      `Жребий — выпал ${WEAPON_MOTIFS[lotFace].label.toLowerCase()}, бросить снова`
-                  : `${mark.label} — ${mark.note.toLowerCase()}`
+                : isSash
+                  ? "Опаска — затянуть потуже"
+                  : isLot
+                    ? lotFace === null
+                      ? "Жребий — бросить"
+                      : /* Nominative: «выпал нож», not the genitive the motif
+                           also carries — that one is for «жребий ножа». */
+                        `Жребий — выпал ${WEAPON_MOTIFS[lotFace].label.toLowerCase()}, бросить снова`
+                    : `${mark.label} — ${mark.note.toLowerCase()}`
             }
             onAnimationEnd={(event) => {
               if (event.animationName === "strike-ring") setStruck(null);
@@ -841,6 +866,7 @@ export function RiverSpine() {
                 setLotFace(lotPending);
                 setLotPending(null);
               }
+              if (event.animationName === "sash-cinch") setCinched(false);
               /* Cleared on the vessel's own movement, not the liquid's: the
                  liquid only animates on the way *in*, so listening to the slosh
                  alone left the flag stuck after a drink. */
@@ -902,6 +928,10 @@ export function RiverSpine() {
                           return <Drawn size={17} />;
                         })()
                       )}
+                    </span>
+                  ) : isSash ? (
+                    <span className={`grid place-items-center${cinched ? " sash-cinch" : ""}`}>
+                      <SashIcon size={18} />
                     </span>
                   ) : isBratina ? (
                     <span

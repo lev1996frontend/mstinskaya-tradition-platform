@@ -68,35 +68,43 @@ export function Equipment({ rules }: { rules: WeaponRulesView | null }) {
 }
 
 /**
- * Left panel — a cropped archival drawing (819×1000 source, rukavitsy /
- * kaftans / belts / hats in the lower-left of frame).
+ * Left panel — an archival drawing (819×1000 source) framed on the band of
+ * fighters, which is what the caption beside it describes.
  *
- * The crop scale lives on this wrapper `<div>`, never on the `<img>` itself,
- * and neither element carries `.ken`/`.drift`/`.unmask` — the handoff calls
- * out exactly this collision (a continuous transform animation stacked on a
- * static crop `scale()` fights the same CSS property and the crop just stops
- * landing on the detail the caption promises). This section has no zoom
- * animation on purpose; keep it that way.
+ * The frame carries its own aspect ratio, and this is the whole point. It used
+ * to be `min-h-[420px] flex-1` inside a stretched grid row, so its height came
+ * from whatever the разряд list beside it happened to need — which on a wide
+ * screen is not much. The frame went landscape (667×433 at 1500px) over a
+ * portrait drawing, and with a further `scale(1.55)` on top the visible band
+ * was so tight that every fighter lost his head and his feet. The caption
+ * promises шапки; шапки were the first thing gone.
+ *
+ * 5:4 keeps about two thirds of the sheet's height around its middle — the
+ * figures run from roughly 30% to 80% down the sheet, so they now sit inside
+ * the frame at every width instead of the crop changing with the neighbouring
+ * column. The old zoom is gone with the same stroke: `object-cover` into a
+ * fixed frame is already the crop.
+ *
+ * Nothing here carries `.ken`/`.drift`/`.unmask`. The handoff called out the
+ * collision when there was a static `scale()` to fight; there no longer is,
+ * but this panel still has no zoom animation on purpose — keep it that way.
  */
 function ArchivalCrop() {
   return (
     <figure className="flex flex-col">
-      <div className="relative min-h-[420px] flex-1 overflow-hidden border border-[var(--border)] bg-[var(--surface-muted)]">
-        <div
-          className="absolute inset-0"
-          style={{ transform: "scale(1.55)", transformOrigin: "46% 52%" }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- project convention: no next/image anywhere, no remote-image config */}
-          <img
-            src="/archive/kulachnoy-boy-risunok.jpg"
-            alt="«Кулачной бой!», рисунок с натуры — рукавицы, кафтаны, пояса и шапки бойцов"
-            className="h-full w-full object-cover"
-            style={{
-              objectPosition: "46% 52%",
-              filter: "sepia(.3) contrast(1.06) brightness(.92)",
-            }}
-          />
-        </div>
+      <div className="relative aspect-[5/4] w-full overflow-hidden border border-[var(--border)] bg-[var(--surface-muted)]">
+        {/* eslint-disable-next-line @next/next/no-img-element -- project convention: no next/image anywhere, no remote-image config */}
+        <img
+          src="/archive/kulachnoy-boy-risunok.jpg"
+          alt="«Кулачной бой!», рисунок с натуры — рукавицы, кафтаны, пояса и шапки бойцов"
+          className="h-full w-full object-cover"
+          style={{
+            /* A shade below centre: above the figures is sky and cloud, below
+               them the ground and the sheet's own title. */
+            objectPosition: "50% 52%",
+            filter: "sepia(.3) contrast(1.06) brightness(.92)",
+          }}
+        />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[var(--background-deep)] to-transparent"
