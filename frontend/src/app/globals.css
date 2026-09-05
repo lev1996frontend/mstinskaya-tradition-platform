@@ -1668,6 +1668,36 @@ button:not(:disabled),
   animation: bratina-drop 900ms cubic-bezier(0.3, 0.6, 0.4, 1) both;
 }
 
+/* бросок (lot-tumble) — the жребий mark on the tournaments rail being thrown:
+   the cube turns over twice, dips as it lands, and comes up on a разряд.
+
+   Two turns and not one so it reads as thrown rather than nudged, and a `scale`
+   dip at the bottom so it looks like it hit something. The разряд it landed on
+   is swapped in by `river-spine.tsx` off this keyframe's own `animationend` —
+   never on the click, which would show the result before the cube had moved.
+   Third widget in this codebase to need that rule stated. */
+@keyframes lot-tumble {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  55% {
+    transform: rotate(430deg) scale(1.14);
+  }
+
+  78% {
+    transform: rotate(690deg) scale(0.86);
+  }
+
+  100% {
+    transform: rotate(720deg) scale(1);
+  }
+}
+
+.lot-tumble {
+  animation: lot-tumble 620ms cubic-bezier(0.24, 0.7, 0.3, 1);
+}
+
 /* затон (river-pool) — the still water a mark's berth opens into, shown only
    while the boat is actually lying in it (`river-spine.tsx` sets `.is-open`
    from the scroll loop). Drawn as an upright oval rather than a circle because
