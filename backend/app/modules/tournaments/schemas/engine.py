@@ -19,7 +19,11 @@ CompetitionType = Literal["INDIVIDUAL", "TEAM"]
 CompetitionFormat = Literal["SINGLE_ELIMINATION", "ROUND_ROBIN", "GROUP_PLAYOFF"]
 CompetitionStatus = Literal["DRAFT", "REGISTRATION", "RUNNING", "ACTIVE", "FINISHED", "CANCELLED"]
 DrawType = Literal["RANDOM", "SEEDED", "MANUAL"]
-ParticipantEngineStatus = Literal["REGISTERED", "CONFIRMED", "APPROVED", "WAITLISTED", "WITHDRAWN", "DISQUALIFIED", "ELIMINATED"]
+#: ``RESERVE`` is not a competitor: a reserve is named on the entry list, is
+#: left out of the draw, and becomes ``REGISTERED`` only when an organizer puts
+#: them in the place of someone who pulled out. Kept distinct from the statuses
+#: that mean "out", because a reserve has not left — they have not yet entered.
+ParticipantEngineStatus = Literal["REGISTERED", "CONFIRMED", "APPROVED", "WAITLISTED", "RESERVE", "WITHDRAWN", "DISQUALIFIED", "ELIMINATED"]
 
 #: Bracket stages. The ROUND_OF_* names are produced by generated brackets
 #: wider than eight fighters; TEAM_BOUT is one pairing of a «трое на трое».

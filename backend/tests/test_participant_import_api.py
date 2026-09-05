@@ -165,6 +165,59 @@ def test_the_template_can_be_filled_in_and_uploaded_back():
     assert body["rows"][0]["competition_name"] == "Абсолютная ветеранская"
 
 
+def test_the_template_shows_a_filled_in_example_that_it_then_ignores():
+    """The template teaches by example instead of by a validation error later.
+
+    The examples have to survive the round trip as *examples*: an organizer who
+    fills in their own rows underneath and uploads the file back must not find
+    Замятин Пётр entered into their tournament.
+    """
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+
+    downloaded = client.get(
+        f"/api/v1/tournaments/{tournament_id}/participants/template.xlsx", headers=headers
+    )
+    assert downloaded.status_code == 200, downloaded.text
+    workbook = load_workbook(BytesIO(downloaded.content))
+    sheet = workbook[SHEET_ENTRIES]
+
+    filled = [
+        [cell.value for cell in row]
+        for row in sheet.iter_rows(min_row=1)
+        if any(cell.value not in (None, "") for cell in row)
+    ]
+    assert len(filled) >= 4, "header, notes and at least two example rows"
+
+    report = preview(client, tournament_id, downloaded.content, headers).json()
+    assert report["total_rows"] == 0, report["rows"]
+
+
+def test_an_entry_marked_as_a_reserve_is_entered_as_one():
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+
+    payload = sheet_of(
+        [
+            {"full_name": "Основной", "category": "Абсолютная мужская"},
+            {"full_name": "Запасной", "category": "Абсолютная мужская", "reserve": "да"},
+        ]
+    )
+    report = preview(client, tournament_id, payload, headers).json()
+    assert report["valid_rows"] == 2, report["rows"]
+
+    committed = client.post(
+        f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
+        json={"rows": report["rows"]},
+        headers=headers,
+    )
+    assert committed.status_code == 200, committed.text
+
+    by_name = {row["display_name"]: row for row in participants(client, tournament_id)}
+    assert by_name["Основной"]["status"] == "REGISTERED"
+    assert by_name["Запасной"]["status"] == "RESERVE"
+
+
 # ------------------------------------------------------- preview writes nothing
 
 

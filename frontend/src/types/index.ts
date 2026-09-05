@@ -71,6 +71,8 @@ export type ParticipantStatus =
   | "REGISTERED"
   | "CONFIRMED"
   | "APPROVED"
+  /** Named on the entry list, held out of the draw, waiting to stand in. */
+  | "RESERVE"
   | "WAITLISTED"
   | "WITHDRAWN"
   | "DISQUALIFIED"
@@ -330,11 +332,52 @@ export interface WalkoverView {
   opponent_id: string;
 }
 
+/** A bout whose slot changed hands. */
+export interface SeatView {
+  match_id: string;
+  stage: string | null;
+}
+
+export interface ReplacementView {
+  participant_id: string;
+  seats: SeatView[];
+}
+
+/** Someone who could take a vacated seat, and the ground they are offered on. */
+export interface ReplacementCandidate {
+  participant_id: string;
+  display_name: string;
+  club_name: string | null;
+  status: string;
+  reason: "SAME_CLUB_RESERVE" | "RESERVE" | "OTHER_COMPETITION";
+  /**
+   * Disciplines of this tournament they are already fighting in. A warning
+   * about a possible clash of timing, never a refusal — the organizer decides.
+   */
+  busy_in: string[];
+}
+
+export interface ReplacementCandidatesView {
+  participant_id: string;
+  competition_id: string | null;
+  candidates: ReplacementCandidate[];
+}
+
+/** Standing someone in for a fighter who was already withdrawn. */
+export interface LateReplacementView {
+  participant_id: string;
+  replacement: ReplacementView;
+  /** Bouts whose walkover was taken back and which are open again. */
+  reopened: SeatView[];
+}
+
 export interface WithdrawalView {
   participant_id: string;
   from_status: string;
   to_status: string;
   reason: string;
+  /** Set when the withdrawal named a stand-in; then no walkover is granted. */
+  replacement: ReplacementView | null;
   walkovers: WalkoverView[];
   /**
    * Bouts that could not be awarded yet because the opponent is still
@@ -599,6 +642,8 @@ export interface ImportRow {
   category: string | null;
   birth_year: number | null;
   seed: number | null;
+  /** Held back from the draw, waiting to take a withdrawn fighter's place. */
+  reserve: boolean;
   /** Resolved from `category`; null when it matched no discipline. */
   competition_id: string | null;
   competition_name: string | null;

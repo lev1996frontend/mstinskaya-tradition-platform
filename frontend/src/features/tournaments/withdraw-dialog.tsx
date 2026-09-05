@@ -11,6 +11,8 @@ import { labelOf, matchStage } from "@/lib/labels";
 import { useFocusTrap } from "@/lib/use-focus-trap";
 import type { MatchView, ParticipantView } from "@/types";
 
+import { ReplacementPicker } from "./replacement-picker";
+
 /**
  * Taking a fighter out of a competition that has already started.
  *
@@ -34,12 +36,12 @@ function describeError(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 401) return "Требуется вход в систему.";
     if (error.status === 403) return "Снять участника может только организатор или инструктор.";
-    if (error.status === 409) {
-      // The backend refuses while a bout of theirs is under way, and says which.
-      const detail = error.detail as { code?: string; message?: string } | null;
-      if (detail?.code === "BOUT_IN_FLIGHT" && detail.message) return detail.message;
-      return "Участник уже выбыл из сетки.";
-    }
+    // Every refusal that can be caused by the chosen replacement carries its own
+    // message from the backend, which knows the actual reason; showing ours
+    // instead would be a guess.
+    const detail = error.detail as { code?: string; message?: string } | null;
+    if (detail?.message) return detail.message;
+    if (error.status === 409) return "Участник уже выбыл из сетки.";
     return error.message;
   }
   return "Не удалось снять участника.";
@@ -61,6 +63,7 @@ export function WithdrawDialog({
 
   const [status, setStatus] = useState<"WITHDRAWN" | "DISQUALIFIED">("WITHDRAWN");
   const [reason, setReason] = useState("");
+  const [replacement, setReplacement] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -107,7 +110,11 @@ export function WithdrawDialog({
     setSaving(true);
     setError(null);
     try {
-      await withdrawParticipant(participant.id, { reason: trimmed, status });
+      await withdrawParticipant(participant.id, {
+        reason: trimmed,
+        status,
+        ...(replacement ? { replacement_participant_id: replacement } : {}),
+      });
       onSaved();
     } catch (caught) {
       setError(describeError(caught));
@@ -169,7 +176,20 @@ export function WithdrawDialog({
             })}
           </div>
 
-          {awardable.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Кто выйдет вместо него</p>
+            <ReplacementPicker
+              key={participant.id}
+              participantId={participant.id}
+              value={replacement}
+              onChange={setReplacement}
+              disabled={saving}
+            />
+          </div>
+
+          {/* The consequence, restated for whichever choice is on screen: a
+              replacement means the opponents get a fight, not a free pass. */}
+          {awardable.length > 0 && !replacement ? (
             <Alert tone="warning" title="Эти бои будут отданы соперникам">
               <ul className="mt-1 space-y-1">
                 {awardable.map((match) => (
@@ -181,7 +201,14 @@ export function WithdrawDialog({
             </Alert>
           ) : null}
 
-          {deferred.length > 0 ? (
+          {awardable.length > 0 && replacement ? (
+            <Alert tone="info" title="Проход без боя не выдаётся">
+              Замена садится на его место, соперники получают бой:{" "}
+              {awardable.map((match) => labelOf(matchStage, match.stage)).join(", ")}.
+            </Alert>
+          ) : null}
+
+          {deferred.length > 0 && !replacement ? (
             <Alert tone="info" title="Соперник ещё не определён">
               {deferred.map((match) => labelOf(matchStage, match.stage)).join(", ")}: проход будет засчитан
               автоматически, как только другая половина сетки даст соперника.
@@ -208,7 +235,7 @@ export function WithdrawDialog({
               Отмена
             </Button>
             <Button type="submit" variant="danger" disabled={saving || trimmed.length < 3}>
-              {saving ? "Сохраняем…" : "Снять"}
+              {saving ? "Сохраняем…" : replacement ? "Снять и заменить" : "Снять"}
             </Button>
           </div>
         </form>

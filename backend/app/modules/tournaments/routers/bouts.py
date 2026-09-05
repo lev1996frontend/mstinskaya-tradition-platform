@@ -30,7 +30,10 @@ from app.modules.tournaments.schemas.bouts import (
     LotOverrideRequest,
     LotView,
     MatchRoundView,
+    LateReplacementRequest,
+    LateReplacementView,
     ParticipantWithdrawRequest,
+    ReplacementCandidatesView,
     QualificationView,
     RoundCompleteRequest,
     RoundScoreRequest,
@@ -136,6 +139,9 @@ async def withdraw_participant(
     Not the same thing as ``POST /participant-status-history``, which only
     records a status: that route leaves the bracket holding a fighter who will
     never appear, and the bout stuck forever. This one settles the bouts too.
+
+    With ``replacement_participant_id`` it settles them differently: somebody
+    steps into the vacated seat and no walkover is granted.
     """
     participant = await TournamentReadService.get_participant(session, participant_id)
     await ensure_can_manage_participant(session, manager, participant)
@@ -145,9 +151,54 @@ async def withdraw_participant(
         reason=payload.reason,
         to_status=payload.status,
         actor_id=manager.user.id,
+        replacement_participant_id=payload.replacement_participant_id,
     )
     await session.commit()
     return WithdrawalView(**result)
+
+
+@router.post("/participants/{participant_id}/replace", response_model=LateReplacementView)
+async def replace_withdrawn_participant(
+    participant_id: str,
+    payload: LateReplacementRequest,
+    manager: TournamentManager = Depends(get_current_manager),
+    session: AsyncSession = Depends(get_db),
+) -> LateReplacementView:
+    """Stand someone in for a fighter who was already withdrawn.
+
+    For the ordinary case — the substitute is known when the fighter pulls out
+    — name them on the withdrawal instead: no walkover is granted at all and
+    nothing has to be undone.
+    """
+    participant = await TournamentReadService.get_participant(session, participant_id)
+    await ensure_can_manage_participant(session, manager, participant)
+    result = await BracketService.replace_withdrawn(
+        session,
+        participant_id,
+        reason=payload.reason,
+        replacement_participant_id=payload.replacement_participant_id,
+        actor_id=manager.user.id,
+    )
+    await session.commit()
+    return LateReplacementView(**result)
+
+
+@router.get(
+    "/participants/{participant_id}/replacement-candidates",
+    response_model=ReplacementCandidatesView,
+)
+async def replacement_candidates(
+    participant_id: str, session: AsyncSession = Depends(get_db)
+) -> ReplacementCandidatesView:
+    """Who could stand in for this fighter, best first. Writes nothing.
+
+    A suggestion, never an action: the organizer reads the list and decides.
+    Nothing here changes the draw, which is why it is a ``GET`` and needs no
+    manager — seeing who is available is not a privileged act.
+    """
+    return ReplacementCandidatesView(
+        **await BracketService.replacement_candidates(session, participant_id)
+    )
 
 
 # ---------------------------------------------------------------- bout view

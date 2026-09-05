@@ -41,6 +41,8 @@ class ImportRow(BaseModel):
     category: str | None = None
     birth_year: int | None = None
     seed: int | None = None
+    #: Held back from the draw, waiting to take a withdrawn fighter's place.
+    reserve: bool = False
     #: Resolved from ``category``; null when it matched no discipline.
     competition_id: str | None = None
     competition_name: str | None = None
@@ -85,6 +87,7 @@ class ImportRowInput(BaseModel):
     category: str | None = None
     birth_year: int | None = None
     seed: int | None = None
+    reserve: bool = False
 
 
 class ImportCommitRequest(BaseModel):

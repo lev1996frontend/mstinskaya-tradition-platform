@@ -28,6 +28,7 @@ import type {
   ImportCommitResponse,
   ImportReport,
   ImportRow,
+  LateReplacementView,
   LotMethod,
   LotView,
   MatchResultView,
@@ -43,6 +44,7 @@ import type {
   TeamView,
   Tournament,
   TournamentCategory,
+  ReplacementCandidatesView,
   TournamentDocument,
   TournamentRegistration,
   WeaponCategory,
@@ -176,9 +178,42 @@ export const updateParticipantStatus = (body: {
  */
 export const withdrawParticipant = (
   participantId: string,
-  body: { reason: string; status?: "WITHDRAWN" | "DISQUALIFIED" },
+  body: {
+    reason: string;
+    status?: "WITHDRAWN" | "DISQUALIFIED";
+    /**
+     * Naming a stand-in changes what the call does: no walkover is granted at
+     * all, and the replacement takes the vacated seat instead.
+     */
+    replacement_participant_id?: string;
+  },
 ) =>
   apiRequest<WithdrawalView>(`/api/v1/participants/${participantId}/withdraw`, {
+    method: "POST",
+    body,
+  });
+
+/**
+ * Who could stand in for this fighter, best first. A suggestion only — reading
+ * this changes nothing, and the replacement is seated by the call below.
+ */
+export const getReplacementCandidates = (participantId: string) =>
+  apiRequest<ReplacementCandidatesView>(
+    `/api/v1/participants/${participantId}/replacement-candidates`,
+  );
+
+/**
+ * Stand someone in for a fighter who was already withdrawn.
+ *
+ * By this point the walkover has been granted and the opponent advanced, so the
+ * backend takes both back — and refuses outright if that opponent has since
+ * fought the bout they were advanced into.
+ */
+export const replaceWithdrawnParticipant = (
+  participantId: string,
+  body: { reason: string; replacement_participant_id: string },
+) =>
+  apiRequest<LateReplacementView>(`/api/v1/participants/${participantId}/replace`, {
     method: "POST",
     body,
   });

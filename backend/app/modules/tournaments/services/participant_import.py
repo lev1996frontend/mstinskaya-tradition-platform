@@ -90,9 +90,54 @@ IMPORT_COLUMNS: tuple[ImportColumn, ...] = (
         14,
     ),
     ImportColumn("seed", "Посев", False, "необязательно", 10),
+    ImportColumn(
+        "reserve",
+        "Запасной",
+        False,
+        "«да» — в сетку не попадёт, ждёт замены",
+        12,
+    ),
 )
 
 COLUMN_BY_KEY = {column.key: column for column in IMPORT_COLUMNS}
+
+#: What counts as "yes" in «Запасной». Anything outside these two sets is a row
+#: error rather than a silent "no": a typo in this column decides whether a
+#: fighter is in the draw at all.
+RESERVE_YES = frozenset({"да", "yes", "y", "д", "1", "+", "true", "истина"})
+RESERVE_NO = frozenset({"", "нет", "no", "n", "н", "0", "-", "false", "ложь"})
+
+#: Prefix marking a row the template filled in for illustration. The parser
+#: drops these, so a file uploaded without deleting them enters nobody. A
+#: marker rather than a row number, because an organizer who inserts a row
+#: above would otherwise shift the examples into their own entry list.
+EXAMPLE_MARKER = "ПРИМЕР:"
+
+#: Shown filled in so the format is read off a real row rather than guessed at
+#: from the notes. Deliberately exercising the awkward parts: a fighter with no
+#: драковое имя, and one held in reserve.
+EXAMPLE_ROWS: tuple[dict[str, str], ...] = (
+    {
+        "full_name": f"{EXAMPLE_MARKER} Замятин Пётр Ильич",
+        "fight_name": "Кистень",
+        "city": "Великий Новгород",
+        "club": "Буза",
+        "category": "название из листа «Дисциплины»",
+        "birth_year": "1998",
+        "seed": "1",
+        "reserve": "нет",
+    },
+    {
+        "full_name": f"{EXAMPLE_MARKER} Сергеев Сергей Сергеевич",
+        "fight_name": "",
+        "city": "Псков",
+        "club": "Сокол",
+        "category": "название из листа «Дисциплины»",
+        "birth_year": "2005",
+        "seed": "",
+        "reserve": "да",
+    },
+)
 
 
 def _normalize(value: str | None) -> str:
@@ -134,8 +179,16 @@ def build_template_workbook(competitions: Sequence[Competition]) -> BytesIO:
         note.font = Font(italic=True, size=9)
         note.alignment = Alignment(wrap_text=True, vertical="top")
         sheet.column_dimensions[letter].width = column.width
-    # Headers and the note row stay visible while the organizer scrolls.
-    sheet.freeze_panes = "A3"
+
+    example_font = Font(italic=True, color="FF808080")
+    for example in EXAMPLE_ROWS:
+        sheet.append([example.get(column.key, "") for column in IMPORT_COLUMNS])
+        for cell in sheet[sheet.max_row]:
+            cell.font = example_font
+
+    # Headers, notes and the examples all stay visible while the organizer
+    # scrolls their own rows.
+    sheet.freeze_panes = f"A{2 + len(EXAMPLE_ROWS) + 1}"
 
     reference = workbook.create_sheet(SHEET_DISCIPLINES)
     reference.append(["Дисциплина", "Возраст", "Тип"])
@@ -231,6 +284,10 @@ def parse_workbook(stream: BinaryIO) -> list[RawRow]:
         if not any(values.values()):
             continue
         if values["full_name"] in {column.note for column in IMPORT_COLUMNS}:
+            continue
+        # A row the template filled in for illustration, left in place by an
+        # organizer who did not delete it.
+        if values["full_name"].startswith(EXAMPLE_MARKER):
             continue
         parsed.append(RawRow(row_number=offset + 2 if mapping else offset + 1, values=values))
     return parsed
@@ -378,6 +435,19 @@ class ParticipantImportService:
                     )
                     seed = None
 
+            reserve = False
+            marked = _normalize(values["reserve"])
+            if marked in RESERVE_YES:
+                reserve = True
+            elif marked not in RESERVE_NO:
+                errors.append(
+                    {
+                        "code": "INVALID_RESERVE",
+                        "column": "reserve",
+                        "message": "В колонке «Запасной» пишут «да» или оставляют пусто",
+                    }
+                )
+
             # A fight name is the better match key: it is what a fighter is
             # actually known by, and what the roster shows.
             athlete = athlete_by_nickname.get(_normalize(values["fight_name"])) or (
@@ -431,6 +501,7 @@ class ParticipantImportService:
                     "category": category_text or None,
                     "birth_year": birth_year,
                     "seed": seed,
+                    "reserve": reserve,
                     "competition_id": str(competition.id) if competition else None,
                     "competition_name": competition.name if competition else None,
                     "athlete_id": str(athlete.id) if athlete else None,
@@ -504,7 +575,9 @@ class ParticipantImportService:
                 club_name=row["club"],
                 birth_year=row["birth_year"],
                 seed=row["seed"],
-                status="REGISTERED",
+                # A reserve is entered on the roster but stays out of the draw
+                # until an organizer puts them in someone's place.
+                status="RESERVE" if row.get("reserve") else "REGISTERED",
             )
             name = row["competition_name"] or row["competition_id"]
             per_competition[name] = per_competition.get(name, 0) + 1

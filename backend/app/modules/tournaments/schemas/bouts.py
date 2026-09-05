@@ -249,6 +249,12 @@ class ParticipantWithdrawRequest(BaseModel):
 
     reason: str = Field(min_length=3, max_length=2000)
     status: Literal["WITHDRAWN", "DISQUALIFIED"] = "WITHDRAWN"
+    #: Who takes the vacated seat. When given, no walkover is granted at all —
+    #: the opponent gets a fight rather than a free pass. Part of the
+    #: withdrawal rather than a route of its own because a withdrawal awards
+    #: its walkovers immediately, and a substitution arriving afterwards would
+    #: mean undoing a result that is already recorded.
+    replacement_participant_id: str | None = None
 
 
 class WalkoverView(BaseModel):
@@ -264,6 +270,58 @@ class PendingWalkoverView(BaseModel):
     stage: str | None = None
 
 
+class SeatView(BaseModel):
+    """A bout whose slot changed hands."""
+
+    match_id: str
+    stage: str | None = None
+
+
+class ReplacementView(BaseModel):
+    participant_id: str
+    seats: list[SeatView] = Field(default_factory=list)
+
+
+class LateReplacementRequest(BaseModel):
+    """Putting someone in the place of a fighter who is already withdrawn.
+
+    Separate from the withdrawal because by now a walkover has been granted and
+    the opponent advanced; this takes both back, and refuses if the opponent
+    has since fought.
+    """
+
+    reason: str = Field(min_length=3, max_length=2000)
+    replacement_participant_id: str
+
+
+class LateReplacementView(BaseModel):
+    participant_id: str
+    replacement: ReplacementView
+    #: Bouts whose walkover was taken back and which are open again.
+    reopened: list[SeatView] = Field(default_factory=list)
+
+
+class ReplacementCandidateView(BaseModel):
+    """Someone who could take the seat, and why they are being offered."""
+
+    participant_id: str
+    display_name: str
+    club_name: str | None = None
+    status: str
+    #: ``SAME_CLUB_RESERVE`` / ``RESERVE`` / ``OTHER_COMPETITION`` — the ground
+    #: on which they are suggested, and the order they are suggested in.
+    reason: str
+    #: Disciplines of this tournament they are already fighting in. Not a
+    #: refusal: a clash of timing is the organizer's call, not the server's.
+    busy_in: list[str] = Field(default_factory=list)
+
+
+class ReplacementCandidatesView(BaseModel):
+    participant_id: str
+    competition_id: str | None = None
+    candidates: list[ReplacementCandidateView] = Field(default_factory=list)
+
+
 class WithdrawalView(BaseModel):
     participant_id: str
     from_status: str
@@ -271,6 +329,7 @@ class WithdrawalView(BaseModel):
     reason: str
     walkovers: list[WalkoverView] = Field(default_factory=list)
     pending_walkovers: list[PendingWalkoverView] = Field(default_factory=list)
+    replacement: ReplacementView | None = None
 
 
 # --------------------------------------------------------------- group stage

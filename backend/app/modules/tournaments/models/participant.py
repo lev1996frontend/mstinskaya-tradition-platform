@@ -76,6 +76,16 @@ class Participant(Base):
         nullable=True,
         index=True,
     )
+    #: Set on the entry that stepped into a withdrawn fighter's seat, pointing
+    #: at the fighter who left. Recorded on the replacement rather than on the
+    #: departed because one reserve may stand in for different people in
+    #: different disciplines, while a given entry has exactly one predecessor.
+    replaces_participant_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("tournament_participants.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     #: Only for an entrant with no platform profile yet. When ``athlete_id`` is
     #: set the name always comes from that profile, so linking an existing
     #: athlete can never produce a duplicate identity.

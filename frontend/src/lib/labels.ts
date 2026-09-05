@@ -117,6 +117,7 @@ export const participantStatus: Record<ParticipantStatus, { label: string; tone:
   CONFIRMED: { label: "Подтверждён", tone: "info" },
   APPROVED: { label: "Допущен", tone: "success" },
   WAITLISTED: { label: "В листе ожидания", tone: "warning" },
+  RESERVE: { label: "Запасной", tone: "info" },
   WITHDRAWN: { label: "Снялся", tone: "warning" },
   DISQUALIFIED: { label: "Дисквалифицирован", tone: "danger" },
   ELIMINATED: { label: "Выбыл", tone: "neutral" },

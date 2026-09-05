@@ -1,6 +1,6 @@
 "use client";
 
-import { UserMinus, Users } from "lucide-react";
+import { UserMinus, UserPlus, Users } from "lucide-react";
 import { useState } from "react";
 
 import { Button, EmptyState, Table, Td, Th } from "@/components/ui";
@@ -8,6 +8,7 @@ import { Avatar } from "@/components/ui/avatar";
 import type { MatchView, ParticipantView } from "@/types";
 
 import { ParticipantStatusBadge } from "./badges";
+import { ReplaceDialog } from "./replace-dialog";
 import { WithdrawDialog } from "./withdraw-dialog";
 
 /** Statuses that mean the fighter is already out; nothing left to withdraw. */
@@ -33,6 +34,7 @@ export function ParticipantsTable({
   onChanged?: () => void;
 }) {
   const [withdrawing, setWithdrawing] = useState<ParticipantView | null>(null);
+  const [replacing, setReplacing] = useState<ParticipantView | null>(null);
   const showActions = canManage && Boolean(onChanged);
   if (participants.length === 0) {
     return (
@@ -81,7 +83,19 @@ export function ParticipantsTable({
             </Td>
             {showActions ? (
               <Td align="right">
-                {OUT_STATUSES.has(participant.status) ? null : (
+                {participant.status === "WITHDRAWN" ? (
+                  // Only someone who withdrew: a disqualification is a sanction,
+                  // and the backend will not let a club substitute out of one.
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    icon={<UserPlus className="size-3.5" strokeWidth={2} />}
+                    onClick={() => setReplacing(participant)}
+                  >
+                    Заменить
+                  </Button>
+                ) : OUT_STATUSES.has(participant.status) ? null : (
                   <Button
                     type="button"
                     variant="ghost"
@@ -110,6 +124,16 @@ export function ParticipantsTable({
           onClose={() => setWithdrawing(null)}
           onSaved={() => {
             setWithdrawing(null);
+            onChanged?.();
+          }}
+        />
+      ) : null}
+      {replacing ? (
+        <ReplaceDialog
+          participant={replacing}
+          onClose={() => setReplacing(null)}
+          onSaved={() => {
+            setReplacing(null);
             onChanged?.();
           }}
         />
