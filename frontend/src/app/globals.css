@@ -1337,6 +1337,79 @@ button:not(:disabled),
   }
 }
 
+/* Карточка-запись под курсором — the cards that are each one link (a
+   tournament, a discipline) had nothing but a border tint and the pointer to
+   say they were clickable, which on a card this large is a change you find by
+   accident rather than one that answers you.
+
+   It answers in the vocabulary the rest of the site already speaks: the same
+   oxblood rule the labels and the footer strike, drawn from the left, here
+   along the card's own bottom edge — the card is the thing being underlined
+   rather than a word. The ring inside the border is the bracket cells' own cue
+   (`bracket-grid.tsx`), chosen there precisely because it marks a cell as live
+   without moving it.
+
+   The border lifts, it does not turn oxblood: tinting the whole frame red put
+   an oxblood line on all four sides and the rule drawing along the bottom —
+   the actual gesture — vanished into it.
+
+   `focus-within`, not only `:hover`: the whole card is one link, and a keyboard
+   reaching it should get the same answer a pointer does. */
+.record-card {
+  position: relative;
+  transition:
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.record-card::after {
+  content: "";
+  position: absolute;
+  /* Inside the card, not straddling its border on `-1px`: astride the edge the
+     rule was half outside the box and got clipped by anything that bounded the
+     card, including its own grid track. */
+  inset-inline: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 260ms var(--ease-out);
+}
+
+.record-card:hover,
+.record-card:focus-within {
+  border-color: var(--border-strong);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.record-card:hover::after,
+.record-card:focus-within::after {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .record-card,
+  .record-card::after {
+    transition-duration: 1ms;
+  }
+}
+
+/* Квадраты разряда в личных делах (`dossiers.tsx`) answered a pointer with
+   nothing at all: their resting border and ink are written as inline styles
+   driven by which разряд is chosen, and an inline declaration beats any class,
+   so no Tailwind `hover:` could ever reach them.
+
+   `!important` is the honest tool here rather than a workaround — the inline
+   style is the *resting* state, and this is the one declaration that has to
+   outrank it. The alternative was lifting three colours out of the component's
+   own conditional logic purely to win a specificity argument. */
+.declare-square:hover,
+.declare-square:focus-visible {
+  border-color: var(--accent-deep) !important;
+  color: var(--accent-deep) !important;
+}
+
 /* Ширина поля (river-rail) — the margin river's own box, sized to the page
    gutter at each width so a 1px line never crosses a text column.
 

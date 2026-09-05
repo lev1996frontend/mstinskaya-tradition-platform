@@ -55,8 +55,18 @@ export function PageHeader({
     <header className="rule-double-b flex flex-col gap-5 pb-6 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0 space-y-3">
         {eyebrow ? (
-          <div className="record-label flex items-center gap-2 text-[var(--accent)]">
-            <span aria-hidden="true" className="h-3 w-px bg-[var(--accent)]" />
+          /* `w-fit` so the group is the tick plus the label and nothing else —
+             as a full-width block, pointing anywhere along the empty right of
+             the row would have lit the mark.
+
+             The tick grows with the label it belongs to. It used to stand still
+             while the link beside it scaled and drew its rule, which read as
+             one half of a control answering and the other half stuck. */
+          <div className="record-label group flex w-fit items-center gap-2 text-[var(--accent)]">
+            <span
+              aria-hidden="true"
+              className="h-3 w-px origin-center bg-[var(--accent)] transition-transform duration-200 group-hover:scale-y-150 group-focus-within:scale-y-150"
+            />
             {eyebrow}
           </div>
         ) : null}

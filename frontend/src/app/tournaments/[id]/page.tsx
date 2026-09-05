@@ -112,11 +112,19 @@ export default async function TournamentPage({ params }: PageProps) {
                 <Card
                   as="li"
                   key={competition.id}
-                  className="transition-colors hover:border-[var(--accent)]"
+                  /* `group` so the name can answer the card's own hover — see
+                     `.discipline-card` in globals.css for the rule that draws
+                     along the bottom edge and the ring inside the border. */
+                  className="record-card group"
                 >
+                  {/* The whole card's contents move, not the name alone. The
+                      nudge is the mobile menu's own gesture, but applied to one
+                      line inside a card it read as a broken hover — a title
+                      sliding out from under text that stayed put. Either
+                      everything travels or nothing does. */}
                   <Link
                     href={`/tournaments/${tournament.id}/competitions/${competition.id}`}
-                    className="flex h-full flex-col gap-3 p-5"
+                    className="flex h-full flex-col gap-3 p-5 transition-transform duration-300 group-hover:translate-x-1.5 group-focus-within:translate-x-1.5"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <h3 className="min-w-0 font-semibold leading-snug">{competition.name}</h3>

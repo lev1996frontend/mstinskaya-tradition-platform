@@ -20,12 +20,19 @@ export function TournamentCard({
     <Card
       as="article"
       variant={featured ? "featured" : "default"}
-      className="h-full transition-colors hover:border-[var(--accent)]"
+      /* The same mark the discipline cards carry — see `.record-card` in
+         globals.css. A border tint on its own was the whole hover here, which
+         on a card this size is a change you find by accident rather than one
+         that answers you. */
+      className="record-card group h-full"
     >
       <Link
         href={href}
         transitionTypes={["nav-forward"]}
-        className={cn("flex h-full flex-col gap-3 p-5", featured && "sm:p-7")}
+        className={cn(
+          "flex h-full flex-col gap-3 p-5 transition-transform duration-300 group-hover:translate-x-1.5 group-focus-within:translate-x-1.5",
+          featured && "sm:p-7",
+        )}
       >
         <div className="flex items-start justify-between gap-3">
           <ViewTransition name={`tournament-title-${tournament.id}`} share="text-morph" default="none">

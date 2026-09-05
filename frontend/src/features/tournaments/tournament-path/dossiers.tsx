@@ -152,7 +152,7 @@ export function Dossiers() {
                          to 24px on a narrow card — the "Разряд" label beside
                          them wins the space otherwise, and the squares stop
                          being square. */
-                      className="grid size-8 shrink-0 cursor-pointer place-items-center border transition-colors"
+                      className="declare-square grid size-8 shrink-0 cursor-pointer place-items-center border transition-colors"
                       style={{
                         background: active ? "rgba(142,36,29,.12)" : "transparent",
                         borderColor: active ? "var(--accent-deep)" : "rgba(36,28,21,.28)",

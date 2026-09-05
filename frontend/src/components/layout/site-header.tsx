@@ -216,9 +216,10 @@ export function SiteHeader() {
               {user.name || user.email}
             </Link>
           ) : (
-            <ButtonLink href="/login" size="sm">
-              Войти
-            </ButtonLink>
+            /* `md`, not `sm`. At `sm` this was 55×30 inside a 66px header —
+               the only action in the bar, and the smallest thing in it, sitting
+               beside 33px-tall nav items it was supposed to outrank. */
+            <ButtonLink href="/login">Войти</ButtonLink>
           )}
         </div>
 
