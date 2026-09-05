@@ -22,15 +22,24 @@
  */
 const EMBLEM_MASK = "url(/brand/mstinskaya-emblem.svg) center / contain no-repeat";
 
-export function Emblem({ size, className }: { size: number; className?: string }) {
+/**
+ * `size` is optional: leave it off and the mark fills whatever box it is put
+ * in, which is the only way it can be sized responsively — an inline
+ * `width`/`height` in px cannot be overridden by a class, and a loader that
+ * has to shrink on a phone needs the size to come from CSS.
+ *
+ * The ~34px floor still applies either way: below it this much detail turns to
+ * mud, so a fluid parent needs a `min-width` that respects it.
+ */
+export function Emblem({ size, className }: { size?: number; className?: string }) {
   return (
     <span
       aria-hidden="true"
       className={className}
       style={{
         display: "block",
-        width: size,
-        height: size,
+        width: size ?? "100%",
+        height: size ?? "100%",
         background: "currentColor",
         WebkitMask: EMBLEM_MASK,
         mask: EMBLEM_MASK,

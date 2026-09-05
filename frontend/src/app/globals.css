@@ -1681,48 +1681,65 @@ button:not(:disabled),
   animation: bratina-drop 900ms cubic-bezier(0.3, 0.6, 0.4, 1) both;
 }
 
-/* оттиск (loading-seal) — the archive's own mark for "this page is coming"
-   (`components/layout/route-loading.tsx`).
+/* кистень (lot-loader) — the archive's mark for "this page is coming"
+   (`components/layout/route-loading.tsx`). The weight is swung round the club
+   mark; the mark itself holds still and holds the cord.
 
-   Two movements, deliberately at different speeds so they read as one thing
-   being done to another rather than as two spinners: a segment travels the
-   outer ring at a steady pace, and the mark under it breathes slowly, the way
-   a stamp is worked into wax and lifted.
+   Fluid, not fixed. At a flat 132px this took up 41% of a 320px phone, which
+   for the only thing on the screen is shouting. The floor is the emblem's,
+   not a matter of taste — it is fine detail that turns to mud much under
+   ~34px, and it is a third of this box, so the box cannot go below ~92px.
 
-   Under the global reduced-motion override both stop, and what is left is a
-   seal with a mark in it and one short stroke on its ring — a still object,
-   not a spinner caught mid-turn. That is why the ring is drawn as a segment
-   on a bed rather than as an arc alone. */
-.loading-seal-arc {
-  animation: loading-seal-arc 1.6s linear infinite;
-  transform-origin: center;
+   Guidance for a full-page loader is the large size with the message set
+   below it, which is what this is; the message is a sibling, not drawn here. */
+.lot-loader {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: clamp(92px, 24vw, 132px);
+  aspect-ratio: 1;
 }
 
-@keyframes loading-seal-arc {
+.lot-loader-field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* `transform-box: view-box` so the origin is read in the SVG's own coordinate
+   space; without it the browser measures from the group's bounding box, which
+   is the arm — and the weight then spins about its own middle instead of
+   travelling round the mark. */
+.lot-loader-arm {
+  transform-box: view-box;
+  transform-origin: 60px 60px;
+  animation: lot-loader-swing 1.15s linear infinite;
+}
+
+@keyframes lot-loader-swing {
   to {
     transform: rotate(360deg);
   }
 }
 
-.loading-seal-mark {
-  animation: loading-seal-mark 2.6s ease-in-out infinite;
+/* 38% and not a third: at a third the mark measured 30px inside the smallest
+   box, under the ~34px this emblem needs to stay legible. Raising the box
+   instead would have taken a phone screen up to a third of its width for one
+   ornament, so the mark takes a bigger share of a small box rather than the
+   box growing. `route-loading.tsx` moves the cord's anchor out to match. */
+.lot-loader-mark {
+  position: relative;
+  width: 38%;
+  /* Required, not tidiness: the mark fills its parent's height, and a parent
+     given only a width is zero tall — the кистень swung round an empty ring. */
+  aspect-ratio: 1;
 }
 
-@keyframes loading-seal-mark {
-  /* The floor is 0.78 and not lower: at 0.62 the mark spent half of every
-     cycle looking switched off rather than breathing, and this emblem is
-     already fine detail at 44px. */
-  0%,
-  100% {
-    opacity: 0.78;
-    transform: scale(0.985);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
+/* Under the global reduced-motion override the swing stops and what is left
+   is a кистень held out on its cord, trail and all — a picture of the object
+   rather than a spinner frozen mid-turn. Nothing extra is needed for that,
+   which is the argument for drawing an object instead of an arc. */
 
 /* черта, которая дочерчивается (nav-pending-rule) — the header already marks
    the section you are in by striking an oxblood rule under the word
