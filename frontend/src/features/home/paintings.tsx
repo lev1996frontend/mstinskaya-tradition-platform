@@ -164,7 +164,16 @@ export function Paintings() {
         {/* row of three */}
         <div className="grid gap-7 sm:grid-cols-3">
           {ROW_PAINTINGS.map((painting, index) => (
-            <figure key={painting.title} className="relative">
+            <figure key={painting.title}>
+              {/* The plaque is `absolute bottom-2`, so it anchors to the nearest
+                  positioned ancestor. With `relative` on the whole `figure` —
+                  which here also holds the caption — that ancestor was the
+                  figure, and the plaque sat under the picture instead of on it:
+                  fine while a caption ran to one line, and straight through the
+                  words as soon as one wrapped to two (Васнецов's, the longest
+                  of the three). This wrapper is the picture and nothing else,
+                  which is what the plaque was always meant to be pinned to. */}
+              <div className="relative">
               <PhotoReveal
                 className="block aspect-[4/3] w-full overflow-hidden border border-[var(--border-strong)]"
                 style={{ animationDelay: `${index * 120}ms` }}
@@ -180,6 +189,7 @@ export function Paintings() {
               <CreditPlaque>
                 {painting.author} · {painting.year} · PD
               </CreditPlaque>
+              </div>
               <figcaption className="mt-2.5 text-sm leading-relaxed text-[var(--muted)]">
                 <span className="font-semibold text-[var(--foreground)]">{painting.title}.</span> {painting.author},{" "}
                 {painting.year}.
