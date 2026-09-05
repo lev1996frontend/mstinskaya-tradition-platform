@@ -891,21 +891,34 @@ button:not(:disabled),
   animation: ken 34s ease-in-out infinite alternate;
 }
 
-/* раскрытие (unmask) — one-shot clip-path reveal, toggled by adding this
-   class from an IntersectionObserver wrapper (see `features/home/*`
-   reveal components) rather than on mount, so below-the-fold photos reveal
-   on scroll, not on page load. */
+/* проявление (unmask) — one-shot reveal for an archive photograph, toggled by
+   `stenka-photo-reveal.tsx` once the picture is both in view and actually
+   loaded, rather than on mount.
+
+   It was a clip-path wipe from the left, one second long, identical on every
+   picture on the site. Three of them in a row all swept the same way at the
+   same moment, which read less as photographs surfacing than as a set of
+   blinds going up — and a wipe is hard-edged by nature, so each one arrived
+   with a visible leading edge.
+
+   A print coming up in the tray instead: it rises out of the mount, settles
+   the last of the way down, and clears. No direction at all, so nothing can
+   be "all left to right", and the sections that stagger their frames
+   (`animationDelay`) now read as several prints developing at their own pace
+   rather than one gesture repeated. */
 @keyframes unmask {
   from {
-    clip-path: inset(0 100% 0 0);
+    opacity: 0;
+    transform: scale(1.035);
   }
   to {
-    clip-path: inset(0 0 0 0);
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
 .unmask {
-  animation: unmask 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: unmask 900ms cubic-bezier(0.22, 0.8, 0.24, 1) both;
 }
 
 /* прорисовка (draw-x / draw-y) — bracket connector lines drawing in.
@@ -1667,6 +1680,58 @@ button:not(:disabled),
   pointer-events: none;
   animation: bratina-drop 900ms cubic-bezier(0.3, 0.6, 0.4, 1) both;
 }
+
+/* ожидание (archive-loading) — a picture that has not arrived yet
+   (`stenka-photo-reveal.tsx`, which every archive photo goes through).
+
+   A filled panel and not a transparent overlay: the box behind it is empty
+   until the image lands, so there is nothing to see through. It sits over the
+   picture rather than under it so the swap is one element disappearing, with
+   no moment where a half-painted scan shows through a scrim. */
+.archive-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--surface-muted);
+}
+
+/* One arc in the archive's own ochre, turning on a dim ring. Sized to read at
+   a thumbnail's scale without becoming the subject of the block.
+
+   Held back for 400ms before it fades in. The plates are served from this
+   origin now and most of them land in well under that, so a ring shown the
+   instant the box mounts would be a two-frame flash on every picture on the
+   page — which reads as a glitch, not as loading. Only a picture that is
+   genuinely making someone wait ever draws one. */
+.archive-loading-ring {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--gold) 20%, transparent);
+  border-top-color: var(--gold);
+  opacity: 0;
+  animation:
+    archive-spin 900ms linear 400ms infinite,
+    archive-ring-in 220ms ease 400ms forwards;
+}
+
+@keyframes archive-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes archive-ring-in {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Under reduced motion the global override stops both animations, so the ring
+   never fades in and the mount panel stands alone — which is the right answer
+   here. A spinner frozen at an angle reads as broken rather than as waiting,
+   and the panel already says the picture has not arrived. */
 
 /* бросок (lot-tumble) — the жребий mark on the tournaments rail being thrown:
    the cube turns over twice, dips as it lands, and comes up on a разряд.

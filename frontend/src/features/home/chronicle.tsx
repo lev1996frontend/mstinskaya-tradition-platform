@@ -18,21 +18,21 @@ type ChroniclePhoto = {
 const CHRONICLE_PHOTOS: ChroniclePhoto[] = [
   {
     n: "01",
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Lob_Kulachni_boi.jpg/1920px-Lob_Kulachni_boi.jpg",
+    src: "/archive/lob-kulachny-boy.jpg",
     credit: "В. Лобачев · CC0",
     caption: "Круговой бой: один на один в очерченном круге, зрители — по кромке.",
     aspect: "aspect-[4/3]",
   },
   {
     n: "02",
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Lob_Stenka_na_stenku.jpg/1920px-Lob_Stenka_na_stenku.jpg",
+    src: "/archive/lob-stenka-na-stenku.jpg",
     credit: "В. Лобачев · CC0",
     caption: "Стенка на стенку: строй на строй, до того, как один подастся назад.",
     aspect: "aspect-[3/4]",
   },
   {
     n: "03",
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/%D0%9C%D0%B0%D1%81%D0%BB%D0%B5%D0%BD%D0%B8%D1%87%D0%BD%D1%8B%D0%B9_%D0%BA%D1%83%D0%BB%D0%B0%D1%87%D0%BD%D1%8B%D0%B9_%D0%B1%D0%BE%D0%B9._%D0%9C%D0%B0%D0%BB%D1%8B%D0%B5_%D0%9A%D0%BE%D1%80%D0%B5%D0%BB%D1%8B%2C_%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9_%D0%A1%D0%B5%D0%B2%D0%B5%D1%80%2C_2019.jpg/1920px-%D0%9C%D0%B0%D1%81%D0%BB%D0%B5%D0%BD%D0%B8%D1%87%D0%BD%D1%8B%D0%B9_%D0%BA%D1%83%D0%BB%D0%B0%D1%87%D0%BD%D1%8B%D0%B9_%D0%B1%D0%BE%D0%B9._%D0%9C%D0%B0%D0%BB%D1%8B%D0%B5_%D0%9A%D0%BE%D1%80%D0%B5%D0%BB%D1%8B%2C_%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9_%D0%A1%D0%B5%D0%B2%D0%B5%D1%80%2C_2019.jpg",
+    src: "/archive/maslenichny-boy-malye-korely-2019.jpg",
     credit: "FrolovaAlex · CC BY-SA 4.0",
     caption: "Масленичный бой в деревне Малые Корелы, Русский Север. 2019 год.",
     aspect: "aspect-[3/4]",

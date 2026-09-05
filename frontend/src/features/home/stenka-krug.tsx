@@ -29,7 +29,7 @@ const STENKA_SIDE: Side = {
     { name: "Фомичёв Илья", city: "Вышний Волочёк" },
   ],
   image: {
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Lob_Stenka_na_stenku.jpg/1920px-Lob_Stenka_na_stenku.jpg",
+    src: "/archive/lob-stenka-na-stenku.jpg",
     credit: "В. Лобачев · CC0",
   },
 };
@@ -44,7 +44,7 @@ const KRUG_SIDE: Side = {
     { name: "Клюев Артём", city: "Бологое" },
   ],
   image: {
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Lob_Kulachni_boi.jpg/1920px-Lob_Kulachni_boi.jpg",
+    src: "/archive/lob-kulachny-boy.jpg",
     credit: "В. Лобачев · CC0",
   },
 };
