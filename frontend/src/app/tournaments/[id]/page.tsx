@@ -97,7 +97,17 @@ export default async function TournamentPage({ params }: PageProps) {
               description="Организатор пока не создал ни одной дисциплины для этого турнира."
             />
           ) : (
-            <ul className="grid gap-4 md:grid-cols-2">
+            /* Tracks that fit themselves to how many disciplines there are,
+               rather than a fixed two columns: a tournament with one discipline
+               used to leave half the row empty, which reads as a layout that
+               broke rather than a list with one item in it. `auto-fit` collapses
+               the empty tracks, so one card fills the width, two split it, and
+               three or more wrap into as many columns as 24rem each will allow.
+
+               `min(100%, 24rem)` rather than a bare `24rem`: below 384px the
+               track would otherwise stay 384px wide and push the page into a
+               horizontal scroll — the one thing a narrow phone must never do. */
+            <ul className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,24rem),1fr))]">
               {competitions.map((competition) => (
                 <Card
                   as="li"
@@ -138,10 +148,17 @@ export default async function TournamentPage({ params }: PageProps) {
               перечисляет дисциплины этого турнира с возрастными границами — без
               них колонка «Категория» заполняется наугад, поэтому ссылки нет,
               пока нет дисциплин. */}
+          {/* No `download` attribute. The API is a different origin to the site
+              (`:8000` vs `:3000`), and a browser ignores `download` across
+              origins — Chrome then also stops honouring the filename the server
+              sent, and saves the sheet under a generated id with no extension.
+              The server already answers with
+              `Content-Disposition: attachment; filename="participants-template.xlsx"`,
+              which is the mechanism that actually names the file, so the
+              attribute was contributing nothing but the bug. */}
           {competitions.length > 0 ? (
             <a
               href={participantTemplateUrl(tournament.id)}
-              download
               className="label-link label-link-fwd mt-5 font-record text-xs uppercase tracking-[0.1em] text-[var(--muted)]"
             >
               Скачать бланк заявки
