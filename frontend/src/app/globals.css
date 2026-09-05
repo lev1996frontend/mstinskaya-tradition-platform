@@ -1708,17 +1708,46 @@ button:not(:disabled),
 }
 
 /* `transform-box: view-box` so the origin is read in the SVG's own coordinate
-   space; without it the browser measures from the group's bounding box, which
-   is the arm — and the weight then spins about its own middle instead of
-   travelling round the mark. */
-.lot-loader-arm {
+   space; without it the browser measures from each group's own bounding box —
+   the chain would spin about the middle of the chain and the weight about the
+   middle of the weight, instead of both travelling round the mark. */
+.lot-loader-chain,
+.lot-loader-weight {
   transform-box: view-box;
   transform-origin: 60px 60px;
-  animation: lot-loader-swing 1.15s linear infinite;
+  animation: lot-loader-swing 2.6s linear infinite;
 }
 
+/* The weight runs the very same keyframes a beat later. Because the swing is
+   not a constant speed, a constant lag in *time* is a changing lag in *angle*:
+   the gap between chain and weight opens on the fast part of the turn and
+   closes on the slow part, which is what mass looks like. A fixed rotation
+   offset instead would have read as a rigid arm.
+
+   The delay is one turn *minus* the lag, not minus the lag. A negative delay
+   means "already ran this long", so -0.11s puts the weight 0.11s further on —
+   ahead of its own chain, which is the one thing a weight on a rope cannot be.
+   -2.49s of a 2.6s turn lands at the same phase from the other side and it
+   trails properly. A positive 0.11s would also trail, at the cost of the
+   weight sitting still for the first 0.11s of the page. */
+.lot-loader-weight {
+  animation-delay: -2.49s;
+}
+
+/* Slightly ahead at the halfway mark, so the first half of each turn runs a
+   little quicker than the second — a swung weight is not a clock hand. Kept
+   small: past a few degrees it stops reading as weight and starts reading as
+   a dropped frame. */
 @keyframes lot-loader-swing {
-  to {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  50% {
+    transform: rotate(187deg);
+  }
+
+  100% {
     transform: rotate(360deg);
   }
 }
@@ -1736,9 +1765,9 @@ button:not(:disabled),
   aspect-ratio: 1;
 }
 
-/* Under the global reduced-motion override the swing stops and what is left
-   is a кистень held out on its cord, trail and all — a picture of the object
-   rather than a spinner frozen mid-turn. Nothing extra is needed for that,
+/* Under the global reduced-motion override the swing stops and what is left is
+   the mark with its chain and weight held out to one side — a picture of a
+   кистень, not a spinner frozen mid-turn. Nothing extra is needed for that,
    which is the argument for drawing an object instead of an arc. */
 
 /* черта, которая дочерчивается (nav-pending-rule) — the header already marks
