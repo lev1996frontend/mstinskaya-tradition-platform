@@ -228,3 +228,4 @@ skills-lock.json
 
 # Local dev database
 backend/dev.db
+backend/verify.db

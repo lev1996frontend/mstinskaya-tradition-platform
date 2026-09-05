@@ -107,6 +107,9 @@ class CompetitionView(BaseModel):
     #: Short Russian label for those bounds («45+», «до 14 лет»), or null when
     #: unbounded — computed once here so every surface phrases it identically.
     age_label: str | None = None
+    #: Largest age difference allowed inside one bracket, or null when the
+    #: discipline fights as one field.
+    max_age_gap: int | None = None
     type: str
     format: str
     status: str

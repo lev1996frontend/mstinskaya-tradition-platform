@@ -246,6 +246,7 @@ class TournamentReadService:
             min_age=competition.min_age,
             max_age=competition.max_age,
             age_label=eligibility.describe_bounds(competition.min_age, competition.max_age),
+            max_age_gap=competition.max_age_gap,
             type=competition.competition_type,
             format=competition.format,
             status=competition.status,

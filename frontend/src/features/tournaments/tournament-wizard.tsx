@@ -66,6 +66,14 @@ type Discipline = {
   /** Blank means unbounded, which is the usual case. */
   minAge: string;
   maxAge: string;
+  /**
+   * Largest age difference one bracket may hold, in whole years. Blank
+   * everywhere by default — an adult category fights as one field. Filled in
+   * on a children's category it lets the platform cut the entrants into age
+   * streams instead of putting an eight-year-old opposite a fourteen-year-old.
+   * The number is the organizer's: a safety rule is not ours to invent.
+   */
+  maxAgeGap: string;
 };
 
 type Entry = {
@@ -102,6 +110,9 @@ const PRESETS: { label: string; discipline: Omit<Discipline, "key"> }[] = [
       format: "SINGLE_ELIMINATION",
       minAge: "",
       maxAge: "14",
+      // Left blank on purpose: the age gap a bracket may hold is a safety
+      // rule, and no number for it has been confirmed.
+      maxAgeGap: "",
     },
   },
   {
@@ -112,6 +123,7 @@ const PRESETS: { label: string; discipline: Omit<Discipline, "key"> }[] = [
       format: "SINGLE_ELIMINATION",
       minAge: "",
       maxAge: "",
+      maxAgeGap: "",
     },
   },
   {
@@ -122,6 +134,7 @@ const PRESETS: { label: string; discipline: Omit<Discipline, "key"> }[] = [
       format: "SINGLE_ELIMINATION",
       minAge: "45",
       maxAge: "",
+      maxAgeGap: "",
     },
   },
   {
@@ -132,6 +145,7 @@ const PRESETS: { label: string; discipline: Omit<Discipline, "key"> }[] = [
       format: "ROUND_ROBIN",
       minAge: "",
       maxAge: "",
+      maxAgeGap: "",
     },
   },
 ];
@@ -157,6 +171,7 @@ function newDiscipline(name = ""): Discipline {
     format: "SINGLE_ELIMINATION",
     minAge: "",
     maxAge: "",
+    maxAgeGap: "",
   };
 }
 
@@ -382,6 +397,7 @@ export function TournamentWizard() {
           status: "REGISTRATION",
           min_age: discipline.minAge.trim() ? Number(discipline.minAge) : null,
           max_age: discipline.maxAge.trim() ? Number(discipline.maxAge) : null,
+          max_age_gap: discipline.maxAgeGap.trim() ? Number(discipline.maxAgeGap) : null,
         });
         built.push({
           id: competition.id,
@@ -585,7 +601,7 @@ export function TournamentWizard() {
               {disciplines.map((discipline, index) => (
                 <li
                   key={discipline.key}
-                  className="grid gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] p-2 sm:grid-cols-[1.6fr_1fr_1fr_4.5rem_4.5rem_2rem] sm:items-center"
+                  className="grid gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] p-2 sm:grid-cols-[1.5fr_1fr_1fr_4rem_4rem_5rem_2rem] sm:items-center"
                 >
                   <Input
                     value={discipline.name}
@@ -641,6 +657,15 @@ export function TournamentWizard() {
                     inputMode="numeric"
                     aria-label={`Максимальный возраст в дисциплине ${index + 1}`}
                   />
+                  <Input
+                    value={discipline.maxAgeGap}
+                    onChange={(event) =>
+                      updateDiscipline(discipline.key, { maxAgeGap: event.target.value })
+                    }
+                    placeholder="разрыв"
+                    inputMode="numeric"
+                    aria-label={`Допустимый разрыв в возрасте в дисциплине ${index + 1}`}
+                  />
                   <button
                     type="button"
                     aria-label={`Удалить дисциплину ${index + 1}`}
@@ -660,6 +685,11 @@ export function TournamentWizard() {
               Возраст «от» и «до» — необязательные и независимые. Пусто с обеих сторон значит, что
               ограничения нет и год рождения вообще не спрашивается. Считается по году турнира:
               «45+» — это те, кому в год турнира исполняется 45.
+            </p>
+            <p className="text-xs text-[var(--muted)]">
+              «Разрыв» — наибольшая допустимая разница в возрасте внутри одной сетки. Пусто —
+              дисциплина бьётся одним составом, как все взрослые. Заполнено — платформа сама
+              разложит заявленных по возрастным потокам, когда дойдёт до сетки.
             </p>
             <p className="text-xs text-[var(--muted)]">
               На этом шаге турнир и дисциплины создаются в базе: без них сервер не сможет

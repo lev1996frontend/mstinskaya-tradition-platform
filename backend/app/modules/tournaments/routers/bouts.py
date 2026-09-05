@@ -15,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.modules.tournaments.domain import rules
 from app.modules.tournaments.schemas.bouts import (
+    AgeSplitResultView,
+    AgeSplitView,
     BoutDetailView,
     BracketGenerateRequest,
     BracketPlanView,
@@ -46,6 +48,7 @@ from app.modules.tournaments.security.deps import (
     ensure_can_manage_participant,
     get_current_manager,
 )
+from app.modules.tournaments.services.age_split_service import AgeSplitService
 from app.modules.tournaments.services.bout_service import BoutService
 from app.modules.tournaments.services.bracket_service import BracketService
 from app.modules.tournaments.services.group_service import GroupService
@@ -467,3 +470,41 @@ async def generate_playoff(
     )
     await session.commit()
     return BracketPlanView(**plan)
+
+
+# --------------------------------------------------------------- age streams
+
+
+@router.get("/competitions/{competition_id}/age-split", response_model=AgeSplitView)
+async def preview_age_split(
+    competition_id: str, session: AsyncSession = Depends(get_db)
+) -> AgeSplitView:
+    """The age streams this discipline would be cut into. Writes nothing.
+
+    Public, like the other read projections: which children fight whom is not
+    a secret, and the page showing it is the same one everybody reads.
+    """
+    return AgeSplitView(**await AgeSplitService.preview(session, competition_id))
+
+
+@router.post(
+    "/competitions/{competition_id}/age-split",
+    response_model=AgeSplitResultView,
+    status_code=status.HTTP_201_CREATED,
+)
+async def apply_age_split(
+    competition_id: str,
+    manager: TournamentManager = Depends(get_current_manager),
+    session: AsyncSession = Depends(get_db),
+) -> AgeSplitResultView:
+    """Turn the streams into disciplines of their own.
+
+    This one keeps its id and becomes the youngest stream; the rest are created
+    beside it. Each then runs as an ordinary discipline — own bracket, own
+    champion — so nothing downstream has to learn what a stream is.
+    """
+    competition = await TournamentReadService.get_competition(session, competition_id)
+    await ensure_can_manage_competition(session, manager, competition)
+    result = await AgeSplitService.apply(session, competition_id, actor_id=manager.user.id)
+    await session.commit()
+    return AgeSplitResultView(**result)

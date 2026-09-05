@@ -136,6 +136,10 @@ export interface CompetitionView {
   /** Short Russian label for those bounds («45+», «до 14 лет»), or null when
    *  unbounded — computed on the server so every surface phrases it alike. */
   age_label: string | null;
+  /** Largest age difference allowed inside one bracket, or null when the
+   *  discipline fights as one field. Set on a children's category it lets the
+   *  platform cut the entrants into age streams. */
+  max_age_gap: number | null;
   type: CompetitionType;
   format: CompetitionFormat;
   status: CompetitionStatus;
@@ -415,6 +419,41 @@ export interface FirstRoundPairPlan {
   participant_b_id: string | null;
   participant_b_name: string | null;
   participant_b_city: string | null;
+}
+
+// -------------------------------------------------------------- age streams
+
+export interface AgeBandMemberView {
+  participant_id: string;
+  display_name: string;
+  age: number | null;
+}
+
+/** One stream a too-wide category would be cut into. */
+export interface AgeBandView {
+  label: string;
+  name: string;
+  min_age: number;
+  max_age: number;
+  /** Holds a single fighter. Reported, never merged away: folding them into
+   *  the neighbouring stream is what the age gap exists to prevent. */
+  is_lonely: boolean;
+  members: AgeBandMemberView[];
+}
+
+export interface AgeSplitView {
+  competition_id: string;
+  competition_name: string;
+  max_age_gap: number | null;
+  participant_count: number;
+  age_min: number | null;
+  age_max: number | null;
+  age_spread: number;
+  /** False when the field already fits inside the allowed gap. */
+  split_needed: boolean;
+  ready: boolean;
+  blockers: QualificationBlocker[];
+  bands: AgeBandView[];
 }
 
 // ------------------------------------------------------------- group stage

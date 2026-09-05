@@ -44,6 +44,14 @@ class Competition(Base):
     #: `domain/eligibility.py`.
     min_age: Mapped[int | None] = mapped_column(nullable=True)
     max_age: Mapped[int | None] = mapped_column(nullable=True)
+    #: Largest age difference allowed inside one bracket, in whole years. Null
+    #: — and it is null everywhere until an organizer sets it — means the
+    #: discipline fights as one field, which is how every adult category works.
+    #: Set on a children's category, it lets the platform cut the entrants into
+    #: age streams instead of putting an eight-year-old opposite a fourteen-
+    #: year-old. The number itself is the organizer's: a safety rule is not
+    #: something this codebase may invent (``docs/domain-model.md`` §5).
+    max_age_gap: Mapped[int | None] = mapped_column(nullable=True)
     competition_type: Mapped[str] = mapped_column(String(20), nullable=False, default="INDIVIDUAL")
     format: Mapped[str] = mapped_column(String(30), nullable=False, default="SINGLE_ELIMINATION")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="DRAFT")

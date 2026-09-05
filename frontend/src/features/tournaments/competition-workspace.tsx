@@ -8,6 +8,7 @@ import { Stat, cn } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
 import type {
   BracketTreeView,
+  AgeSplitView,
   ChampionSummaryView,
   CompetitionEventView,
   GroupStageView,
@@ -28,6 +29,7 @@ import { ChampionSummary } from "./champion-summary";
 import { EventsJournal } from "./events-journal";
 import { MatchResultDialog } from "./match-result-dialog";
 import { MatchesList } from "./matches-list";
+import { AgeSplitPanel } from "./age-split-panel";
 import { GroupStageConfig } from "./group-stage-config";
 import { GroupStandings } from "./group-standings";
 import { ParticipantsTable } from "./participants-table";
@@ -61,6 +63,7 @@ export type CompetitionData = {
   champion: ChampionSummaryView | null;
   groupStage: GroupStageView | null;
   qualification: QualificationView | null;
+  ageSplit: AgeSplitView | null;
 };
 
 export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
@@ -76,6 +79,7 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
     champion,
     groupStage,
     qualification,
+    ageSplit,
   } = data;
   const { user } = useAuth();
   const router = useRouter();
@@ -142,6 +146,10 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
   );
   const isGroupFormat =
     competition.format === "GROUP_PLAYOFF" || competition.format === "ROUND_ROBIN";
+  // A category whose entrants are too far apart in age is not a bracket
+  // problem — it has to be cut into streams first, so that offer comes
+  // before the generator rather than beside it.
+  const needsAgeSplit = Boolean(ageSplit?.split_needed);
 
   const [tab, setTab] = useState<TabKey>(tabs[0]?.key ?? "participants");
   const activeTab = tabs.some((item) => item.key === tab) ? tab : (tabs[0]?.key ?? "participants");
@@ -283,7 +291,9 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
                   by this generator anyway; its playoff comes from the
                   qualification step. */}
               {canManage && !hasPlayoff ? (
-                hasGroupStage ? (
+                needsAgeSplit && ageSplit ? (
+                  <AgeSplitPanel state={ageSplit} canManage={canManage} onSplit={refresh} />
+                ) : hasGroupStage ? (
                   qualification ? (
                     <QualificationPanel
                       state={qualification}

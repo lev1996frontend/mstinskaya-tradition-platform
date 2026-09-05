@@ -333,4 +333,88 @@ def test_bounds_get_a_short_russian_label():
     assert eligibility.describe_bounds(45, None) == "45+"
     assert eligibility.describe_bounds(None, 14) == "до 14 лет"
     assert eligibility.describe_bounds(12, 14) == "12–14 лет"
+    # A one-year-wide stream: «14–14 лет» would read as a typo.
+    assert eligibility.describe_bounds(14, 14) == "14 лет"
     assert eligibility.describe_bounds(None, None) is None
+
+
+# ------------------------------------------------------------- age bands
+
+
+def band(entrants, gap):
+    """`[(id, age)]` → list of `(label, [ids])`, for readable assertions."""
+    return [
+        (item.label, list(item.participant_ids))
+        for item in eligibility.split_into_age_bands(entrants, max_gap=gap)
+    ]
+
+
+CHILDREN = [("ваня", 8), ("гриша", 9), ("тимофей", 11), ("захар", 12), ("митя", 13), ("лёшка", 14)]
+
+
+def test_a_gap_of_two_cuts_the_children_into_three_streams():
+    """8, 9, 11, 12, 13, 14 with a gap of two.
+
+    The middle stream is 11–13, not 11–12: eleven to thirteen is exactly two
+    years, so they fight together and fourteen is left on its own. The cut
+    follows from the rule rather than from a tidy-looking guess.
+    """
+    assert band(CHILDREN, 2) == [
+        ("8–9", ["ваня", "гриша"]),
+        ("11–13", ["тимофей", "захар", "митя"]),
+        ("14", ["лёшка"]),
+    ]
+
+
+def test_a_wider_gap_makes_fewer_streams():
+    assert band(CHILDREN, 3) == [
+        ("8–11", ["ваня", "гриша", "тимофей"]),
+        ("12–14", ["захар", "митя", "лёшка"]),
+    ]
+    assert band(CHILDREN, 6) == [("8–14", ["ваня", "гриша", "тимофей", "захар", "митя", "лёшка"])]
+
+
+def test_the_gap_is_a_difference_not_a_count():
+    """A gap of 2 holds 8, 9 and 10 — three ages, two years apart."""
+    assert band([("а", 8), ("б", 9), ("в", 10), ("г", 11)], 2) == [
+        ("8–10", ["а", "б", "в"]),
+        ("11", ["г"]),
+    ]
+
+
+def test_a_gap_of_zero_puts_every_age_on_its_own():
+    assert band([("а", 8), ("б", 8), ("в", 9)], 0) == [("8", ["а", "б"]), ("9", ["в"])]
+
+
+def test_one_age_is_never_split():
+    assert band([("а", 12), ("б", 12), ("в", 12)], 2) == [("12", ["а", "б", "в"])]
+
+
+def test_the_cut_is_minimal_and_never_leaves_a_stream_too_wide():
+    for gap in range(0, 7):
+        bands = eligibility.split_into_age_bands(CHILDREN, max_gap=gap)
+        # every stream honours the rule…
+        assert all(b.max_age - b.min_age <= gap for b in bands)
+        # …everyone is placed exactly once…
+        placed = [pid for b in bands for pid in b.participant_ids]
+        assert sorted(placed) == sorted(pid for pid, _ in CHILDREN)
+        # …and no two streams could have been merged into one.
+        for earlier, later in zip(bands, bands[1:]):
+            assert later.max_age - earlier.min_age > gap
+
+
+def test_a_stream_of_one_is_reported_not_folded_into_its_neighbour():
+    """Merging it would break the very rule the gap expresses."""
+    bands = eligibility.split_into_age_bands([("малой", 8), ("средний", 12), ("старший", 13)], max_gap=2)
+    assert [b.label for b in bands] == ["8", "12–13"]
+    assert bands[0].is_lonely is True
+    assert bands[1].is_lonely is False
+
+
+def test_an_empty_field_yields_no_streams():
+    assert eligibility.split_into_age_bands([], max_gap=2) == []
+
+
+def test_a_negative_gap_is_refused():
+    with pytest.raises(ValueError):
+        eligibility.split_into_age_bands(CHILDREN, max_gap=-1)

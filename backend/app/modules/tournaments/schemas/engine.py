@@ -76,6 +76,10 @@ class CompetitionCreateRequest(BaseModel):
     #: which is what lets a fifty-year-old enter both.
     min_age: int | None = Field(default=None, ge=0, le=120)
     max_age: int | None = Field(default=None, ge=0, le=120)
+    #: Largest age difference allowed inside one bracket. Null — the usual case
+    #: — means the discipline fights as one field. Set on a children's category
+    #: it lets the platform cut the entrants into age streams.
+    max_age_gap: int | None = Field(default=None, ge=0, le=120)
     type: CompetitionType = "INDIVIDUAL"
     competition_type: CompetitionType | None = None
     format: CompetitionFormat = "SINGLE_ELIMINATION"
@@ -97,6 +101,7 @@ class CompetitionResponse(BaseModel):
     category_id: IdStr | None = None
     min_age: int | None = None
     max_age: int | None = None
+    max_age_gap: int | None = None
     type: CompetitionType
     format: CompetitionFormat
     status: CompetitionStatus

@@ -416,3 +416,57 @@ class QualificationView(BaseModel):
     qualifiers: list[QualifierView] = Field(default_factory=list)
     #: The playoff that would be built, or null while something blocks it.
     plan: BracketPlanView | None = None
+
+
+# --------------------------------------------------------------- age streams
+
+
+class AgeBandMemberView(BaseModel):
+    participant_id: str
+    display_name: str
+    age: int | None = None
+
+
+class AgeBandView(BaseModel):
+    """One stream a too-wide category would be cut into."""
+
+    label: str
+    name: str
+    min_age: int
+    max_age: int
+    #: Holds a single fighter, so it would produce a champion with no bout.
+    #: Reported rather than merged away: folding them into the neighbouring
+    #: stream is exactly what the age gap exists to prevent.
+    is_lonely: bool = False
+    members: list[AgeBandMemberView] = Field(default_factory=list)
+
+
+class AgeSplitView(BaseModel):
+    competition_id: str
+    competition_name: str
+    max_age_gap: int | None = None
+    participant_count: int = 0
+    age_min: int | None = None
+    age_max: int | None = None
+    age_spread: int = 0
+    #: False when the field already fits inside the allowed gap.
+    split_needed: bool = False
+    ready: bool = False
+    blockers: list[QualificationBlocker] = Field(default_factory=list)
+    bands: list[AgeBandView] = Field(default_factory=list)
+
+
+class AgeSplitResultCompetition(BaseModel):
+    competition_id: str
+    name: str
+    label: str
+    min_age: int
+    max_age: int
+    participant_count: int
+    is_lonely: bool = False
+
+
+class AgeSplitResultView(BaseModel):
+    source_name: str
+    max_age_gap: int | None = None
+    competitions: list[AgeSplitResultCompetition] = Field(default_factory=list)

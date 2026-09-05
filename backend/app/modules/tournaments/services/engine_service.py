@@ -60,6 +60,7 @@ class TournamentEngineService:
             category_id=category_id,
             min_age=min_age,
             max_age=max_age,
+            max_age_gap=data.get("max_age_gap"),
             competition_type=data["type"],
             format=data["format"],
             status=data["status"],

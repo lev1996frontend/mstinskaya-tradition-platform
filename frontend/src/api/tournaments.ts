@@ -9,6 +9,7 @@ import {
 } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/config";
 import type {
+  AgeSplitView,
   AthleteParticipationView,
   BoutDetailView,
   BoutSide,
@@ -104,6 +105,10 @@ export const listDraws = (competitionId: string) =>
 
 export const listEvents = (competitionId: string) =>
   apiListOrEmpty<CompetitionEventView>(`/api/v1/competitions/${competitionId}/events`);
+
+/** The age streams this discipline would be cut into. Writes nothing. */
+export const getAgeSplit = (competitionId: string) =>
+  apiRequestOrNull<AgeSplitView>(`/api/v1/competitions/${competitionId}/age-split`);
 
 export const getGroupStage = (competitionId: string) =>
   apiRequestOrNull<GroupStageView>(`/api/v1/competitions/${competitionId}/groups`);
@@ -236,6 +241,18 @@ export const previewBracket = (competitionId: string) =>
   apiRequest<BracketPlanView>(`/api/v1/competitions/${competitionId}/bracket/preview`, {
     method: "POST",
   });
+
+/**
+ * Turn the age streams into disciplines of their own.
+ *
+ * The competition keeps its id and becomes the youngest stream; the rest are
+ * created beside it, each an ordinary discipline from then on.
+ */
+export const applyAgeSplit = (competitionId: string) =>
+  apiRequest<{ source_name: string; competitions: { competition_id: string; name: string }[] }>(
+    `/api/v1/competitions/${competitionId}/age-split`,
+    { method: "POST" },
+  );
 
 // ------------------------------------------------------------- group stage
 // The organizer states both numbers; the platform only suggests. Neither
@@ -386,6 +403,8 @@ export const createCompetition = (
     category_id?: string | null;
     min_age?: number | null;
     max_age?: number | null;
+    /** Largest age difference one bracket may hold; null means one field. */
+    max_age_gap?: number | null;
   },
 ) =>
   apiRequest<CompetitionView>(`/api/v1/tournaments/${tournamentId}/competitions`, {

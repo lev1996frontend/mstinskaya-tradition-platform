@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import {
   getBracket,
   getChampion,
+  getAgeSplit,
   getCompetition,
   getGroupStage,
   getQualification,
@@ -51,6 +52,7 @@ export default async function CompetitionPage({ params }: PageProps) {
     champion,
     groupStage,
     qualification,
+    ageSplit,
   ] = await Promise.all([
     listParticipants(competitionId),
     listTeams(competitionId),
@@ -63,6 +65,7 @@ export default async function CompetitionPage({ params }: PageProps) {
     getChampion(competitionId),
     getGroupStage(competitionId),
     getQualification(competitionId),
+    getAgeSplit(competitionId),
   ]);
 
   return (
@@ -109,6 +112,7 @@ export default async function CompetitionPage({ params }: PageProps) {
           champion,
           groupStage,
           qualification,
+          ageSplit,
         }}
       />
     </Container>
