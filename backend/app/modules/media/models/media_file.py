@@ -23,14 +23,22 @@ class MediaFile(Base):
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     original_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    storage_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    #: Unique since the table was created, though the model never said so. Two
+    #: rows pointing at one stored object would make deletion of either destroy
+    #: the other's file.
+    storage_key: Mapped[str] = mapped_column(String(500), nullable=False, unique=True)
     url: Mapped[str] = mapped_column(String(1000), nullable=False)
     type: Mapped[str] = mapped_column(String(20), nullable=False, default="DOCUMENT")
     size: Mapped[int | None] = mapped_column(Integer, nullable=True)
     mime_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    #: ``RESTRICT`` rather than the ``SET NULL`` this once declared: the column
+    #: is ``NOT NULL`` and every schema exposing it requires a UUID, so nulling
+    #: it on the uploader's deletion could only ever fail. A file keeps naming
+    #: who put it there; deleting a user who has uploads is refused until the
+    #: uploads are dealt with.
     uploaded_by: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="SET NULL"),
+        ForeignKey("users.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )

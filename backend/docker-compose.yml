@@ -12,10 +12,14 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://mstina:${POSTGRES_PASSWORD}@postgres:5432/mstina
     depends_on:
-      - postgres
+      postgres:
+        # Not just "started": alembic runs first thing on boot, and a Postgres
+        # that has accepted the TCP connection is not yet a Postgres ready to
+        # answer a query.
+        condition: service_healthy
     volumes:
       - .:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
   postgres:
     image: postgres:16-alpine
@@ -28,6 +32,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mstina -d mstina"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
 
 volumes:
   postgres_data:
