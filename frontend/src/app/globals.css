@@ -1681,6 +1681,109 @@ button:not(:disabled),
   animation: bratina-drop 900ms cubic-bezier(0.3, 0.6, 0.4, 1) both;
 }
 
+/* оттиск (loading-seal) — the archive's own mark for "this page is coming"
+   (`components/layout/route-loading.tsx`).
+
+   Two movements, deliberately at different speeds so they read as one thing
+   being done to another rather than as two spinners: a segment travels the
+   outer ring at a steady pace, and the mark under it breathes slowly, the way
+   a stamp is worked into wax and lifted.
+
+   Under the global reduced-motion override both stop, and what is left is a
+   seal with a mark in it and one short stroke on its ring — a still object,
+   not a spinner caught mid-turn. That is why the ring is drawn as a segment
+   on a bed rather than as an arc alone. */
+.loading-seal-arc {
+  animation: loading-seal-arc 1.6s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes loading-seal-arc {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-seal-mark {
+  animation: loading-seal-mark 2.6s ease-in-out infinite;
+}
+
+@keyframes loading-seal-mark {
+  /* The floor is 0.78 and not lower: at 0.62 the mark spent half of every
+     cycle looking switched off rather than breathing, and this emblem is
+     already fine detail at 44px. */
+  0%,
+  100% {
+    opacity: 0.78;
+    transform: scale(0.985);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* черта, которая дочерчивается (nav-pending-rule) — the header already marks
+   the section you are in by striking an oxblood rule under the word
+   (`nav-active-pill` in `site-header.tsx`). While a navigation is in flight it
+   now draws that same rule under the word you are going to, so the answer
+   appears under the pointer at the moment of the click rather than after the
+   server has replied.
+
+   It never reaches full width: it has no idea how long the wait is, and a rule
+   that completes says "arrived" when nothing has. It runs quickly to most of
+   the way and then creeps, and the real active rule replaces it when the page
+   lands.
+
+   A fixed-size element whose `transform` animates, never a growing `width` —
+   the nav is a flex row and an element that changes size in it would shove the
+   other words sideways on every click. */
+.nav-pending-rule {
+  transform: scaleX(0);
+  transform-origin: left center;
+  opacity: 0;
+}
+
+.nav-pending-rule.is-pending {
+  animation: nav-pending-rule 2.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes nav-pending-rule {
+  0% {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+
+  6% {
+    opacity: 1;
+  }
+
+  30% {
+    transform: scaleX(0.68);
+  }
+
+  /* `opacity` restated here and not left to hold from 6%. A property missing
+     from the 100% keyframe does not keep its last declared value — the browser
+     builds the missing endpoint out of the element's own computed style, which
+     for this rule is `opacity: 0`, and then interpolates the whole way down to
+     it. The mark drew itself correctly and faded to nothing while doing it. */
+  100% {
+    transform: scaleX(0.95);
+    opacity: 1;
+  }
+}
+
+/* The global override would leave this at `scaleX(0)` and invisible, i.e. no
+   feedback at all for exactly the readers who asked for less movement. Held
+   at a static part-width mark instead. */
+@media (prefers-reduced-motion: reduce) {
+  .nav-pending-rule.is-pending {
+    opacity: 1;
+    transform: scaleX(0.55);
+  }
+}
+
 /* ожидание (archive-loading) — a picture that has not arrived yet
    (`stenka-photo-reveal.tsx`, which every archive photo goes through).
 
