@@ -1715,7 +1715,7 @@ button:not(:disabled),
 .lot-loader-weight {
   transform-box: view-box;
   transform-origin: 60px 60px;
-  animation: lot-loader-swing 2.6s linear infinite;
+  animation: lot-loader-swing 2.8s linear infinite;
 }
 
 /* The weight runs the very same keyframes a beat later. Because the swing is
@@ -1725,30 +1725,105 @@ button:not(:disabled),
    offset instead would have read as a rigid arm.
 
    The delay is one turn *minus* the lag, not minus the lag. A negative delay
-   means "already ran this long", so -0.11s puts the weight 0.11s further on —
-   ahead of its own chain, which is the one thing a weight on a rope cannot be.
-   -2.49s of a 2.6s turn lands at the same phase from the other side and it
-   trails properly. A positive 0.11s would also trail, at the cost of the
-   weight sitting still for the first 0.11s of the page. */
+   means "already ran this long", so -0.04s would put the weight 0.04s further
+   on — ahead of its own chain, which is the one thing a weight on a rope
+   cannot be. -2.761s of a 2.8s turn reaches the same phase from the other
+   side and trails properly.
+
+   ~5°, and no more: the weight rests about 12° behind the last link, so a
+   bigger lag pulls the ball clean off the end of its own chain. The two
+   numbers are sized against each other — change one and check the other. */
 .lot-loader-weight {
-  animation-delay: -2.49s;
+  animation-delay: -2.761s;
 }
 
-/* Slightly ahead at the halfway mark, so the first half of each turn runs a
-   little quicker than the second — a swung weight is not a clock hand. Kept
-   small: past a few degrees it stops reading as weight and starts reading as
-   a dropped frame. */
+/* Мягкий ход. The angle follows `t·360 + 8·sin(2πt)` rather than a straight
+   ramp, so the swing runs a little quicker through one side of the turn and
+   eases through the other — a swung weight is not a clock hand.
+
+   Sampled at eight points rather than eased with a `cubic-bezier`: a bezier
+   over a whole revolution accelerates from a standstill and stops dead at
+   100%, which on `infinite` is a visible hitch every turn. A sine has the
+   same slope entering and leaving the loop, so it never seams. */
 @keyframes lot-loader-swing {
   0% {
     transform: rotate(0deg);
   }
 
+  12.5% {
+    transform: rotate(50.7deg);
+  }
+
+  25% {
+    transform: rotate(98deg);
+  }
+
+  37.5% {
+    transform: rotate(140.7deg);
+  }
+
   50% {
-    transform: rotate(187deg);
+    transform: rotate(180deg);
+  }
+
+  62.5% {
+    transform: rotate(219.3deg);
+  }
+
+  75% {
+    transform: rotate(262deg);
+  }
+
+  87.5% {
+    transform: rotate(309.3deg);
   }
 
   100% {
     transform: rotate(360deg);
+  }
+}
+
+/* Воздух за грузом. The three arcs are struck on the orbit's own radius, so
+   they already curve the right way; this only strikes them out and lets them
+   go, in step with the swing.
+
+   One period, the swing's own, so the trail is longest and clearest where the
+   turn is quickest (the start and end of the cycle, where the sine adds most
+   speed) and shortest where it eases through the middle. It is never a
+   separate clock — that would read as a fourth object going round.
+
+   Length is `stroke-dashoffset` against a normalised `pathLength`, which is
+   why one rule shortens all three despite their different real lengths. */
+.lot-loader-trail path {
+  fill: none;
+  opacity: 0;
+  animation: lot-loader-trail 2.8s linear infinite;
+}
+
+@keyframes lot-loader-trail {
+  0% {
+    opacity: var(--trail);
+    stroke-dashoffset: 0;
+  }
+
+  30% {
+    opacity: calc(var(--trail) * 0.5);
+    stroke-dashoffset: 0.34;
+  }
+
+  50% {
+    opacity: calc(var(--trail) * 0.22);
+    stroke-dashoffset: 0.6;
+  }
+
+  70% {
+    opacity: calc(var(--trail) * 0.5);
+    stroke-dashoffset: 0.34;
+  }
+
+  100% {
+    opacity: var(--trail);
+    stroke-dashoffset: 0;
   }
 }
 
