@@ -1696,7 +1696,11 @@ button:not(:disabled),
   position: relative;
   display: inline-grid;
   place-items: center;
-  width: clamp(92px, 24vw, 132px);
+  /* Everything inside is drawn in a viewBox or sized as a percentage, so this
+     one width scales the whole composition — mark, circle, chain, ball and the
+     air behind it — in proportion. ~256px at 1920, twice what it was, and 100px
+     on a phone where it has to stay out of the way. */
+  width: clamp(100px, 64px + 10vw, 280px);
   aspect-ratio: 1;
 }
 
@@ -1711,11 +1715,26 @@ button:not(:disabled),
    space; without it the browser measures from each group's own bounding box —
    the chain would spin about the middle of the chain and the weight about the
    middle of the weight, instead of both travelling round the mark. */
-.lot-loader-chain,
-.lot-loader-weight {
+/* Две вложенные оси. The hand walks slowly round the mark; the кистень is
+   worked quickly about the hand. It is the ratio between the two that says
+   "someone is spinning this" rather than "something is orbiting a logo" — one
+   rotation alone was what made every previous pass read as decoration.
+
+   `transform-box: view-box` on all of them: without it the browser measures
+   each origin from that group's own bounding box, so the chain would spin
+   about the middle of the chain instead of about the hand. */
+.lot-loader-hand {
   transform-box: view-box;
   transform-origin: 60px 60px;
-  animation: lot-loader-swing 2.8s linear infinite;
+  animation: lot-loader-swing 6s linear infinite;
+}
+
+.lot-loader-flail,
+.lot-loader-weight {
+  transform-box: view-box;
+  /* The hand, not the centre. */
+  transform-origin: 101px 60px;
+  animation: lot-loader-swing 1.1s linear infinite;
 }
 
 /* The weight runs the very same keyframes a beat later. Because the swing is
@@ -1725,16 +1744,16 @@ button:not(:disabled),
    offset instead would have read as a rigid arm.
 
    The delay is one turn *minus* the lag, not minus the lag. A negative delay
-   means "already ran this long", so -0.04s would put the weight 0.04s further
+   means "already ran this long", so -0.012s would put the ball 0.012s further
    on — ahead of its own chain, which is the one thing a weight on a rope
-   cannot be. -2.761s of a 2.8s turn reaches the same phase from the other
-   side and trails properly.
+   cannot be. -1.088s of a 1.1s spin reaches the same phase from the other side
+   and trails properly.
 
-   ~5°, and no more: the weight rests about 12° behind the last link, so a
-   bigger lag pulls the ball clean off the end of its own chain. The two
-   numbers are sized against each other — change one and check the other. */
+   ~4°, and no more: the ball overlaps the last link by about a unit and a half,
+   so a bigger lag drags it clean off the end of the chain. The two numbers are
+   sized against each other — change one and check the other. */
 .lot-loader-weight {
-  animation-delay: -2.761s;
+  animation-delay: -1.088s;
 }
 
 /* Мягкий ход. The angle follows `t·360 + 8·sin(2πt)` rather than a straight
@@ -1797,7 +1816,9 @@ button:not(:disabled),
 .lot-loader-trail path {
   fill: none;
   opacity: 0;
-  animation: lot-loader-trail 2.8s linear infinite;
+  /* The spin's period, not the hand's walk: the air is displaced by the ball
+     going round the hand, so it has to breathe on that clock. */
+  animation: lot-loader-trail 1.1s linear infinite;
 }
 
 @keyframes lot-loader-trail {

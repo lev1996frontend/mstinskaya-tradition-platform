@@ -9,39 +9,56 @@ import { Container } from "@/components/ui";
  * page simply stood there until the new one was ready.
  *
  * The wait is spent watching the one снаряд in this tradition that is *made*
- * to go round: a кистень is a weight on a cord, and swinging it is the whole
- * technique. So the loader is not a ring with a gap in it that happens to
- * rotate — it is the object doing the thing the object does, with the club
- * mark standing still at the middle holding it. A circular orbit because that
- * is what a swung weight actually travels.
+ * to go round. What has to read, in one glance, is not an ornament circling a
+ * logo but somebody working a кистень:
  *
- * Read in one glance it should say: mark → chain → weight → the air behind it.
+ *     рукоять -> натянутая цепь -> тяжёлый груз -> воздух за ним
  *
- * The chain lies *along* the orbit rather than out across it, and that is the
- * whole reason it reads as a chain. Drawn radially it has only the ~20px
- * between the emblem and the ring to live in — five pixels a link, and five
- * pixels can only ever be a dot, which is what the first two attempts here
- * produced. Along the arc a link is 12 units and can be a proper link:
- * alternating full and edge-on ovals overlapping at the ends, which is what a
- * chain looks like from the side and what makes links interlock instead of
- * queue.
+ * That comes from two nested rotations, and it is the ratio between them that
+ * does the work. The hand walks slowly round the mark (6s); the кистень is
+ * spun quickly about the hand (1.1s). A single rotation — which is what every
+ * earlier pass had — can only ever look like decoration going round a logo,
+ * however the links are drawn.
  *
- * The weight rides its own group so it can lag: the swing is not linear, and
- * the weight runs the same keyframes a beat later, so the gap between chain
- * and weight opens and closes through every turn. That is the whole of the
- * inertia — nothing measures anything, it is two clocks a little out of step.
- * The lag is kept to about 5° because the ball rests only ~12° off the last
- * link; more and it comes off the end of its own chain.
+ * The hand does not spin. It is a grip bar outside the spinning group, the
+ * fixed point the whole thing is worked about; the emblem is a symbol at the
+ * centre of the composition rather than the pivot.
  *
- * Behind the ball, three thin arcs struck on the orbit's own radius: the air
- * it has just gone through. They ride the weight's group, so they are part of
- * its movement and not a fourth thing circling the mark, and they run on the
- * swing's own period — longest where the turn is quickest, shortest where it
- * eases. Under reduced motion they simply do not draw, which is right: a
- * speed trail on something that is not moving would be a lie.
+ * Two numbers decide the rest, and they are arithmetic rather than taste. The
+ * ball has to clear the emblem on the inner pass of its loop and stay inside
+ * the box on the outer one; with the emblem at 22.8 units those two
+ * constraints leave a hand radius of 41 and a chain of 13.4, of which the
+ * ball's own body takes 3.2. So there is room for exactly one link. Two would
+ * be about 7px each at the loader's largest, which is the bead three previous
+ * passes kept producing. A taut line with one link on it says "chain" at every
+ * size this loader takes; a queue of small ovals says "beads" at most of them.
  *
- * It replaced an abstract gold arc travelling a seal. The arc was fine and
- * read as "loading"; it just as easily belonged to any other site.
+ * The ball is deliberately small against the chain — under half its length. An
+ * earlier cut had it at nearly three quarters, and a weight that size on a
+ * chain that short is a lollipop, not a кистень.
+ *
+ * The whole кистень is only about a tenth of the box across, against an emblem
+ * that is 38% of it, and it cannot be made longer — the pincer above forbids
+ * it. So it earns its presence in line weight rather than in size: every
+ * stroke in it is a step heavier than the hairline the circle is drawn with.
+ *
+ * The ball is filled, and that is the single most important line in this file.
+ * Drawn as an outline with hatching inside — which it was — the hatching turns
+ * to mush at the ~18px it is really rendered at, and what survives is a circle
+ * outline: one more link. Filled, the contrast between a thin chain and a
+ * dense mass is legible at any size.
+ *
+ * The ball rides its own copy of the spin, a beat late, so it trails the chain
+ * by ~4 degrees: two clocks a little out of step is the whole of the inertia.
+ * It is a sibling of the chain, never nested inside it — nested, it would take
+ * the chain's rotation *and* its own and spin twice as fast.
+ *
+ * Behind it, three thin arcs struck on the ball's own epicycle: the air it has
+ * just gone through. They ride the ball's group, so they belong to its movement
+ * rather than being a fourth thing circling the mark, and they breathe on the
+ * spin's period — longest where the turn is quickest. Under reduced motion they
+ * do not draw at all, which is right: a speed trail on something that is not
+ * moving would be a lie.
  *
  * One thing asked for is deliberately absent: a decelerating stop at the end
  * of the wait. `loading.tsx` is a Suspense fallback — React swaps it for the
@@ -50,10 +67,11 @@ import { Container } from "@/components/ui";
  * for the same reason a hard stop would have been jarring; it simply never
  * gets to finish, which is what arriving looks like.
  *
- * Sizing is fluid (`clamp`), not fixed. At a flat 132px this filled 41% of a
- * 320px phone. The floor is set by the mark rather than by taste: this emblem
- * is fine detail that turns to mud much under ~34px, and at the smallest box
- * the mark is a third of it.
+ * Sizing is fluid (`clamp`), not fixed, and one width scales the whole
+ * composition because everything inside is viewBox- or percentage-driven:
+ * ~256px at 1920, 100px on a phone. The floor is set by the mark rather than
+ * by taste — this emblem is fine detail that turns to mud much under ~34px,
+ * and the mark is 38% of the box.
  *
  * In the page body and not over the screen: a section is being turned to, not
  * the whole site blocked, so the header and the margin river stay usable. Not
@@ -70,100 +88,92 @@ export function RouteLoading({ label = "Поднимаем лист" }: { label?
       <div role="status" aria-live="polite" className="grid place-items-center gap-6">
         <span className="lot-loader" aria-hidden="true">
           <svg viewBox="0 0 120 120" fill="none" className="lot-loader-field">
-            {/* The circle the weight travels, drawn faintly so the knot has
-                somewhere to be rather than swinging in nothing. */}
+            {/* Круг — near enough the outer envelope of the ball's path to be
+                its line rather than decoration: the hand walks at 41 and the
+                chain is 13.4, so the ball crosses this circle at the far point of
+                every loop. It cannot sit exactly on it — clearing the emblem on
+                the inner pass and staying in the box on the outer one pins both
+                radii, and 41 + 13.4 is what those two constraints leave. */}
             <circle cx="60" cy="60" r="50" stroke="var(--iron)" strokeWidth="1" opacity="0.6" />
 
-            {/* Цепь — four links lying *along* the orbit, not out across it.
-                That is what makes them links instead of beads: a chain drawn
-                radially has only the ~20px between the emblem and the ring to
-                live in, which is 5px a link, and five pixels can only ever be
-                a dot. Following the arc it has the better part of a quarter
-                turn, so a link is 12 units long and reads as one.
-
-                Alternating full and edge-on ovals, overlapping at the ends: a
-                chain seen from the side is exactly that, every other link
-                turned ninety degrees and foreshortened. The overlap is what
-                makes them interlock rather than queue.
-
-                The leading link crosses the trajectory circle, which is where
-                the chain is made fast; from there it falls away inward — the
-                radius dips from 50 to 45.5 across the middle links and comes
-                back — so the chain hangs with some slack under the weight
-                instead of lying out straight. */}
-            <g className="lot-loader-chain">
-              <ellipse
-                cx="104.94" cy="81.92" rx="6.2" ry="3.3"
-                transform="rotate(116 104.94 81.92)"
-                stroke="var(--gold)" strokeWidth="1.2"
+            {/* Ход руки. Everything below rides this group, which walks the
+                hand slowly round the emblem. The hand itself is at (101, 60) —
+                between the mark and the circle — and it does not spin: it is
+                the fixed point the кистень is worked about. */}
+            <g className="lot-loader-hand">
+              {/* Рукоять — a short bar across the line of the chain, held
+                  crosswise. Not a ring: a ring here is one more link, which is
+                  precisely the confusion this whole pass is undoing. It sits
+                  outside the spinning group, so it stays put while the кистень
+                  goes round it. */}
+              <path
+                d="M100.2 55.9 V64.1"
+                stroke="var(--gold)" strokeWidth="2.6" strokeLinecap="round"
               />
-              <ellipse
-                cx="106.17" cy="72.37" rx="6.2" ry="1.9"
-                transform="rotate(105 106.17 72.37)"
-                stroke="var(--gold)" strokeWidth="1.2"
-              />
-              <ellipse
-                cx="105.40" cy="63.20" rx="6.2" ry="3.3"
-                transform="rotate(94 105.40 63.20)"
-                stroke="var(--gold)" strokeWidth="1.2"
-              />
-              <ellipse
-                cx="107.44" cy="54.17" rx="6.2" ry="1.9"
-                transform="rotate(83 107.44 54.17)"
-                stroke="var(--gold)" strokeWidth="1.2"
-              />
-            </g>
+              <path d="M100.2 60 H102.6" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" />
 
-            {/* Утяжелитель и воздух за ним. Both on the lagging group, so the
-                trail is part of the weight's own movement rather than a third
-                thing going round the mark.
+              {/* Цепь — taut, straight out from the hand: a drawn line with a
+                  single link on it, and the link count is arithmetic rather
+                  than taste. The ball has to clear the emblem on its inner pass
+                  and stay in the box on its outer one, which pins the chain at
+                  13.4 units; the ball's own body takes 3.2 of those, leaving
+                  about 9 for chain. One link in that space is ~15px at the
+                  loader's full size and reads as a link. Two are 7px each,
+                  which is precisely the bead this pass exists to stop drawing.
 
-                The weight sits close enough to the last link that the lag
-                never pulls it off the chain — the resting gap and the lag are
-                sized against each other, ~12° apart and ~5° of lag. */}
-            <g className="lot-loader-weight">
-              {/* Три следа в воздухе. Arcs struck on the orbit's own radius, so
-                  they carry its curvature exactly; nearest is longest and
-                  least faint, and each fades and shortens toward the tail.
-                  `pathLength="1"` normalises them so one dash rule shortens
-                  all three regardless of their real length. */}
-              <g className="lot-loader-trail">
-                <path
-                  d="M103.70 36.76 A49.5 49.5 0 0 0 99.53 30.21"
-                  pathLength="1" strokeDasharray="1"
-                  stroke="var(--gold)" strokeWidth="0.9" strokeLinecap="round"
-                  style={{ "--trail": "0.24" } as Record<string, string>}
-                />
-                <path
-                  d="M97.36 27.52 A49.5 49.5 0 0 0 93.76 23.79"
-                  pathLength="1" strokeDasharray="1"
-                  stroke="var(--gold)" strokeWidth="0.8" strokeLinecap="round"
-                  style={{ "--trail": "0.14", animationDelay: "-0.12s" } as Record<string, string>}
-                />
-                <path
-                  d="M91.15 21.53 A49.5 49.5 0 0 0 88.39 19.45"
-                  pathLength="1" strokeDasharray="1"
-                  stroke="var(--gold)" strokeWidth="0.7" strokeLinecap="round"
-                  style={{ "--trail": "0.08", animationDelay: "-0.24s" } as Record<string, string>}
-                />
+                  The line is what carries the read at small sizes — a taut cord
+                  from a grip to a heavy ball is legible long after any link
+                  detail has closed up. */}
+              <g className="lot-loader-flail">
+                <path d="M102.4 60 H111.6" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" />
+                <ellipse cx="106.9" cy="60" rx="3.4" ry="2.2" stroke="var(--gold)" strokeWidth="1.5" />
               </g>
 
-              {/* Filled on the ground colour first so neither the trajectory
-                  nor a trail shows through the metal. Heavier line than the
-                  links carry, and a hair wider across: at the same weight of
-                  stroke it read as one more ring on the end of the chain
-                  rather than as the thing the chain is carrying. */}
-              <circle cx="106.80" cy="43.88" r="6.9" fill="var(--background-deep)" />
-              <circle cx="106.80" cy="43.88" r="6.9" stroke="var(--gold)" strokeWidth="2.1" />
-              {/* Штриховка — three chords across it, the way mass is shaded in
-                  a plate engraving. It is what separates the ball from the
-                  links without making it any bigger than it needs to be. */}
-              <path
-                d="M102.71 40.00 L105.97 49.46 M105.17 39.15 L108.43 48.61 M107.63 38.30 L110.89 47.76"
-                stroke="var(--gold)"
-                strokeWidth="0.8"
-                opacity="0.55"
-              />
+              {/* Груз и воздух за ним, on their own copy of the spin so the
+                  ball can trail the chain by a few degrees. A sibling of the
+                  chain, never nested inside it — nested, it would take the
+                  chain's rotation *and* its own and spin twice as fast. */}
+              <g className="lot-loader-weight">
+                {/* Воздушный след — arcs struck on the ball's own epicycle,
+                    centred on the hand at radius 13.4, so they lie exactly where
+                    it has just been. Nearest is longest and least faint.
+                    `pathLength="1"` normalises them, so one dash rule shortens
+                    all three despite their different real lengths. */}
+                <g className="lot-loader-trail">
+                  <path
+                    d="M113.59 55.42 A13.4 13.4 0 0 0 110.31 50.36"
+                    pathLength="1" strokeDasharray="1"
+                    stroke="var(--gold)" strokeWidth="1.1" strokeLinecap="round"
+                    style={{ "--trail": "0.3" } as Record<string, string>}
+                  />
+                  <path
+                    d="M108.88 49.16 A13.4 13.4 0 0 0 103.79 46.89"
+                    pathLength="1" strokeDasharray="1"
+                    stroke="var(--gold)" strokeWidth="0.95" strokeLinecap="round"
+                    style={{ "--trail": "0.17", animationDelay: "-0.05s" } as Record<string, string>}
+                  />
+                  <path
+                    d="M101.00 46.60 A13.4 13.4 0 0 0 96.86 47.26"
+                    pathLength="1" strokeDasharray="1"
+                    stroke="var(--gold)" strokeWidth="0.8" strokeLinecap="round"
+                    style={{ "--trail": "0.09", animationDelay: "-0.1s" } as Record<string, string>}
+                  />
+                </g>
+
+                {/* Утяжелитель — solid, and that is the whole point. Drawn as
+                    an outline with hatching inside it, at the ~15px this is
+                    really rendered at, the hatching turns to mush and what
+                    survives is a circle outline: one more link. Filled, the
+                    contrast between a thin chain and a dense mass is legible at
+                    any size the loader ever takes. */}
+                <circle cx="114.4" cy="60" r="3.2" fill="var(--gold)" />
+                {/* One lit edge, upper-left, so it reads as a ball rather than
+                    a disc. */}
+                <path
+                  d="M112.36 59.26 A2.18 2.18 0 0 1 115.14 57.96"
+                  stroke="var(--gold-strong)" strokeWidth="1.1" strokeLinecap="round" opacity="0.75"
+                />
+              </g>
             </g>
           </svg>
           <span className="lot-loader-mark">
