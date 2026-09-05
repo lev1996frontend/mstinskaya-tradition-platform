@@ -8,7 +8,6 @@ import { useEffect, useRef, useState } from "react";
 import { MonogramFlip } from "@/components/brand/monogram-flip";
 import { MenuToggleGlyph } from "@/components/brand/menu-glyph";
 import { WEAPON_MOTIFS, randomWeaponMotif, type WeaponMotifKey } from "@/components/brand/weapon-glyphs";
-import { RiverStrip } from "@/components/layout/river-strip";
 import { ButtonLink, Container, cn } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
 import { IMPULSE_TAP, TURN_EASE, stepIn } from "@/lib/motion";
@@ -236,20 +235,15 @@ export function SiteHeader() {
         </div>
       </Container>
 
-      {/* River strip only exists to open the "Буза" section, which only
-          lives on the homepage — showing it elsewhere would be a control
-          with nothing to open.
+      {/* The header used to carry a 56px river strip here — three symbols
+          (seal, boat, mug) whose only job was opening the "Буза" section far
+          below, on the homepage alone. It cost a second storey of header on
+          every phone, and the control it offered was so far from the thing it
+          opened that the section needed a sentence explaining where to click.
 
-          Hidden past ~1400px, where the margin river's own three bays take
-          over the same three symbols (`components/layout/river-spine.tsx`
-          mirrors this breakpoint). Below it there is no margin wide enough to
-          hold a bay, so the strip stays — the symbols are always in exactly
-          one place, never two. */}
-      {pathname === "/" ? (
-        <div className="min-[1400px]:hidden">
-          <RiverStrip />
-        </div>
-      ) : null}
+          The opener now lives inside "Буза" itself (`features/home/buza.tsx`),
+          where it needs no instructions, and the header is one storey
+          everywhere. */}
 
       {/* Full-screen takeover, not a dropdown: reuses the site's own
           numbered-index grammar (01/02/… ruled rows in `font-display`, the

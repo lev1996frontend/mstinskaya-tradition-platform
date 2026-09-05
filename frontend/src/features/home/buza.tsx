@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { Emblem } from "@/components/brand/emblem";
 import { Container, cn } from "@/components/ui";
 import { useBuza, type BuzaVersion } from "@/features/home/buza-context";
 
@@ -80,13 +81,17 @@ export function Buza() {
   /* The selected reading lives in the shared context, not in local state: the
      river's bays (`river-spine.tsx`) open this section *on* a reading, and the
      chips below have to show that choice rather than contradict it. */
-  const { open, version: etymologySelected, setVersion: setEtymologySelected } = useBuza();
+  const { open, toggle, version: etymologySelected, setVersion: setEtymologySelected } = useBuza();
   const [ritualStepActive, setRitualStepActive] = useState(0);
+  const [struck, setStruck] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
 
-  // Scroll the section into view when the header boat opens it — only fires
-  // on the false→true transition (the effect's dependency), never on mount
-  // (which always starts `open` false), and never on close.
+  // Scroll the section into view when something opens it — only fires on the
+  // false→true transition (the effect's dependency), never on mount (which
+  // always starts `open` false), and never on close. It matters for the margin
+  // river's bays, which can open the section from anywhere on the page; the
+  // section's own emblem is already on screen when it is pressed, and this
+  // simply settles the heading to the top under it.
   useEffect(() => {
     if (open) sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [open]);
@@ -106,12 +111,88 @@ export function Buza() {
         </div>
 
         <h2 className="font-display text-[2.25rem] font-bold tracking-tight sm:text-[3rem]">Буза</h2>
-        <p className="mt-4 text-[0.9375rem] leading-relaxed text-[var(--text-4)]">
-          Кораблик на реке выше приведёт сюда историю.
-        </p>
 
+        {/* The way in, standing in the block it opens.
+
+            It used to be three symbols on a strip in the header, which meant
+            the section had to carry a line of instructions naming the control
+            and pointing up the page at it. A mark you can see next to the
+            heading needs no such sentence — so the sentence is gone, and the
+            emblem answers for itself.
+
+            It keeps the shield's own vocabulary rather than becoming a plain
+            button: the blow lands and it gives ground (`.shield-brace`), a ring
+            of impact crosses its face (`.strike-ring`), and while the section is
+            open it holds the guard (`.shield-guard-raised`) — an open section
+            gets a visible posture instead of a visible wound. The margin
+            river's застава strikes the identical pose, so the gesture reads as
+            one thing in two places. */}
+        <div className="mt-6 flex items-center gap-4 sm:gap-5">
+          <button
+            type="button"
+            onClick={() => {
+              toggle();
+              setStruck(true);
+            }}
+            onAnimationEnd={(event) => {
+              // `.strike-ring` (650ms) outlasts `.shield-brace` (420ms), so
+              // clearing on the ring clears both. Bound on the button because
+              // the two animations run on separate elements and `animationend`
+              // only bubbles up, never sideways.
+              if (event.animationName !== "strike-ring") return;
+              setStruck(false);
+            }}
+            aria-expanded={open}
+            aria-controls="buza-story"
+            /* Full strength at rest. The three symbols this replaced sat at 45%
+               until hovered, which suited decoration riding a strip and would be
+               wrong for the one control this block has. It warms to the
+               section's own gold on hover or focus — gold rather than the
+               oxblood, which is spent on actions elsewhere, and the mark itself
+               stays monochrome either way. */
+            className={cn(
+              "grid shrink-0 cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0",
+              "text-[var(--foreground)] transition-colors hover:text-[var(--gold)]",
+              "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--gold)] focus-visible:text-[var(--gold)]",
+              open ? "shield-on-guard" : "",
+            )}
+          >
+            <span className="relative grid size-20 place-items-center">
+              <span
+                className={cn("shield-guard grid place-items-center", open ? "shield-guard-raised" : "")}
+              >
+                {/* One mark at one size, not a `sm:hidden` pair: `Emblem` sets
+                    its box as an inline style, and an inline style beats a
+                    `hidden` class — rendering two would show both, stacked. */}
+                <span className={cn("grid place-items-center", struck ? "shield-brace" : "")}>
+                  <Emblem size={80} />
+                </span>
+              </span>
+              {struck ? (
+                <span
+                  aria-hidden="true"
+                  className="strike-ring pointer-events-none absolute inset-0 m-auto size-12"
+                />
+              ) : null}
+            </span>
+            {/* The label is the accessible name and the visible one at once —
+                an emblem on its own tells nobody what pressing it does. */}
+            <span className="sr-only">
+              {open ? "Свернуть рассказ о бузе" : "Раскрыть рассказ о бузе"}
+            </span>
+          </button>
+
+          <p className="text-[0.9375rem] leading-relaxed text-[var(--text-4)]">
+            {open ? "Знак свёрнет рассказ." : "Три версии одного слова — нажмите на знак."}
+          </p>
+        </div>
+
+        {/* The region the emblem's `aria-controls` names. Unmounted rather than
+            hidden while closed, as it always was — the id travels with it, and
+            `aria-expanded` on the button is what a screen reader reads either
+            way. */}
         {open ? (
-          <>
+          <div id="buza-story">
             <p className="pop-in mt-4 max-w-2xl text-[0.9375rem] leading-[1.75] text-[var(--muted)]">
               Буза — обрядовое рукопашное состязание Тверской земли, выросшее из уклада артелей на
               Вышневолоцкой водной системе. Бурлаки, портовые грузчики и судовые экипажи, нанимавшиеся артелями,
@@ -221,7 +302,7 @@ export function Buza() {
               Турниры этого сайта носят то же имя — <strong className="text-[var(--accent)]">«Мстинская традиция»</strong> —
               потому что продолжают ту самую линию: обряд, перенесённый в зал, с судьями, разрядами и жребием.
             </p>
-          </>
+          </div>
         ) : null}
       </Container>
     </section>

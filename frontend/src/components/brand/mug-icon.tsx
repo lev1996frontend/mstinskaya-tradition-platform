@@ -4,10 +4,9 @@
  * into. Same single-colour `currentColor` line/fill language as `BoatIcon` and
  * `weapon-glyphs.tsx`.
  *
- * Shared, like `BoatIcon`, between the header strip's mug
- * (`components/layout/river-mug.tsx`) and the margin river's landing
- * (`components/layout/river-spine.tsx`), so the drink means the same thing in
- * both places.
+ * Kept beside `BoatIcon` rather than inside its one caller — the margin
+ * river's landing (`components/layout/river-spine.tsx`) — so the three symbols
+ * of the word stay one family in one folder.
  */
 export function MugIcon({ size = 22 }: { size?: number }) {
   return (

@@ -3,13 +3,12 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 
 /**
- * Shared state for the "Буза" section (`buza.tsx`), driven from the river
- * symbols — the header strip's boat/seal/mug (`components/layout/river-strip.tsx`
- * and siblings) and the page-margin river's three bays
- * (`components/layout/river-spine.tsx`). The two live far apart in the tree —
- * the header and the river are mounted once in `app/layout.tsx`, the section
- * only on the homepage — so this is a small top-level provider rather than
- * state lifted into either component.
+ * Shared state for the "Буза" section (`buza.tsx`), driven from two places:
+ * the section's own emblem button, and the page-margin river's three bays
+ * (`components/layout/river-spine.tsx`), one per reading of the word. The river
+ * is mounted once in `app/layout.tsx` while the section exists only on the
+ * homepage, so they live far apart in the tree — hence a small top-level
+ * provider rather than state lifted into either component.
  */
 
 /** The three readings of the word, one per river symbol. Keys match

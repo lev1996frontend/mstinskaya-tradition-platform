@@ -8,7 +8,7 @@ import { AnnalIcon } from "@/components/brand/annal-icon";
 import { BoatIcon } from "@/components/brand/boat-icon";
 import { BratinaIcon } from "@/components/brand/bratina-icon";
 import { PaintingIcon } from "@/components/brand/painting-icon";
-import { SealDisc } from "@/components/brand/seal-disc";
+import { Emblem } from "@/components/brand/emblem";
 import { StenkaIcon } from "@/components/brand/weapon-glyphs";
 import { useBuza } from "@/features/home/buza-context";
 
@@ -16,10 +16,11 @@ import { useBuza } from "@/features/home/buza-context";
  * Мста — the river the tradition (and this archive) is named after, run down
  * the page's own margin as its spine.
  *
- * The header already shows the river across (`river-strip.tsx`, a horizontal
- * current with the Буза boat on it). This is the same river seen along: one
- * hairline meander in the outer margin, with the same boat (`BoatIcon`, shared
- * with that strip) carrying the reader's position down it. So the background
+ * One hairline meander in the outer margin, with a boat (`BoatIcon`) carrying
+ * the reader's position down it. The header once ran the same river across, as
+ * a strip; that strip is gone — it cost a second storey of header on every
+ * phone to offer a button for a section further down the page — so this is now
+ * the only river on the site. So the background
  * stops being decoration and starts answering "how far into this document am
  * I, and what have I passed" — the notches are the real `<section id>`
  * boundaries of whatever page is mounted, measured, not decorative marks at
@@ -698,16 +699,19 @@ export function RiverSpine() {
             >
               <MarkWater radius={mark.box / 2 - 4} />
               {isShield ? (
-                /* The same shield as the header strip's, with the same blow and
-                   the same held guard — see `river-wax-seal.tsx` for why it
-                   takes the hit instead of breaking. It has to answer here too:
-                   past ~1400px the strip is hidden and this mark is the only
-                   place the shield appears at all. Big enough (40px) to carry
-                   the real emblem. */
+                /* Takes the blow and holds the guard rather than breaking: this
+                   mark is meant to be hit again on every visit, and while «Буза»
+                   is open it keeps a visible posture instead of a visible wound.
+                   The same pose the section's own emblem button now strikes, so
+                   the two read as one gesture in two places. Big enough (40px)
+                   to carry the real mark. */
                 <>
                   <span className={`shield-guard grid place-items-center${open ? " shield-guard-raised" : ""}`}>
                     <span className={`grid place-items-center${struck ? " shield-brace" : ""}`}>
-                      <SealDisc size={40} />
+                      {/* Colour stated rather than inherited: the mark is
+                          `currentColor`, and a berth that changes text colour
+                          later must not silently repaint the emblem with it. */}
+                      <Emblem size={40} className="text-[var(--foreground)]" />
                     </span>
                   </span>
                   {struck ? (

@@ -3,12 +3,12 @@
  * same single-colour `currentColor` line/fill language as
  * `weapon-glyphs.tsx`.
  *
- * Lives here rather than inside `river-boat.tsx` because two unrelated places
- * sail the same boat: the header river strip's Буза button
- * (`components/layout/river-boat.tsx`) and the page-margin river
- * (`components/layout/river-spine.tsx`). One silhouette, so the boat that
- * crosses the header and the boat that runs down the margin are recognisably
- * the same vessel — which is the whole conceit of the margin river.
+ * Lives here rather than inside the river that sails it: the boat carries the
+ * reader's position down the page-margin river (`components/layout/river-spine.tsx`)
+ * and marks the «корабль» reading of the word in that river's own landing. It
+ * once also crossed a strip in the header; that strip is gone, but the icon
+ * stays shared, so a second place that needs the vessel does not trace a
+ * second one.
  */
 export function BoatIcon({ size = 30 }: { size?: number }) {
   return (

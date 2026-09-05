@@ -13,8 +13,9 @@ import { TournamentGrid } from "@/features/home/tournament-grid";
  * Front page of the archive — the "Живой архив" v3 redesign
  * (design_handoff_mstinskaya). Masthead, the real live-tournament bulletin,
  * then БУЗА (design_handoff_buza_river — the tradition's origin story,
- * collapsed by default and opened only by the river-boat button in the
- * header; see `features/home/buza-context.tsx`), then the remaining
+ * collapsed by default and opened by the emblem standing in its own block, or
+ * by the margin river's bays on a wide screen; see
+ * `features/home/buza-context.tsx`), then the remaining
  * editorial sections (СТЕНКА/КРУГ → ХРОНИКА → ЖИВОПИСЬ).
  *
  * Two blocks that used to live here moved out to their own routes: the
