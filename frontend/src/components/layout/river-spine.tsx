@@ -8,6 +8,7 @@ import { AnnalIcon } from "@/components/brand/annal-icon";
 import { BoatIcon } from "@/components/brand/boat-icon";
 import { BracketIcon } from "@/components/brand/bracket-icon";
 import { BratinaIcon } from "@/components/brand/bratina-icon";
+import { CanvasesIcon } from "@/components/brand/canvases-icon";
 import { HelmetIcon } from "@/components/brand/helmet-icon";
 import { LotIcon } from "@/components/brand/lot-icon";
 import { PaintingIcon } from "@/components/brand/painting-icon";
@@ -197,6 +198,10 @@ const MATERIAL = {
   linen: "border-[var(--surface-paper)]/40 text-[var(--surface-paper)]",
   copper: "border-[var(--copper)]/50 text-[var(--copper)]",
   iron: "border-[var(--iron)]/70 text-[var(--iron)]",
+  /* The stretcher a canvas is stood on, not the paint — `--surface-paper` is
+     already the linen one mark above, and two cream marks in a row would read
+     as one object drawn twice. */
+  wood: "border-[var(--gold)]/35 text-[var(--gold)]/80",
   wax: "border-[var(--accent)]/50 text-[var(--accent)]",
   bone: "border-[var(--surface-paper)]/40 text-[var(--surface-paper)]",
 } as const;
@@ -237,6 +242,14 @@ const RIVER_BY_PATH: Record<string, Mark[]> = {
     { id: "stenka", label: "Стенка и круг", note: "Как сходятся", Icon: StenkaIcon, material: MATERIAL.brass },
     { id: "hronika", label: "Хроника", note: "Что уже было", Icon: AnnalIcon, material: MATERIAL.tin },
     { id: "zhivopis", label: "Живопись", note: "Как это видели", Icon: PaintingIcon, material: MATERIAL.linen },
+    /* «Живопись» is half the homepage's whole scroll on its own, so its single
+       mark left the longest stretch of this river with nothing standing in it
+       — and the братина, the last thing on the water, sat higher up the rail
+       than the walk down there deserved. This is the section's honest middle:
+       above it a drawing made from life in 1845, from here down the painted
+       record. Placing it also drops the братина to the slot the жребий holds
+       on the tournaments rail, which is where it belonged. */
+    { id: "holsty", label: "Холсты", note: "Писаны в XIX веке", Icon: CanvasesIcon, material: MATERIAL.wood },
     /* Братина — the last thing on the homepage's river, and the only mark
      * there that isn't a way anywhere: it takes no section, scrolls nowhere,
      * and answers a click with the drink moving in it. The "напиток" reading of

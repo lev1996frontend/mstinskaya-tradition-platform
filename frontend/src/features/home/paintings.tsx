@@ -118,8 +118,23 @@ export function Paintings() {
           </figcaption>
         </figure>
 
-        {/* featured painting + text */}
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,620px)_minmax(0,1fr)]">
+        {/* featured painting + text.
+
+            A `<section id>` and not a plain `div`: this section is by some way
+            the longest thing on the homepage — it alone spans about half the
+            page's whole scroll — so the margin river had one mark at its head
+            and then nothing for the rest of the way down. The canvases are the
+            honest second place in it: above this line the section shows a
+            drawing made from life in 1845, below it the painted record. The
+            river charts off `main section[id]`, so an id here is all the rail
+            needs.
+
+            Deliberately *not* on the closing documentary photograph, which
+            would be the better split of the three media on show: that block
+            begins past the page's own maximum scroll, its charted position
+            clamps to 1, and a stop at 1 leaves the boat unable to sail past it
+            — the братина below would never be reachable. */}
+        <section id="holsty" className="grid gap-10 lg:grid-cols-[minmax(0,620px)_minmax(0,1fr)]">
           <figure className="relative">
             <PhotoReveal
               className="block aspect-[4/3] w-full overflow-hidden border border-[var(--border-strong)]"
@@ -144,7 +159,7 @@ export function Paintings() {
             </h3>
             <p className="text-sm leading-relaxed text-[var(--muted)]">{FEATURED_PAINTING.text}</p>
           </div>
-        </div>
+        </section>
 
         {/* row of three */}
         <div className="grid gap-7 sm:grid-cols-3">
