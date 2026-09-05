@@ -34,10 +34,17 @@ export type TournamentPathState = {
   runOver: "out" | "champion" | null;
 };
 
+/** Три четверти — the angle the cube sits at whenever it is not turning. A
+ *  cube seen square-on is a square: one face fills the frame, no edge, no top,
+ *  nothing that says there are five more faces behind it. Both the resting
+ *  angle below and every landing in `FACE_ROT` carry this offset, so the
+ *  жребий reads as a cube before the first throw and after the last one. */
+export const CUBE_REST_TILT: readonly [number, number] = [-18, 24];
+
 const initialState: TournamentPathState = {
   phase: "idle",
-  rx: -18,
-  ry: 24,
+  rx: CUBE_REST_TILT[0],
+  ry: CUBE_REST_TILT[1],
   pendingWeapon: null,
   lot: null,
   lotCount: 0,
@@ -54,8 +61,11 @@ const initialState: TournamentPathState = {
   runOver: null,
 };
 
-/** Resting cube angle per real weapon index (0=руки,1=палка,2=нож,3=кистень),
- *  ported from the prototype's `FACE_ROT`. */
+/** Landing angle per real weapon index (0=руки,1=палка,2=нож,3=кистень): the
+ *  drawn face square to the camera, so the разряд that came up is read head-on
+ *  rather than foreshortened across a corner. The cube does not *stay* here —
+ *  `START_BOUT` tips it back to `CUBE_REST_TILT` once the разряд has been
+ *  read, which is what keeps it a cube for every phase after the throw. */
 const FACE_ROT: [number, number][] = [
   [0, 0],
   [0, -90],
@@ -222,6 +232,14 @@ function reducer(state: TournamentPathState, action: Action): TournamentPathStat
       return {
         ...state,
         phase: "bout",
+        // The разряд has been read, so the cube tips off its square-on landing
+        // back into three quarters — a die being picked up off the floor. It
+        // also stops the widget spending every phase after the throw (and the
+        // whole of the next round's declare) looking like a flat plate, which
+        // is exactly what a face-on landing leaves behind: at `rx` 0 and `ry` a
+        // multiple of 90 the five other faces are edge-on and invisible.
+        rx: state.rx + CUBE_REST_TILT[0],
+        ry: state.ry + CUBE_REST_TILT[1],
         round: 0,
         exchanges: [],
         scores: [0, 0],

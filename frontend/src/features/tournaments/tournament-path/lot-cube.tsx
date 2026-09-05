@@ -32,8 +32,8 @@ const PHASE_HINT: Partial<Record<string, string>> = {
   // declaring below first — since a first-time visitor otherwise has no cue
   // that the icon row underneath does anything. "ready" already has its
   // declare done, so it drops back to the single remaining action.
-  declare: "Нажмите на плиту — бросьте жребий, или выберите разряд вручную ниже",
-  ready: "Готов к жребию — нажмите на плиту",
+  declare: "Нажмите на куб — бросьте жребий, или выберите разряд вручную ниже",
+  ready: "Готов к жребию — нажмите на куб",
   result: "Разряд определён",
   bout: "Идёт соступ",
   clash: "Сшибка",
@@ -55,7 +55,7 @@ export function LotCube() {
   // sized up accordingly, rather than leaving a cube that would still throw
   // (misleadingly, since the copy around it now says "без жребия").
   const showCube = !(isFinal && state.phase === "declare");
-  // Once a throw has landed (or any later phase), the plate stops
+  // Once a throw has landed (or any later phase), the cube stops
   // responding — otherwise clicking it again silently re-rolls the already
   // revealed разряд, letting a player keep re-throwing until they get the
   // weapon they want.
@@ -69,8 +69,17 @@ export function LotCube() {
         // in, and giving that element its own `transform` flattens them into a
         // plate. See `.lot-cube-scale` in globals.css.
         <div className="lot-cube-scale">
+        {/* The camera shake sits on its own wrapper, not on the stage. `.cam`
+            animates a `transform`, and the stage is the element carrying
+            `perspective`: a transformed element whose `transform-style` is the
+            default `flat` flattens its own 3D children, so for the whole
+            length of every throw the cube was rendering as a single plate —
+            exactly the beat where it most needs to read as a tumbling cube.
+            An ancestor may be transformed freely; the same reason the
+            narrow-phone scale lives on `.lot-cube-scale` above. */}
+        <div className={state.phase === "throw" ? "cam" : undefined}>
         <div
-          className={`lot-cube-stage relative grid place-items-center ${state.phase === "throw" ? "cam" : ""}`}
+          className="lot-cube-stage relative grid place-items-center"
           style={{ width: 300, height: 300, perspective: 900 }}
         >
           <span
@@ -119,30 +128,56 @@ export function LotCube() {
               // read as "the result already showing while the cube's still
               // visibly spinning". Firing off the real `transitionend`
               // instead ties it to what's actually on screen.
+              // `event.target === currentTarget`: the faces run their own
+              // opacity transition, and those events bubble up to this button.
+              if (event.target !== event.currentTarget) return;
               if (event.propertyName !== "transform" || state.phase !== "throw") return;
               confirmSpin();
             }}
             aria-label="Бросить жребий"
-            className={`relative border-none bg-transparent p-0 ${throwable ? "cursor-pointer" : "pointer-events-none cursor-default opacity-60"}`}
+            // No `opacity` class on this button, ever. `opacity < 1` forces the
+            // used value of `transform-style` back to `flat` — the same
+            // flattening the `.cam` shake caused, from a property nobody thinks
+            // of as 3D. With `opacity-60` here the cube collapsed to a plate in
+            // every phase it wasn't throwable in (idle, and everything from the
+            // result on), and when a throw happened to land on палка or
+            // кистень — the ±90° faces — the collapsed plate was edge-on and
+            // the cube disappeared outright. The dimming lives on each face
+            // below instead, where it is a leaf and flattens nothing.
+            className={`relative border-none bg-transparent p-0 ${throwable ? "cursor-pointer" : "pointer-events-none cursor-default"}`}
             style={{
               width: 132,
               height: 132,
               transformStyle: "preserve-3d",
-              transition: `${cubeThrowCss(spinMs)}, opacity 300ms ease`,
+              transition: cubeThrowCss(spinMs),
               transform: `rotateX(${state.rx}deg) rotateY(${state.ry}deg)`,
             }}
           >
             {CUBE_FACE_KEYS.map((key, i) => {
               const Icon = FACE_ICONS[key];
-              const isOutcome = state.phase === "result" && state.lot === i;
+              const isOutcome = state.lot === i && state.phase !== "throw";
+              // Waiting for a fighter is the one phase with nothing to throw,
+              // so the cube sits back — in colour only. An `opacity` below 1
+              // on a face turns the cube to glass: you see its own back faces
+              // and their glyphs through the front one, which reads as a wire
+              // box rather than a solid жребий.
+              const resting = state.phase === "idle";
+              const ink = resting ? "color-mix(in srgb, var(--iron) 52%, var(--surface))" : "var(--iron)";
               return (
                 <span
                   key={key}
-                  className="absolute inset-0 grid place-items-center border shadow-[inset_0_0_34px_rgba(0,0,0,.6)]"
+                  className="absolute inset-0 grid place-items-center border"
                   style={{
                     background: "var(--surface)",
-                    borderColor: "var(--iron)",
-                    color: isOutcome ? "var(--accent)" : "var(--iron)",
+                    borderColor: isOutcome ? "var(--accent)" : ink,
+                    color: isOutcome ? "var(--accent)" : ink,
+                    // Загорается — the drawn разряд's face lights up when the
+                    // cube stops, rather than only changing the ink colour on
+                    // a face the old flat-plate rendering barely showed.
+                    boxShadow: isOutcome
+                      ? "inset 0 0 34px rgba(0,0,0,.45), 0 0 22px -6px var(--accent)"
+                      : "inset 0 0 34px rgba(0,0,0,.6)",
+                    transition: "box-shadow 420ms ease, border-color 420ms ease, color 420ms ease",
                     transform: FACE_TRANSFORMS[i],
                   }}
                 >
@@ -151,6 +186,7 @@ export function LotCube() {
               );
             })}
           </button>
+        </div>
         </div>
         </div>
       ) : null}

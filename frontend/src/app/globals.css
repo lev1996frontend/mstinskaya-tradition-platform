@@ -834,15 +834,29 @@ button:not(:disabled),
    380px while reading correctly as a cube everywhere above it. Scaling an
    ancestor is safe — the wrapper has no 3D children of its own, and the
    stage's perspective context survives intact inside it. */
+.lot-cube-scale {
+  transform: scale(var(--lot-cube-scale, 1));
+  transform-origin: top center;
+  /* A transform does not change the box the layout reserves, so a scaled stage
+     still occupied its full 300px and left dead floor under a shorter cube.
+     Derived from the scale rather than typed as a number per breakpoint —
+     the two were a hand-matched pair (0.82 / −54px) that had no way of
+     staying in step once there was more than one step. */
+  margin-bottom: calc(300px * (var(--lot-cube-scale, 1) - 1));
+}
+
+/* Two steps down, not one. The stage is a fixed 300px box; on a 390–414px
+   phone that is three quarters of the screen width for a single ornament,
+   and the outer 290px ring runs to both edges of the viewport. */
+@media (max-width: 440px) {
+  .lot-cube-scale {
+    --lot-cube-scale: 0.9;
+  }
+}
+
 @media (max-width: 380px) {
   .lot-cube-scale {
-    transform: scale(0.82);
-    transform-origin: top center;
-    /* A transform does not change the box the layout reserves, so the stage
-       still occupied its full 300px and left 54px of dead floor under a cube
-       drawn 246px tall. Pulled back exactly (300 × 0.18), measured from the
-       same origin the scale works from. */
-    margin-bottom: -54px;
+    --lot-cube-scale: 0.82;
   }
 }
 
