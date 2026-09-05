@@ -198,10 +198,18 @@ const MATERIAL = {
   linen: "border-[var(--surface-paper)]/40 text-[var(--surface-paper)]",
   copper: "border-[var(--copper)]/50 text-[var(--copper)]",
   iron: "border-[var(--iron)]/70 text-[var(--iron)]",
-  /* The stretcher a canvas is stood on, not the paint — `--surface-paper` is
-     already the linen one mark above, and two cream marks in a row would read
-     as one object drawn twice. */
-  wood: "border-[var(--gold)]/35 text-[var(--gold)]/80",
+  /* Bare pine — the stretcher a canvas is stood on, not the paint.
+     `--surface-paper` is already the linen one mark above and two cream marks
+     in a row would read as one object drawn twice, so this is the warm ash of
+     unfinished wood instead.
+
+     Full strength, like every other material here. It was first written as
+     `--gold` at 80% alpha, which made it the only translucent mark on the rail
+     and by some way the hardest to find — and the glyph check that should have
+     caught that turns the resting dim off in order to judge shape, so it saw
+     the one thing this mark did not have wrong with it. Never tint a material
+     with alpha: the rail already dims every mark at rest. */
+  wood: "border-[var(--neutral-400)]/45 text-[var(--neutral-400)]",
   wax: "border-[var(--accent)]/50 text-[var(--accent)]",
   bone: "border-[var(--surface-paper)]/40 text-[var(--surface-paper)]",
 } as const;
