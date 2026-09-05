@@ -1813,10 +1813,17 @@ button:not(:disabled),
 
 /* Чернила. The wrapper carries the sweep because the emblem's own artwork is
    already a mask on the element inside it, and two masks cannot live on one
-   element. */
+   element.
+
+   No `from` angle. A CSS conic-gradient already starts at twelve o'clock and
+   runs clockwise; the `from -90deg` this was first written with — SVG's
+   convention, where zero is three o'clock — pushed the start round to nine and
+   left the ink a quarter-turn behind the furrow that was supposed to be
+   cutting it. Measured by sampling sectors of the rendered mark, because at a
+   glance it only looked like the scribe running ahead. */
 .lot-loader-ink {
-  -webkit-mask-image: conic-gradient(from -90deg, #000 0deg var(--sweep), transparent var(--sweep) 360deg);
-  mask-image: conic-gradient(from -90deg, #000 0deg var(--sweep), transparent var(--sweep) 360deg);
+  -webkit-mask-image: conic-gradient(#000 0deg var(--sweep), transparent var(--sweep) 360deg);
+  mask-image: conic-gradient(#000 0deg var(--sweep), transparent var(--sweep) 360deg);
   animation: lot-loader-ink var(--draw-cycle) linear infinite;
 }
 
