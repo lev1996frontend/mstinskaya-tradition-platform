@@ -339,6 +339,26 @@ const GLYPH_BOX = 44;
 const DOCK_REACH = 0.07;
 
 /**
+ * Стоянка — the innermost part of that reach, where the boat lies *still*
+ * rather than merely being pulled towards the berth.
+ *
+ * Without it the pull eased in and straight back out again, so the boat matched
+ * its berth for a single instant and was already sliding away for the rest of
+ * the time it still counted as moored. Two visible faults came out of that one
+ * omission: the anchor stayed down while the hull crept off, dragging the
+ * flukes as much as 9px past the pool's rim (the rope is cut to hang *inside*
+ * it), and the travelled water — charted from raw progress — kept running while
+ * the boat sat there, so the river advanced past a boat that had not cast off.
+ *
+ * A plateau is also what the rail always claimed to do: a mark is a place the
+ * boat "lies there while the reader is inside that section". Now it actually
+ * does, and because the water is charted from the same moored position, the
+ * current holds with it and gets under way again on the same frame the boat
+ * does.
+ */
+const DOCK_HOLD = 0.4;
+
+/**
  * Разметка. Real sections don't fall at comfortable intervals — on the homepage
  * "Буза" and "Стенка" start ~5% apart while the rest of the page runs on for
  * half its height, which put two marks on top of each other and left the last
@@ -437,6 +457,15 @@ export function RiverSpine() {
      departure, so it costs one render each way, not one per frame. */
   const berthedRef = useRef<string | null>(null);
   const [berthed, setBerthed] = useState<string | null>(null);
+  /* Whether the boat has actually *stopped*, which is a later moment than
+     `berthed` and belongs to the anchor alone. The mark gives way while the
+     boat is still coming in — that approach is the whole gesture, and tying it
+     to the boat being at rest deleted it, leaving the mark to swap for the
+     berth in one jump. The anchor keeps the stricter test, because dropping it
+     while the hull is still moving is what dragged the flukes past the pool's
+     rim in the first place. */
+  const atRestRef = useRef(false);
+  const [atRest, setAtRest] = useState(false);
   /* The братина: `drained` is what's in it, `sloshing` is the moment of it
      moving. Two flags rather than one, because the level has to survive the
      animation — drunk to the bottom, it stays empty until someone fills it. */
@@ -526,21 +555,42 @@ export function RiverSpine() {
        moored to neither. */
     let moored = 0;
     let at: string | null = null;
+    let rested = false;
+    /* Where the boat has actually got to, mooring included — the raw charted
+       progress is where the *reader* is, which is not the same thing while the
+       boat is lying still. The travelled water is drawn from this, so the
+       current can never run on past a boat that hasn't cast off. */
+    let travelled = progress;
     for (const berth of marksRef.current) {
       const gap = Math.abs(progress - berth.at);
       if (gap >= DOCK_REACH) continue;
-      const pull = 1 - gap / DOCK_REACH;
+      /* Full inside the стоянка, then easing off to nothing at the edge of
+         reach, so putting in and getting under way still have no corner. */
+      const hold = DOCK_REACH * DOCK_HOLD;
+      const pull = gap <= hold ? 1 : 1 - (gap - hold) / (DOCK_REACH - hold);
       const eased = pull * pull * (3 - 2 * pull);
       if (eased <= moored) continue;
       moored = eased;
       x = x + (berth.x - x) * eased;
       y = y + (berth.at * h - y) * eased;
+      travelled = travelled + (berth.at - travelled) * eased;
+      /* Coming in counts as arriving: the затон opens and the mark steps aside
+         while the boat is still on its way over, so the berth is ready for it
+         rather than appearing around a boat already sitting there. */
       if (eased > 0.5) at = berth.id;
+      /* Stopped, which is a stricter thing — an anchor is dropped by a boat
+         that has come to rest, and only on the plateau is the hull actually
+         still. */
+      if (pull >= 1) rested = true;
     }
 
     if (berthedRef.current !== at) {
       berthedRef.current = at;
       setBerthed(at);
+    }
+    if (atRestRef.current !== rested) {
+      atRestRef.current = rested;
+      setAtRest(rested);
     }
 
     /* Lean into the bend rather than turning to face down the current: a
@@ -554,7 +604,7 @@ export function RiverSpine() {
        the rail's non-uniform scaling, where dash offsets in user units would
        not — and it colours the passed notches for free, since the gold copy of
        the whole set rides inside the same clip. */
-    clip.setAttribute("height", `${progress * VB_H}`);
+    clip.setAttribute("height", `${travelled * VB_H}`);
   }, []);
 
   /* Chart the page: how far it scrolls, and where its real sections fall on
@@ -739,11 +789,20 @@ export function RiverSpine() {
         </defs>
 
         {/* Русло — the whole course, waiting. Struck in the cold ramp's light
-            end at low alpha rather than `--chrome-line` itself: that token is
-            dark enough against the coal ground to vanish outright, which left
-            the river looking like it simply stopped under the boat instead of
-            running on ahead of it. */}
-        <path d={RIVER_D} stroke="var(--chrome)" strokeWidth="1" opacity="0.16" vectorEffect="non-scaling-stroke" />
+            end rather than `--chrome-line` itself: that token is dark enough
+            against the coal ground to vanish outright, which left the river
+            looking like it simply stopped under the boat instead of running on
+            ahead of it.
+
+            0.34, not the 0.16 it was set at: the darker value lost that
+            argument on the page it was written for. Below the boat the course
+            faded into the ground within a mark or two, so the water still
+            appeared to end wherever the reader had got to, and the rail read as
+            a progress bar rather than as a river the boat is somewhere along.
+            The waiting course has to stay legibly *behind* the travelled gold —
+            it is the part not yet reached — but it has to be visibly there,
+            all the way off the bottom of the rail. */}
+        <path d={RIVER_D} stroke="var(--chrome)" strokeWidth="1" opacity="0.34" vectorEffect="non-scaling-stroke" />
 
         {notches.map((notch) => (
           <line
@@ -1001,7 +1060,7 @@ export function RiverSpine() {
               standing still beside a moving hull. Dropped only while the boat
               is lying in a berth, and gone the moment it gets under way: rope
               and anchor belong to a boat at rest. */}
-          <span className={`river-anchor${berthed ? " is-down" : ""}`}>
+          <span className={`river-anchor${atRest ? " is-down" : ""}`}>
             {/* Five pixels of rope, measured rather than guessed: at eight the
                 flukes hung three past the pool's rim. */}
             <svg className="river-rode" width="7" height="5" viewBox="0 0 7 5" fill="none" aria-hidden="true">
