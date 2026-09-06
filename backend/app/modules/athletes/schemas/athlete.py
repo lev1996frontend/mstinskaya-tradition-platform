@@ -33,6 +33,13 @@ class AthleteUpdateRequest(BaseModel):
 class AthleteResponse(BaseModel):
     id: str
     user_id: str
+    #: ФИО off the person's own account, «Фамилия Имя». Read-only and derived —
+    #: it is not stored on the athlete and cannot be written through this
+    #: schema; a name is changed on the user, in the identity module. Null only
+    #: for an account with neither half of a name on it.
+    full_name: str | None = None
+    #: Боевое имя. Optional, and frequently absent — which is exactly why it
+    #: cannot be the only thing an athlete is findable by.
     nickname: str | None = None
     birth_year: int | None = None
     experience_years: int = 0

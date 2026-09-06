@@ -33,7 +33,10 @@ from openpyxl.utils import get_column_letter
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.athletes.models import Athlete
+# The athletes domain is reached through its service, not its model — the name
+# resolution this needs lives there (`docs/architecture.md`: a module talks to
+# another module's service layer).
+from app.modules.athletes.services.athlete_service import AthleteService
 from app.modules.tournaments.domain import eligibility
 from app.modules.tournaments.models import (
     Competition,
@@ -342,8 +345,22 @@ class ParticipantImportService:
             if competition.category_id == category.id
         }
 
-        athletes = list(await session.scalars(select(Athlete)))
+        # Through the athletes module's own service, which brings each profile's
+        # person along with it — the ФИО lives on the user account, not on the
+        # athlete row.
+        athletes = await AthleteService.list_athletes(session)
         athlete_by_nickname = {_normalize(a.nickname): a for a in athletes if a.nickname}
+        # …and by real name, which is what a заявка actually carries. Matching on
+        # nickname alone meant a fighter with no боевое имя — or one whose
+        # spreadsheet row simply gives their ФИО — linked to no profile at all
+        # and was entered as a brand-new person, which is the duplicate identity
+        # this import is supposed to prevent. A nickname still wins where both
+        # match: it is the more specific claim.
+        athlete_by_full_name = {}
+        for candidate in athletes:
+            full_name = AthleteService.full_name_of(candidate)
+            if full_name:
+                athlete_by_full_name.setdefault(_normalize(full_name), candidate)
 
         existing = list(
             await session.scalars(
@@ -449,9 +466,14 @@ class ParticipantImportService:
                 )
 
             # A fight name is the better match key: it is what a fighter is
-            # actually known by, and what the roster shows.
-            athlete = athlete_by_nickname.get(_normalize(values["fight_name"])) or (
-                athlete_by_nickname.get(_normalize(full_name))
+            # actually known by, and what the roster shows. Then the ФИО, against
+            # nicknames and against real names both — a spreadsheet may put
+            # either in either column.
+            athlete = (
+                athlete_by_nickname.get(_normalize(values["fight_name"]))
+                or athlete_by_nickname.get(_normalize(full_name))
+                or athlete_by_full_name.get(_normalize(full_name))
+                or athlete_by_full_name.get(_normalize(values["fight_name"]))
             )
 
             if competition is not None:
@@ -505,7 +527,12 @@ class ParticipantImportService:
                     "competition_id": str(competition.id) if competition else None,
                     "competition_name": competition.name if competition else None,
                     "athlete_id": str(athlete.id) if athlete else None,
-                    "athlete_display_name": athlete.nickname if athlete else None,
+                    # What to call the profile that was matched: the боевое имя
+                    # if there is one, otherwise the ФИО — never nothing, or the
+                    # review screen claims a link it cannot name.
+                    "athlete_display_name": (
+                        (athlete.nickname or AthleteService.full_name_of(athlete)) if athlete else None
+                    ),
                     # Пусто — в сетке ФИО. Many fighters have no fight name.
                     "display_name": values["fight_name"] or full_name,
                     "errors": errors,
