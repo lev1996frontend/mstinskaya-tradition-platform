@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -78,6 +78,30 @@ const navSpinTransition = {
 };
 const navRestState = { rotateX: 0, scale: 1 };
 const navRestTransition = { duration: 0.25, ease: "easeOut" as const };
+
+/**
+ * Черта, которая дочерчивается. `useLinkStatus` reports whether *this* `Link`
+ * is the one currently navigating, and the hook only works from inside the
+ * `Link`, which is why this is its own component rather than a flag computed
+ * up in `SiteHeader`.
+ *
+ * Rendered only for the words you are not already on: the section you are in
+ * already carries the finished rule (`nav-active-pill`), and drawing a second
+ * one under it would be the same mark twice saying two different things.
+ *
+ * Always mounted while pending and animated by `transform` alone — the docs
+ * for this hook warn that inline indicators cause layout shift, and this nav
+ * is a flex row where anything that changes size moves every word beside it.
+ */
+function NavPendingRule() {
+  const { pending } = useLinkStatus();
+  return (
+    <span
+      aria-hidden="true"
+      className={cn("nav-pending-rule absolute inset-x-2 bottom-1 h-[2px] bg-[var(--accent)]", pending && "is-pending")}
+    />
+  );
+}
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -180,7 +204,9 @@ export function SiteHeader() {
                       reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 32 }
                     }
                   />
-                ) : null}
+                ) : (
+                  <NavPendingRule />
+                )}
                 <span className="relative block min-w-[88px] text-center" style={{ perspective: 480 }}>
                   <motion.span
                     className="block"

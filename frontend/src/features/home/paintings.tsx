@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
 
 import { Container } from "@/components/ui";
@@ -28,7 +29,7 @@ const FEATURED_PAINTING = {
   author: "М. И. Песков",
   title: "Кулачный бой при Иване IV",
   year: "1862",
-  src: "https://upload.wikimedia.org/wikipedia/commons/4/46/%D0%9F%D0%B5%D1%81%D0%BA%D0%BE%D0%B2_%D0%9C%D0%B8%D1%85%D0%B0%D0%B8%D0%BB_%D0%98%D0%B2%D0%B0%D0%BD%D0%BE%D0%B2%D0%B8%D1%87_-_%D0%9A%D1%83%D0%BB%D0%B0%D1%87%D0%BD%D1%8B%D0%B9_%D0%B1%D0%BE%D0%B9_%D0%BF%D1%80%D0%B8_%D0%98%D0%B2%D0%B0%D0%BD%D0%B5_IV_%281862%29.jpg",
+  src: "/archive/peskov-kulachny-boy-1862.jpg",
   text: "Академическое полотно XIX века воспроизводит летописный сюжет: кулачный бой как публичное состязание, а не стихийная драка — с судьями и правилами, признанными обеими сторонами.",
 };
 
@@ -37,19 +38,19 @@ const ROW_PAINTINGS = [
     author: "Ф. Г. Солнцев",
     title: "Кулачный бой",
     year: "1836",
-    src: "https://upload.wikimedia.org/wikipedia/commons/f/f7/%D0%A1%D0%BE%D0%BB%D0%BD%D1%86%D0%B5%D0%B2_%D0%9A%D1%83%D0%BB%D0%B0%D1%87%D0%BD%D1%8B%D0%B9_%D0%B1%D0%BE%D0%B9_1836.jpg",
+    src: "/archive/solntsev-kulachny-boy-1836.jpg",
   },
   {
     author: "В. М. Васнецов",
     title: "«Кулачный бой» (илл. к «Песне о купце Калашникове»)",
     year: "1891",
-    src: "https://upload.wikimedia.org/wikipedia/commons/5/5f/%D0%9A%D1%83%D0%BB%D0%B0%D1%87%D0%BD%D1%8B%D0%B9_%D0%B1%D0%BE%D0%B9._%D0%98%D0%BB%D0%BB%D1%8E%D1%81%D1%82%D1%80%D0%B0%D1%86%D0%B8%D1%8F_%D0%BA_%D0%BF%D0%BE%D1%8D%D0%BC%D0%B5_%C2%AB%D0%9F%D0%B5%D1%81%D0%BD%D1%8F_%D0%BE_%D0%BA%D1%83%D0%BF%D1%86%D0%B5_%D0%9A%D0%B0%D0%BB%D0%B0%D1%88%D0%BD%D0%B8%D0%BA%D0%BE%D0%B2%D0%B5%C2%BB.jpg",
+    src: "/archive/vasnetsov-kulachny-boy-1891.jpg",
   },
   {
     author: "Г. Г. Гейслер",
     title: "Лист из «Забав русского народа»",
     year: "1805",
-    src: "https://upload.wikimedia.org/wikipedia/commons/5/5e/03_Spiele_und_Blustigungen_der_Russen_aus_den_niederen_Volksschichten.jpg",
+    src: "/archive/geissler-zabavy-russkogo-naroda-1805.jpg",
   },
 ];
 
@@ -57,9 +58,24 @@ const DOCUMENTARY_PHOTO = {
   author: "М. П. Дмитриев",
   title: "Кулачный бой перед ночлежным домом",
   year: "до 1917",
-  src: "https://upload.wikimedia.org/wikipedia/commons/9/99/%D0%9A%D1%83%D0%BB%D0%B0%D1%87%D0%BD%D1%8B%D0%B9_%D0%B1%D0%BE%D0%B9_%D0%BF%D0%B5%D1%80%D0%B5%D0%B4_%D0%BD%D0%BE%D1%87%D0%BB%D0%B5%D0%B6%D0%BD%D1%8B%D0%BC_%D0%B4%D0%BE%D0%BC%D0%BE%D0%BC.jpg",
+  src: "/archive/dmitriev-kulachny-boy-nochlezhny-dom.jpg",
   text: "Нижегородский фотограф М. П. Дмитриев снимал уличную жизнь без постановки — здесь кулачный бой попал в кадр как часть будничной сцены, а не как постановочный сюжет.",
 };
+
+/**
+ * Mount for the plates that are shown *contained* on a board rather than
+ * cropped to the frame (the featured canvas and the row of three).
+ *
+ * Those frames carry their own padding — the board the plate is mounted on.
+ * A `fill` image cannot simply be dropped into them: an absolutely positioned
+ * box resolves `inset: 0` against its ancestor's *padding* box, so it would
+ * paint straight over the mount and the picture would sit flush to the
+ * border. This wrapper re-establishes a containing block inside the padding,
+ * which is where the plate actually belongs.
+ */
+function MountedPlate({ children }: { children: ReactNode }) {
+  return <div className="relative h-full w-full">{children}</div>;
+}
 
 function CreditPlaque({ children }: { children: ReactNode }) {
   return (
@@ -93,11 +109,12 @@ export function Paintings() {
             className="relative block aspect-[1280/868] w-full overflow-hidden border border-[var(--border-strong)]"
             style={{ animationDuration: "1.2s" }}
           >
-            <img
+            <Image
               src={LEAD_SHEET.src}
               alt={`${LEAD_SHEET.title}, ${LEAD_SHEET.year}`}
-              loading="lazy"
-              className="h-full w-full object-cover"
+              fill
+              sizes="100vw"
+              className="object-cover"
             />
             <span
               aria-hidden="true"
@@ -118,20 +135,42 @@ export function Paintings() {
           </figcaption>
         </figure>
 
-        {/* featured painting + text */}
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,620px)_minmax(0,1fr)]">
+        {/* featured painting + text.
+
+            A `<section id>` and not a plain `div`: this section is by some way
+            the longest thing on the homepage — it alone spans about half the
+            page's whole scroll — so the margin river had one mark at its head
+            and then nothing for the rest of the way down. The canvases are the
+            honest second place in it: above this line the section shows a
+            drawing made from life in 1845, below it the painted record. The
+            river charts off `main section[id]`, so an id here is all the rail
+            needs.
+
+            Deliberately *not* on the closing documentary photograph, which
+            would be the better split of the three media on show: that block
+            begins past the page's own maximum scroll, its charted position
+            clamps to 1, and a stop at 1 leaves the boat unable to sail past it
+            — the братина below would never be reachable. */}
+        <section id="holsty" className="grid gap-10 lg:grid-cols-[minmax(0,620px)_minmax(0,1fr)]">
           <figure className="relative">
+            {/* Mounted like the three below it. The canvas is 620×420, so a
+                4:3 frame was cropping its sides *and* stretching what was left
+                past its own resolution; contained, it is shown at the size it
+                actually is. */}
             <PhotoReveal
-              className="block aspect-[4/3] w-full overflow-hidden border border-[var(--border-strong)]"
+              className="block aspect-[4/3] w-full overflow-hidden border border-[var(--border-strong)] bg-[var(--surface-muted)] p-2.5"
               style={{ animationDuration: "1.1s" }}
             >
-              <img
-                src={FEATURED_PAINTING.src}
-                alt={`${FEATURED_PAINTING.author} · «${FEATURED_PAINTING.title}»`}
-                loading="lazy"
-                className="h-full w-full object-cover"
-                style={{ filter: PAINTING_FILTER }}
-              />
+              <MountedPlate>
+                <Image
+                  src={FEATURED_PAINTING.src}
+                  alt={`${FEATURED_PAINTING.author} · «${FEATURED_PAINTING.title}»`}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 620px"
+                  className="object-contain"
+                  style={{ filter: PAINTING_FILTER }}
+                />
+              </MountedPlate>
             </PhotoReveal>
             <CreditPlaque>
               {FEATURED_PAINTING.author} · {FEATURED_PAINTING.year} · PD
@@ -144,27 +183,52 @@ export function Paintings() {
             </h3>
             <p className="text-sm leading-relaxed text-[var(--muted)]">{FEATURED_PAINTING.text}</p>
           </div>
-        </div>
+        </section>
 
         {/* row of three */}
         <div className="grid gap-7 sm:grid-cols-3">
           {ROW_PAINTINGS.map((painting, index) => (
-            <figure key={painting.title} className="relative">
+            <figure key={painting.title}>
+              {/* The plaque is `absolute bottom-2`, so it anchors to the nearest
+                  positioned ancestor. With `relative` on the whole `figure` —
+                  which here also holds the caption — that ancestor was the
+                  figure, and the plaque sat under the picture instead of on it:
+                  fine while a caption ran to one line, and straight through the
+                  words as soon as one wrapped to two (Васнецов's, the longest
+                  of the three). This wrapper is the picture and nothing else,
+                  which is what the plaque was always meant to be pinned to. */}
+              <div className="relative">
+              {/* Mounted, not cropped. `object-cover` in a 4:3 frame was
+                  cutting these three to pieces — two of them are portraits
+                  (Солнцев 636×794, Васнецов 772×1113) and the frame was
+                  landscape, so it took roughly half the height off the
+                  Васнецов and stood the fighters off the bottom edge.
+
+                  4:5 because it is Солнцев's own ratio and the closest single
+                  frame to a set that runs 0.69 / 0.80 / 1.27: every plate is
+                  whole, and what is left over reads as the board it is mounted
+                  on rather than as a gap. Equal frames are also what keeps the
+                  row aligned — the captions sit on one line across all three
+                  however tall the picture inside is. */}
               <PhotoReveal
-                className="block aspect-[4/3] w-full overflow-hidden border border-[var(--border-strong)]"
+                className="block aspect-[4/5] w-full overflow-hidden border border-[var(--border-strong)] bg-[var(--surface-muted)] p-2"
                 style={{ animationDelay: `${index * 120}ms` }}
               >
-                <img
-                  src={painting.src}
-                  alt={`${painting.author} · «${painting.title}»`}
-                  loading="lazy"
-                  className="h-full w-full object-cover"
-                  style={{ filter: PAINTING_FILTER }}
-                />
+                <MountedPlate>
+                  <Image
+                    src={painting.src}
+                    alt={`${painting.author} · «${painting.title}»`}
+                    fill
+                    sizes="(max-width: 640px) 100vw, 33vw"
+                    className="object-contain"
+                    style={{ filter: PAINTING_FILTER }}
+                  />
+                </MountedPlate>
               </PhotoReveal>
               <CreditPlaque>
                 {painting.author} · {painting.year} · PD
               </CreditPlaque>
+              </div>
               <figcaption className="mt-2.5 text-sm leading-relaxed text-[var(--muted)]">
                 <span className="font-semibold text-[var(--foreground)]">{painting.title}.</span> {painting.author},{" "}
                 {painting.year}.
@@ -177,11 +241,12 @@ export function Paintings() {
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
           <figure className="relative">
             <PhotoReveal className="block aspect-video w-full overflow-hidden border border-[var(--border-strong)]">
-              <img
+              <Image
                 src={DOCUMENTARY_PHOTO.src}
                 alt={`${DOCUMENTARY_PHOTO.author} · «${DOCUMENTARY_PHOTO.title}»`}
-                loading="lazy"
-                className="h-full w-full object-cover"
+                fill
+                sizes="(max-width: 1024px) 100vw, 66vw"
+                className="object-cover"
               />
             </PhotoReveal>
             <CreditPlaque>

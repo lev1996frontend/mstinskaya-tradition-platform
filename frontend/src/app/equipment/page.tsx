@@ -35,13 +35,18 @@ export default async function EquipmentPage({
 
   return (
     <>
-      <Container className="py-10">
-        <PageHeader
-          eyebrow="Экипировка"
-          title="Снаряжение"
-          description="Четыре разряда лота традиции и девять предметов обязательного комплекта, которые боец носит независимо от выбранного разряда."
-        />
-      </Container>
+      {/* A `<section id>` and not a bare `Container`: the margin river charts
+          this page off `main section[id]`, and without one here its first
+          berth would be «Разряды», a third of the way down. */}
+      <section id="opis">
+        <Container className="py-10">
+          <PageHeader
+            eyebrow="Экипировка"
+            title="Снаряжение"
+            description="Четыре разряда лота традиции и девять предметов обязательного комплекта, которые боец носит независимо от выбранного разряда."
+          />
+        </Container>
+      </section>
 
       <Equipment rules={boutRules} />
       <GearArchive initialIndex={initialExhibitIndex} />

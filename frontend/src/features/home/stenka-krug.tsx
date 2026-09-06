@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { Container, TwoSided, cn } from "@/components/ui";
 import { PhotoReveal } from "@/features/home/stenka-photo-reveal";
 
@@ -29,7 +31,7 @@ const STENKA_SIDE: Side = {
     { name: "Фомичёв Илья", city: "Вышний Волочёк" },
   ],
   image: {
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Lob_Stenka_na_stenku.jpg/1920px-Lob_Stenka_na_stenku.jpg",
+    src: "/archive/lob-stenka-na-stenku.jpg",
     credit: "В. Лобачев · CC0",
   },
 };
@@ -44,7 +46,7 @@ const KRUG_SIDE: Side = {
     { name: "Клюев Артём", city: "Бологое" },
   ],
   image: {
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Lob_Kulachni_boi.jpg/1920px-Lob_Kulachni_boi.jpg",
+    src: "/archive/lob-kulachny-boy.jpg",
     credit: "В. Лобачев · CC0",
   },
 };
@@ -83,12 +85,15 @@ function SidePanel({ side, mirror }: { side: Side; mirror: boolean }) {
       </ul>
 
       <figure className="mt-1">
+        {/* Two side-by-side panels above the `sm` breakpoint, stacked below —
+            hence the 50vw upper bound rather than a third. */}
         <PhotoReveal className="block aspect-[3/2] w-full overflow-hidden border border-[var(--border-strong)]">
-          <img
+          <Image
             src={side.image.src}
             alt={side.title}
-            loading="lazy"
-            className="h-full w-full object-cover"
+            fill
+            sizes="(max-width: 640px) 100vw, 50vw"
+            className="object-cover"
           />
         </PhotoReveal>
         <figcaption className="record-label mt-2 text-[var(--text-4)]">{side.image.credit}</figcaption>

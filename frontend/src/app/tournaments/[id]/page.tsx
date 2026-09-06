@@ -113,7 +113,7 @@ export default async function TournamentPage({ params }: PageProps) {
                   as="li"
                   key={competition.id}
                   /* `group` so the name can answer the card's own hover — see
-                     `.discipline-card` in globals.css for the rule that draws
+                     `.record-card` in globals.css for the rule that draws
                      along the bottom edge and the ring inside the border. */
                   className="record-card group"
                 >

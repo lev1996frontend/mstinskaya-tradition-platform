@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useId, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion, type PanInfo, type Variants } from "framer-motion";
 
@@ -248,11 +249,18 @@ export function GearArchive({ initialIndex }: { initialIndex?: number } = {}) {
                               more of the target object to show — ask for
                               tighter individual crops if a specific item still
                               reads wrong after this. */}
-                          {/* eslint-disable-next-line @next/next/no-img-element -- project convention: no next/image anywhere, no remote-image config */}
-                          <img
+                          {/* Local files in `public/references/exhibits/`, so
+                              the optimizer applies with no remote-pattern
+                              config — which matters most here: these nine
+                              plates are PNG crops totalling 1.35 MB, the
+                              heaviest set on the site and the one AVIF helps
+                              the most. */}
+                          <Image
                             src={item.image}
                             alt={`${item.title} — ${item.subtitle}`}
-                            className="h-full w-full scale-[1.02] object-contain"
+                            fill
+                            sizes="(max-width: 640px) 100vw, 480px"
+                            className="scale-[1.02] object-contain"
                             style={{ objectPosition: "50% 50%", filter: "saturate(0.72) brightness(0.94) contrast(1.04)" }}
                             draggable={false}
                           />

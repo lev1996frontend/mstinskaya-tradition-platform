@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { Container, cn } from "@/components/ui";
 import { PhotoReveal } from "@/features/home/stenka-photo-reveal";
 
@@ -18,21 +20,21 @@ type ChroniclePhoto = {
 const CHRONICLE_PHOTOS: ChroniclePhoto[] = [
   {
     n: "01",
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Lob_Kulachni_boi.jpg/1920px-Lob_Kulachni_boi.jpg",
+    src: "/archive/lob-kulachny-boy.jpg",
     credit: "В. Лобачев · CC0",
     caption: "Круговой бой: один на один в очерченном круге, зрители — по кромке.",
     aspect: "aspect-[4/3]",
   },
   {
     n: "02",
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Lob_Stenka_na_stenku.jpg/1920px-Lob_Stenka_na_stenku.jpg",
+    src: "/archive/lob-stenka-na-stenku.jpg",
     credit: "В. Лобачев · CC0",
     caption: "Стенка на стенку: строй на строй, до того, как один подастся назад.",
     aspect: "aspect-[3/4]",
   },
   {
     n: "03",
-    src: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/%D0%9C%D0%B0%D1%81%D0%BB%D0%B5%D0%BD%D0%B8%D1%87%D0%BD%D1%8B%D0%B9_%D0%BA%D1%83%D0%BB%D0%B0%D1%87%D0%BD%D1%8B%D0%B9_%D0%B1%D0%BE%D0%B9._%D0%9C%D0%B0%D0%BB%D1%8B%D0%B5_%D0%9A%D0%BE%D1%80%D0%B5%D0%BB%D1%8B%2C_%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9_%D0%A1%D0%B5%D0%B2%D0%B5%D1%80%2C_2019.jpg/1920px-%D0%9C%D0%B0%D1%81%D0%BB%D0%B5%D0%BD%D0%B8%D1%87%D0%BD%D1%8B%D0%B9_%D0%BA%D1%83%D0%BB%D0%B0%D1%87%D0%BD%D1%8B%D0%B9_%D0%B1%D0%BE%D0%B9._%D0%9C%D0%B0%D0%BB%D1%8B%D0%B5_%D0%9A%D0%BE%D1%80%D0%B5%D0%BB%D1%8B%2C_%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9_%D0%A1%D0%B5%D0%B2%D0%B5%D1%80%2C_2019.jpg",
+    src: "/archive/maslenichny-boy-malye-korely-2019.jpg",
     credit: "FrolovaAlex · CC BY-SA 4.0",
     caption: "Масленичный бой в деревне Малые Корелы, Русский Север. 2019 год.",
     aspect: "aspect-[3/4]",
@@ -43,8 +45,22 @@ function ChroniclePhotoFrame({ photo }: { photo: ChroniclePhoto }) {
   return (
     <figure className="flex flex-col gap-3">
       <div className={cn("relative overflow-hidden border border-[var(--border-strong)]", photo.aspect)}>
+        {/* `fill` rather than intrinsic width/height: the frame's aspect ratio
+            is set by `photo.aspect` above and the scan is cropped into it, so
+            the picture's own dimensions never reach the layout. `PhotoReveal`
+            renders a `relative` box, which is what `fill` anchors to.
+
+            `sizes` matters here — without it the browser assumes 100vw and
+            fetches a full-width source for what is at most a third of the row
+            on a wide screen. */}
         <PhotoReveal className="block h-full w-full">
-          <img src={photo.src} alt={photo.caption} loading="lazy" className="ken h-full w-full object-cover" />
+          <Image
+            src={photo.src}
+            alt={photo.caption}
+            fill
+            sizes="(max-width: 1024px) 100vw, 33vw"
+            className="ken object-cover"
+          />
         </PhotoReveal>
         <span className="font-record absolute bottom-2 left-2 rounded-[var(--radius-sm)] bg-[rgba(16,14,12,0.72)] px-2 py-1 text-[0.5rem] uppercase tracking-[0.16em] text-[var(--text-4)]">
           {photo.credit}

@@ -1,15 +1,21 @@
 ﻿"use client";
 
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ComponentType, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AnchorIcon } from "@/components/brand/anchor-icon";
 import { AnnalIcon } from "@/components/brand/annal-icon";
 import { BoatIcon } from "@/components/brand/boat-icon";
+import { BracketIcon } from "@/components/brand/bracket-icon";
 import { BratinaIcon } from "@/components/brand/bratina-icon";
+import { CanvasesIcon } from "@/components/brand/canvases-icon";
+import { HelmetIcon } from "@/components/brand/helmet-icon";
+import { LotIcon } from "@/components/brand/lot-icon";
 import { PaintingIcon } from "@/components/brand/painting-icon";
+import { SashIcon } from "@/components/brand/sash-icon";
+import { UstavIcon } from "@/components/brand/ustav-icon";
 import { Emblem } from "@/components/brand/emblem";
-import { StenkaIcon } from "@/components/brand/weapon-glyphs";
+import { KrugIcon, PalkaIcon, StenkaIcon, WEAPON_MOTIFS } from "@/components/brand/weapon-glyphs";
 import { useBuza } from "@/features/home/buza-context";
 
 /**
@@ -108,6 +114,47 @@ function riverAtY(y: number): Point {
   return RIVER_SAMPLES[lo];
 }
 
+/**
+ * Где начинаются слова. How far in from the left edge the page's own content
+ * actually starts — the number that decides whether there is room for marks.
+ *
+ * Sections on this site are full-bleed: they run edge to edge and carry their
+ * text column on an inner wrapper (`mx-auto max-w-… px-…`). The rail may stand
+ * in that wrapper's own left padding, which is empty by design, but not one
+ * pixel past it — so the measure is the wrapper's left edge plus its
+ * `padding-left`, and the answer for the page is the tightest section on it.
+ *
+ * Absolutely-positioned children are skipped: several sections open with a
+ * full-bleed `aria-hidden` wash, and those start at 0 without holding a single
+ * letter. Taking them at face value said every page was too narrow, always.
+ *
+ * Cheap on purpose — a handful of elements, inside the pass that was already
+ * reading each of their rects. Walking the page for real text nodes would be
+ * exact and would also mean touching every node of a very long document on
+ * every resize tick.
+ */
+function contentInset(sections: HTMLElement[]): number {
+  let inset = Infinity;
+  for (const section of sections) {
+    let narrowest = Infinity;
+    for (const child of Array.from(section.children)) {
+      if (!(child instanceof HTMLElement)) continue;
+      const style = window.getComputedStyle(child);
+      if (style.position === "absolute" || style.position === "fixed") continue;
+      const rect = child.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+      narrowest = Math.min(narrowest, rect.left + (parseFloat(style.paddingLeft) || 0));
+    }
+    /* A section with no in-flow child of its own still holds its own padding. */
+    if (!Number.isFinite(narrowest)) {
+      const style = window.getComputedStyle(section);
+      narrowest = section.getBoundingClientRect().left + (parseFloat(style.paddingLeft) || 0);
+    }
+    inset = Math.min(inset, narrowest);
+  }
+  return Number.isFinite(inset) ? inset : 0;
+}
+
 /** Below this there is no journey to chart, so the rail stays out entirely — a
  *  short page (an empty registry, a login form) would otherwise get a river
  *  with the boat pinned at the source. */
@@ -135,33 +182,132 @@ const NOTCH = 8;
  * drift apart — the boat arrives at a mark exactly as the reader reaches the
  * section it stands for.
  */
+/**
+ * Каждому знаку свой материал. Marks on one hairline river read as one ochre
+ * family unless they're made of different things: brass for a fighting ring,
+ * cold tin for a register, red wax for a rule that was sealed, iron for the
+ * bracket, copper for the vessel and for a helmet, linen for the one object on
+ * the homepage that isn't metal at all, bone for a die.
+ *
+ * Only the marks sharing a rail have to differ from each other — the two routes
+ * never draw at the same time, so a token may serve a different material on
+ * each.
+ */
+const MATERIAL = {
+  brass: "border-[var(--gold)]/45 text-[var(--gold)]",
+  tin: "border-[var(--chrome)]/45 text-[var(--chrome)]",
+  linen: "border-[var(--surface-paper)]/40 text-[var(--surface-paper)]",
+  copper: "border-[var(--copper)]/50 text-[var(--copper)]",
+  iron: "border-[var(--iron)]/70 text-[var(--iron)]",
+  /* Bare pine — the stretcher a canvas is stood on, not the paint.
+     `--surface-paper` is already the linen one mark above and two cream marks
+     in a row would read as one object drawn twice, so this is the warm ash of
+     unfinished wood instead.
+
+     Full strength, like every other material here. It was first written as
+     `--gold` at 80% alpha, which made it the only translucent mark on the rail
+     and by some way the hardest to find — and the glyph check that should have
+     caught that turns the resting dim off in order to judge shape, so it saw
+     the one thing this mark did not have wrong with it. Never tint a material
+     with alpha: the rail already dims every mark at rest. */
+  wood: "border-[var(--neutral-400)]/45 text-[var(--neutral-400)]",
+  wax: "border-[var(--accent)]/50 text-[var(--accent)]",
+  bone: "border-[var(--surface-paper)]/40 text-[var(--surface-paper)]",
+} as const;
+
 type Mark = {
-  /** The `<section id>` this mark stands on and scrolls to. */
+  /** The `<section id>` this mark stands on and scrolls to — or, for a tail
+   *  mark, an id that stands for nothing on the page. */
   id: string;
   label: string;
   /** What the place is, in the archive's own voice — shown on hover/focus. */
   note: string;
+  /** How the mark is drawn. `glyph` is the ordinary case and takes `Icon`; the
+   *  other three are objects with behaviour of their own and are drawn where
+   *  they're described (the shield below, the братина and the жребий at the
+   *  end of this file's render). Kept as a kind rather than an `id ===` chain
+   *  in the render: that chain was already four branches deep for one page. */
+  kind?: "shield" | "bratina" | "lot" | "sash";
+  Icon?: ComponentType<{ size?: number; className?: string }>;
+  /** Tailwind border/text pair — see `MARK_MATERIAL`'s note on why each mark is
+   *  made of a different thing. */
+  material?: string;
+  /** Marks standing on a real `<section id>` are what the river is charted
+   *  against; a tail mark stands on the water and anchors nothing. */
+  tail?: true;
+  /** Answers a click with the strike ring. The shield's own, until «Поединок»
+   *  turned out to want the same gesture for the same reason. */
+  strikes?: true;
 };
 
-const MARKS: Mark[] = [
-  { id: "buza", label: "Буза", note: "Откуда слово" },
-  { id: "stenka", label: "Стенка и круг", note: "Как сходятся" },
-  { id: "hronika", label: "Хроника", note: "Что уже было" },
-  { id: "zhivopis", label: "Живопись", note: "Как это видели" },
-];
-
 /**
- * Братина — the last thing on the river, and the only mark that isn't a way
- * anywhere: it takes no section, scrolls nowhere, and answers a click with the
- * drink moving in it. The "напиток" reading of the word is the one the rail
- * would otherwise have dropped when the bays became section anchors, and it's
- * the reading that can't be a destination — you don't navigate to a drink.
- *
- * A братина rather than the strip's mug: this one was passed round the circle
- * hand to hand, which is why it has a handle on each side, and why it stands at
- * the end of the voyage — the sluice over, the vessel going round.
+ * Каждой странице своя река. The rail is mounted site-wide, but a mark is a way
+ * into a section, so a page with no sections worth marking gets the plain
+ * hairline and nothing else. Two pages have places on them so far.
  */
-const BRATINA: Mark = { id: "bratina", label: "Братина", note: "Пили по кругу" };
+const RIVER_BY_PATH: Record<string, Mark[]> = {
+  "/": [
+    { id: "buza", label: "Буза", note: "Откуда слово", kind: "shield", strikes: true },
+    { id: "stenka", label: "Стенка и круг", note: "Как сходятся", Icon: StenkaIcon, material: MATERIAL.brass },
+    { id: "hronika", label: "Хроника", note: "Что уже было", Icon: AnnalIcon, material: MATERIAL.tin },
+    { id: "zhivopis", label: "Живопись", note: "Как это видели", Icon: PaintingIcon, material: MATERIAL.linen },
+    /* «Живопись» is half the homepage's whole scroll on its own, so its single
+       mark left the longest stretch of this river with nothing standing in it
+       — and the братина, the last thing on the water, sat higher up the rail
+       than the walk down there deserved. This is the section's honest middle:
+       above it a drawing made from life in 1845, from here down the painted
+       record. Placing it also drops the братина to the slot the жребий holds
+       on the tournaments rail, which is where it belonged. */
+    { id: "holsty", label: "Холсты", note: "Писаны в XIX веке", Icon: CanvasesIcon, material: MATERIAL.wood },
+    /* Братина — the last thing on the homepage's river, and the only mark
+     * there that isn't a way anywhere: it takes no section, scrolls nowhere,
+     * and answers a click with the drink moving in it. The "напиток" reading of
+     * the word is the one the rail would otherwise have dropped when the bays
+     * became section anchors, and it's the reading that can't be a destination
+     * — you don't navigate to a drink.
+     *
+     * A братина rather than the strip's mug: this one was passed round the
+     * circle hand to hand, which is why it has a handle on each side, and why
+     * it stands at the end of the voyage — the sluice over, the vessel going
+     * round. */
+    { id: "bratina", label: "Братина", note: "Пили по кругу", kind: "bratina", material: MATERIAL.copper, tail: true },
+  ],
+  "/tournaments": [
+    { id: "turniry", label: "Реестр", note: "Что идёт сейчас", Icon: AnnalIcon, material: MATERIAL.tin },
+    /* Круг rather than a pair of crossed weapons: what this section shows is
+     * two fighters being brought together, and the ring they're brought into
+     * is the same glyph the разряд list already uses for that idea. It strikes
+     * on the way in for the reason the shield does — putting in at «Поединок»
+     * is a blow landing, and the rail has exactly one gesture for that. */
+    { id: "poedinok", label: "Поединок", note: "Как сходятся", Icon: KrugIcon, material: MATERIAL.brass, strikes: true },
+    { id: "setka", label: "Сетка", note: "Кто с кем", Icon: BracketIcon, material: MATERIAL.iron },
+    { id: "pravila", label: "Правила", note: "По чему судят", Icon: UstavIcon, material: MATERIAL.wax },
+    { id: "bojcy", label: "Бойцы", note: "Кто вышел", Icon: HelmetIcon, material: MATERIAL.copper },
+    /* Жребий — this page's братина, and the same argument. Chance is the one
+     * thing in a tournament you cannot scroll to: it isn't a place, it's what
+     * happens to you at one. So it stands last on the water, leads nowhere, and
+     * answers a click by being thrown — the cube turns over and comes up on a
+     * разряд, which stays in the margin until it's thrown again.
+     *
+     * It writes nothing and reads nothing. The real жребий is thrown by a judge
+     * in a match card and goes straight to the server; this is the rail's own
+     * object, the way the братина is. */
+    { id: "zhrebiy", label: "Жребий", note: "Никому не подсуден", kind: "lot", material: MATERIAL.bone, tail: true },
+  ],
+  "/equipment": [
+    { id: "opis", label: "Опись", note: "Что в комплекте", Icon: AnnalIcon, material: MATERIAL.tin },
+    /* Палка and not the круг: this section is «Чем бьются» — the four разряды
+       themselves — and the stick is the one снаряд of the four that reads at
+       18px without being mistaken for something else. */
+    { id: "snaryazhenie", label: "Разряды", note: "Чем бьются", Icon: PalkaIcon, material: MATERIAL.brass },
+    { id: "arhiv-ekipirovki", label: "Комплект", note: "Что надевают", Icon: HelmetIcon, material: MATERIAL.copper },
+    /* Опаска — this page's братина. The sash is the one thing in the комплект
+       a fighter keeps doing something to rather than simply wearing: it is
+       pulled tight before a bout. So it stands last, leads nowhere, and
+       answers a click by cinching. */
+    { id: "opaska", label: "Опаска", note: "Затянуть потуже", kind: "sash", Icon: SashIcon, material: MATERIAL.wood, tail: true },
+  ],
+};
 
 /** What goes over the rim when the братина is handed on: three drops from the
  *  two lips, thrown a beat apart so they read as a spill and not a pulse. The
@@ -172,24 +318,15 @@ const BRATINA_DROPS = [
   { left: "7px", top: "8px", x: "-4px", delay: "190ms" },
 ];
 
-/**
- * Каждому знаку свой материал. Four marks on one hairline river will read as
- * one ochre family unless they're made of different things: red wax for the
- * shield (the seal), brass for the wall (a fight is metal), cold tin for the
- * chronicle (a stamped plate), and linen for the paintings — the canvas is the
- * one object here that isn't metal at all.
- */
-const MARK_MATERIAL: Record<string, string> = {
-  stenka: "border-[var(--gold)]/45 text-[var(--gold)]",
-  hronika: "border-[var(--chrome)]/45 text-[var(--chrome)]",
-  zhivopis: "border-[var(--surface-paper)]/40 text-[var(--surface-paper)]",
-  bratina: "border-[var(--copper)]/50 text-[var(--copper)]",
-};
-
 /** The rail's own width once it carries marks (`.river-rail.is-bayed` in
- *  globals.css, 4rem past ~1400px). Read here in px because a mark has to be
- *  kept whole inside it — see the clamp in the component. */
+ *  globals.css). Read here in px because a mark has to be kept whole inside it
+ *  — see the clamp in the component — and because it's half of what decides
+ *  whether this page has room for marks at all (see `hasRoom`). */
 const RAIL_W = 64;
+
+/** Clear water between the rail's own edge and the first letter on the page.
+ *  Without it the marks are legal but crowd the text they sit beside. */
+const RAIL_CLEARANCE = 12;
 
 /** Outer box of a mark, plate plus the water going round it. The shield is the
  *  biggest thing the rail can hold; the glyph plates are smaller so four marks
@@ -308,26 +445,40 @@ export function RiverSpine() {
   const [ticks, setTicks] = useState<Tick[]>([]);
   const [charted, setCharted] = useState(false);
 
-  /* The marks stand on the homepage's own sections, so they only exist there —
-     the same gate `site-header.tsx` puts on the river strip, for the same
-     reason: elsewhere they'd point at nothing.
+  /* Хватает ли поля. A mark needs ~64px of rail plus clear water beside it, and
+     whether the page has that is not a breakpoint — it's a question about this
+     page's own widest content column, which differs per route: the homepage
+     runs on `Container wide` (max-w-7xl, 1280px) while the tournaments
+     walkthrough lays itself out at `max-w-[88rem]` (1408px). One number can't
+     be right for both, and the number that was here (1400px) was measured
+     against the homepage alone.
 
-     They also need a margin wide enough to hold them, and that threshold has
-     to be the *same* one that hides the header strip, or the symbols end up on
-     screen twice at once (they did, at 1280). Matched in JS rather than hidden
-     in CSS so the marks simply aren't in the DOM below it — nothing to tab
-     into, nothing to mis-hide. */
-  const [roomy, setRoomy] = useState(false);
-  useEffect(() => {
-    const query = window.matchMedia("(min-width: 1400px)");
-    const sync = () => setRoomy(query.matches);
-    sync();
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
-  }, []);
-  const bayed = pathname === "/" && roomy;
-  /* Only the shield plays an impact, so one flag covers it. */
-  const [struck, setStruck] = useState(false);
+     So it's measured, in `chart` below: how far from the left edge the page's
+     own content actually starts. Change a container anywhere and the rail
+     follows without anyone remembering to retune a breakpoint.
+
+     (The old comment tied this threshold to the header's river strip, which had
+     to hide at the same width or the symbols showed twice. That strip is gone —
+     see `site-header.tsx` — so nothing is pinned to this number any more.)
+
+     Measured in JS rather than hidden in CSS so the marks simply aren't in the
+     DOM when there's no room — nothing to tab into, nothing to mis-hide. */
+  const [hasRoom, setHasRoom] = useState(false);
+  const bayed = (RIVER_BY_PATH[pathname]?.length ?? 0) > 0 && hasRoom;
+  /* Which mark is playing its impact, if any. Was a boolean when the shield was
+     the only mark that could be struck. */
+  const [struck, setStruck] = useState<string | null>(null);
+  /* Жребий: `lotPending` is the throw in the air, `lotFace` what it came up on.
+     Two, and not one, for the reason recorded twice already in this codebase —
+     a result set in the same tick that *starts* an animation shows before the
+     thing has visibly moved. `lotFace` is only ever written from the tumble's
+     own `animationend`. */
+  const [lotPending, setLotPending] = useState<number | null>(null);
+  const [lotFace, setLotFace] = useState<number | null>(null);
+  /* Опаска: one flag, because cinching is a gesture that replays rather than
+     a state that persists — a sash left visibly loose would be reporting
+     something about the page that isn't true. */
+  const [cinched, setCinched] = useState(false);
 
   /* A mark is a way *into* its section: it scrolls there, and "Буза" — which is
      collapsed until something opens it — is opened first, on this mark's own
@@ -416,15 +567,18 @@ export function RiverSpine() {
       if (max < MIN_SCROLLABLE) {
         setCharted(false);
         setTicks([]);
+        setHasRoom(false);
         return;
       }
       setCharted(true);
+      const sections = Array.from(document.querySelectorAll<HTMLElement>("main section[id]"));
       setTicks(
-        Array.from(document.querySelectorAll<HTMLElement>("main section[id]")).map((section) => ({
+        sections.map((section) => ({
           id: section.id,
           progress: Math.min(1, Math.max(0, (section.getBoundingClientRect().top + window.scrollY) / max)),
         })),
       );
+      setHasRoom(contentInset(sections) >= RAIL_W + RAIL_CLEARANCE);
     };
 
     chart();
@@ -470,31 +624,34 @@ export function RiverSpine() {
     };
   }, [charted, measureRail, render]);
 
-  /* Знаки. Only where there's margin to hold them: a mark needs ~64px of rail,
-     and the homepage's own `Container wide` (max-w-7xl) leaves that only past
-     ~1400px. Below it the rail stays the plain hairline it is elsewhere and the
-     header strip keeps its three symbols (`site-header.tsx` mirrors this
-     breakpoint), so nothing is ever in two places at once.
+  /* Знаки. Only where there's clear margin to hold them — see `hasRoom` above,
+     which measures the page rather than trusting a breakpoint.
 
      A mark only appears once its section has actually been measured — no
      section on the page, no mark, rather than a mark standing over water it
-     can't take you to. */
+     can't take you to. The tail mark (братина, жребий) has no section by
+     definition and rides along whenever anything else made it. */
   const marks = useMemo<(Mark & { left: number; riverX: number; top: number; box: number })[]>(() => {
     const placed: (Mark & { left: number; riverX: number; top: number; box: number })[] = [];
     if (!bayed) return placed;
-    const found = MARKS.map((mark) => ({
-      mark,
-      progress: ticks.find((candidate) => candidate.id === mark.id)?.progress,
-    })).filter((entry): entry is { mark: Mark; progress: number } => entry.progress !== undefined);
+    const route = RIVER_BY_PATH[pathname] ?? [];
+    const tail = route.find((mark) => mark.tail) ?? null;
+    const found = route
+      .filter((mark) => !mark.tail)
+      .map((mark) => ({
+        mark,
+        progress: ticks.find((candidate) => candidate.id === mark.id)?.progress,
+      }))
+      .filter((entry): entry is { mark: Mark; progress: number } => entry.progress !== undefined);
 
     /* Equal stretches of water, one per place on the river — the marked
-       sections and then the братина at the end — with a margin above the first
-       and below the last so the boat has somewhere to come from and somewhere
-       to go. */
-    const places = found.length + 1;
+       sections and then the tail mark at the end — with a margin above the
+       first and below the last so the boat has somewhere to come from and
+       somewhere to go. */
+    const places = found.length + (tail ? 1 : 0);
     found.forEach((entry, index) => {
       const at = (index + 1) / (places + 1);
-      const box = entry.mark.id === "buza" ? SHIELD_BOX : GLYPH_BOX;
+      const box = entry.mark.kind === "shield" ? SHIELD_BOX : GLYPH_BOX;
       const half = box / 2;
       const riverX = (riverAtY(at * VB_H).x / VB_W) * RAIL_W;
       /* The mark follows the water sideways, but only as far as the rail can
@@ -503,12 +660,12 @@ export function RiverSpine() {
       placed.push({ ...entry.mark, box, riverX, left: Math.min(RAIL_W - half, Math.max(half, riverX)), top: at * 100 });
     });
 
-    if (found.length > 0) {
+    if (tail && found.length > 0) {
       const at = places / (places + 1);
       const riverX = (riverAtY(at * VB_H).x / VB_W) * RAIL_W;
       const half = GLYPH_BOX / 2;
       placed.push({
-        ...BRATINA,
+        ...tail,
         box: GLYPH_BOX,
         riverX,
         left: Math.min(RAIL_W - half, Math.max(half, riverX)),
@@ -516,15 +673,15 @@ export function RiverSpine() {
       });
     }
     return placed;
-  }, [bayed, ticks]);
+  }, [bayed, pathname, ticks]);
 
   /* The chart itself: each marked section's real scroll position mapped to its
-     even stretch of rail. The братина is left out — it stands on the river but
-     isn't a section, so it can't be a point the chart is pinned to. */
+     even stretch of rail. The tail mark is left out — it stands on the river
+     but isn't a section, so it can't be a point the chart is pinned to. */
   const stops = useMemo<Stop[]>(
     () =>
       marks
-        .filter((mark) => mark.id !== BRATINA.id)
+        .filter((mark) => !mark.tail)
         .map((mark) => ({
           from: ticks.find((tick) => tick.id === mark.id)?.progress ?? mark.top / 100,
           to: mark.top / 100,
@@ -648,8 +805,10 @@ export function RiverSpine() {
           rail reads as one line of places being reached one after another,
           instead of plates shuffling out of the boat's way. */}
       {marks.map((mark) => {
-        const isShield = mark.id === "buza";
-        const isBratina = mark.id === BRATINA.id;
+        const isShield = mark.kind === "shield";
+        const isBratina = mark.kind === "bratina";
+        const isLot = mark.kind === "lot";
+        const isSash = mark.kind === "sash";
         /* Opened: the boat is here, the mark has given way to its berth. It's
            gone visually, so it's out of the tab order and off the tree too —
            an invisible control that still answers the keyboard is a trap. */
@@ -665,11 +824,22 @@ export function RiverSpine() {
                 setSloshing(true);
                 return;
               }
+              if (isSash) {
+                setCinched(true);
+                return;
+              }
+              if (isLot) {
+                /* Thrown, not decided: which разряд it came up on is read off
+                   the tumble's own end, below. Re-throwing mid-air would leave
+                   two results racing one animation. */
+                if (lotPending === null) setLotPending(Math.floor(Math.random() * WEAPON_MOTIFS.length));
+                return;
+              }
               goToMark(mark.id);
-              if (isShield) setStruck(true);
+              if (mark.strikes) setStruck(mark.id);
             }}
-            /* Only the shield's target is a thing that opens; the other two
-               marks are plain jumps, so they claim no expanded state. */
+            /* Only the shield's target is a thing that opens; every other mark
+               is a plain jump, so it claims no expanded state. */
             aria-expanded={isShield ? open : undefined}
             aria-controls={isShield ? "buza" : undefined}
             aria-label={
@@ -677,10 +847,26 @@ export function RiverSpine() {
                 ? drained
                   ? "Братина — пуста, налить"
                   : "Братина — выпить до дна"
-                : `${mark.label} — ${mark.note.toLowerCase()}`
+                : isSash
+                  ? "Опаска — затянуть потуже"
+                  : isLot
+                    ? lotFace === null
+                      ? "Жребий — бросить"
+                      : /* Nominative: «выпал нож», not the genitive the motif
+                           also carries — that one is for «жребий ножа». */
+                        `Жребий — выпал ${WEAPON_MOTIFS[lotFace].label.toLowerCase()}, бросить снова`
+                    : `${mark.label} — ${mark.note.toLowerCase()}`
             }
             onAnimationEnd={(event) => {
-              if (event.animationName === "strike-ring") setStruck(false);
+              if (event.animationName === "strike-ring") setStruck(null);
+              /* The разряд is read off the cube finishing its turn, never off
+                 the click that started it — the same rule the big жребий cube
+                 and the weapon billet both had to be fixed to obey. */
+              if (event.animationName === "lot-tumble") {
+                setLotFace(lotPending);
+                setLotPending(null);
+              }
+              if (event.animationName === "sash-cinch") setCinched(false);
               /* Cleared on the vessel's own movement, not the liquid's: the
                  liquid only animates on the way *in*, so listening to the slosh
                  alone left the flag stuck after a drink. */
@@ -707,29 +893,46 @@ export function RiverSpine() {
                    to carry the real mark. */
                 <>
                   <span className={`shield-guard grid place-items-center${open ? " shield-guard-raised" : ""}`}>
-                    <span className={`grid place-items-center${struck ? " shield-brace" : ""}`}>
+                    <span className={`grid place-items-center${struck === mark.id ? " shield-brace" : ""}`}>
                       {/* Colour stated rather than inherited: the mark is
                           `currentColor`, and a berth that changes text colour
                           later must not silently repaint the emblem with it. */}
                       <Emblem size={40} className="text-[var(--foreground)]" />
                     </span>
                   </span>
-                  {struck ? (
+                  {struck === mark.id ? (
                     <span aria-hidden="true" className="strike-ring pointer-events-none absolute inset-0 m-auto size-6" />
                   ) : null}
                 </>
               ) : (
                 /* Each mark its own material, so they never read as one ochre
-                   family: red wax for the shield, brass for the wall, cold tin
-                   for the chronicle and the paintings. */
+                   family — see `MATERIAL`. */
                 <span
-                  className={`grid size-8 place-items-center rounded-full border ${MARK_MATERIAL[mark.id] ?? MARK_MATERIAL.hronika}`}
+                  className={`grid size-8 place-items-center rounded-full border ${mark.material ?? MATERIAL.tin}`}
                   style={{ background: "var(--background-deep)", boxShadow: "var(--shadow-sm)" }}
                 >
-                  {mark.id === "stenka" ? (
-                    <StenkaIcon size={18} />
-                  ) : mark.id === "hronika" ? (
-                    <AnnalIcon size={18} />
+                  {struck === mark.id ? (
+                    <span aria-hidden="true" className="strike-ring pointer-events-none absolute inset-0 m-auto size-6" />
+                  ) : null}
+                  {isLot ? (
+                    /* Cube at rest until it's thrown, then whichever разряд it
+                       came up on — the cube outline and a weapon glyph are the
+                       two states this mark has, and at 18px only one of them
+                       can be on screen at a time. */
+                    <span className={`grid place-items-center${lotPending !== null ? " lot-tumble" : ""}`}>
+                      {lotFace === null || lotPending !== null ? (
+                        <LotIcon size={18} />
+                      ) : (
+                        (() => {
+                          const Drawn = WEAPON_MOTIFS[lotFace].Icon;
+                          return <Drawn size={17} />;
+                        })()
+                      )}
+                    </span>
+                  ) : isSash ? (
+                    <span className={`grid place-items-center${cinched ? " sash-cinch" : ""}`}>
+                      <SashIcon size={18} />
+                    </span>
                   ) : isBratina ? (
                     <span
                       className={`relative grid place-items-center${
@@ -757,15 +960,21 @@ export function RiverSpine() {
                           ))
                         : null}
                     </span>
-                  ) : (
-                    <PaintingIcon size={18} />
-                  )}
+                  ) : mark.Icon ? (
+                    <mark.Icon size={18} />
+                  ) : null}
                 </span>
               )}
             </span>
             <span className="river-berth-label record-label">
               {mark.label}
-              <span className="block text-[var(--text-4)]">{mark.note}</span>
+              <span className="block text-[var(--text-4)]">
+                {/* The жребий's note is what it last came up on — the one mark
+                    whose caption is a result rather than a description. */}
+                {isLot && lotFace !== null && lotPending === null
+                  ? `Выпал: ${WEAPON_MOTIFS[lotFace].label.toLowerCase()}`
+                  : mark.note}
+              </span>
             </span>
           </button>
         );

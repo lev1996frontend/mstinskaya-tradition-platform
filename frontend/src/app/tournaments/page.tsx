@@ -48,6 +48,11 @@ export default async function TournamentsPage() {
 
   return (
     <DirectionalTransition>
+      {/* A `<section id>` and not a bare `Container`: the margin river charts
+          the page off `main section[id]`, and the registry is the first real
+          place on this page — without it the rail's first mark would be the
+          walkthrough, halfway down. */}
+      <section id="turniry">
       <Container className="space-y-8 py-10">
         <PageHeader
           eyebrow="Соревнования"
@@ -78,6 +83,7 @@ export default async function TournamentsPage() {
           </>
         )}
       </Container>
+      </section>
 
       {/* Interactive walkthrough of one fighter's run through a bracket —
           lives here, not on the landing page, so it sits next to the real
