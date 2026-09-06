@@ -1,61 +1,68 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
 import { IMPULSE_SPRING, IMPULSE_TAP, STOP_SPRING } from "@/lib/motion";
-import {
-  getLenis,
-  getLenisServerSnapshot,
-  subscribeLenis,
-} from "@/features/transitions/lenis-instance";
+import { useScrollToTop } from "@/lib/use-scroll-to-top";
 
 const SHOW_AFTER_PX = 480;
 
-/** ease-out-quint — a gentler decel than Lenis's default, so the scroll-to-top settles instead of snapping. */
-const SCROLL_TOP_EASING = (t: number) => 1 - Math.pow(1 - t, 5);
-
 /**
- * Floating "back to top" control. Scroll position is tracked off the native
- * `scroll` event rather than Lenis's own callback — Lenis keeps
- * `window.scrollY` in sync every frame regardless of whether it's mounted
- * (see `SmoothScrollMount`, which skips smooth scrolling entirely under
- * reduced motion), so this stays correct in both branches without depending
- * on the Lenis context being present.
+ * Floating "back to top" control, for the length of the page above the
+ * colophon.
  *
- * The instance is read from `lenis-instance.ts` rather than Lenis's own
- * `useLenis`: this component sits in the root layout, so importing the Lenis
- * react bindings here would drag Lenis (and GSAP behind it) back into the
- * shared chunk of every route — exactly what mounting smooth scroll lazily
- * was meant to prevent. `null` until that chunk has loaded, which the click
- * handler below already treats as "no smooth scroll available".
+ * It steps aside when the footer arrives. The colophon carries its own
+ * «Наверх» — labelled, in the register of the record — and two controls for the
+ * same act, one of them sitting on top of the seals, is one too many.
+ *
+ * That handover replaced an attempt to keep this button on screen throughout by
+ * mooring it above the footer's top edge, and the reason it was dropped is
+ * worth keeping: at 640–767px the colophon's bottom row has already gone
+ * horizontal (`sm`) and put the seals under this corner, while the link columns
+ * have not yet (`md`), leaving a footer 635px tall on a 720px viewport — more
+ * than there was room to rise past. The band where the button most needed to
+ * move was exactly the band where it could not, and no amount of arithmetic
+ * fixes that. Standing down where the footer's own control takes over needs no
+ * room at all, and behaves the same at every width.
+ *
+ * `IntersectionObserver`, not a scroll measurement: "is the footer on screen"
+ * is precisely the question, and the browser answers it without this reading
+ * layout on every tick.
+ *
+ * Scroll position is tracked off the native `scroll` event rather than Lenis's
+ * own callback — Lenis keeps `window.scrollY` in sync every frame regardless of
+ * whether it's mounted (see `SmoothScrollMount`, which skips smooth scrolling
+ * entirely under reduced motion), so this stays correct in both branches
+ * without depending on the Lenis context being present.
  */
 export function ScrollToTop() {
-  const [visible, setVisible] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [footerInView, setFooterInView] = useState(false);
   const reduceMotion = useReducedMotion();
-  const lenis = useSyncExternalStore(subscribeLenis, getLenis, getLenisServerSnapshot);
+  const scrollToTop = useScrollToTop();
 
   useEffect(() => {
-    const onScroll = () => setVisible(window.scrollY > SHOW_AFTER_PX);
+    const onScroll = () => setScrolled(window.scrollY > SHOW_AFTER_PX);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const handleClick = () => {
-    if (lenis) {
-      lenis.scrollTo(0, { duration: reduceMotion ? 0 : 1.6, easing: SCROLL_TOP_EASING });
-    } else {
-      window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
-    }
-  };
+  useEffect(() => {
+    const footer = document.querySelector("footer");
+    if (!footer) return;
+    const observer = new IntersectionObserver(([entry]) => setFooterInView(entry.isIntersecting));
+    observer.observe(footer);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <AnimatePresence>
-      {visible ? (
+      {scrolled && !footerInView ? (
         <motion.button
           type="button"
-          onClick={handleClick}
+          onClick={scrollToTop}
           aria-label="Наверх"
           initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}

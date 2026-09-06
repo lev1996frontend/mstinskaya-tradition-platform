@@ -9,6 +9,7 @@ import { SashIcon } from "@/components/brand/sash-icon";
 import { UstavIcon } from "@/components/brand/ustav-icon";
 import { Container } from "@/components/ui";
 import { FooterSeals } from "./footer-seals";
+import { FooterToTop } from "./footer-to-top";
 
 /**
  * Each link carries the mark that already stands for that place on the margin
@@ -174,7 +175,14 @@ export function SiteFooter() {
         <p className="font-record text-[0.7rem] uppercase tracking-[0.14em] text-[var(--muted)]">
           © {new Date().getFullYear()} · Мстинская традиция
         </p>
-        <FooterSeals />
+        {/* Seals and «Наверх» travel together, so the row needs no breakpoint of
+            its own: stacked (below `sm`) they take the line the copyright left
+            behind, the marks at one end and the way up at the other; in a row
+            they close ranks at the right end beside it. */}
+        <div className="flex items-center justify-between gap-6 sm:justify-end">
+          <FooterSeals />
+          <FooterToTop />
+        </div>
       </Container>
     </footer>
   );
