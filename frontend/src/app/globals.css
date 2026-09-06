@@ -2242,12 +2242,19 @@ button:not(:disabled),
   transition: transform 160ms var(--ease-out);
 }
 
-/* Bleeds into the gutter (and over the rules above and below) so a lit row
-   reads as the page opening around it, not as a boxed cell. */
+/* Runs the full width of the register and 1px over the rules above and below,
+   so a lit row reads as the page opening around it rather than as a boxed cell.
+
+   Flush at the sides, not bled into the gutter as it used to be. The 0.75rem
+   bleed was measured against a row that stays put, but the row travels 6px on
+   hover and carries this pseudo-element with it — so what actually landed was
+   6px of wash sticking out past the register's left rule and 18px past its
+   right, lopsided rather than generous. The compensation lives with the travel
+   itself, in the pointer block below. */
 .ledger-row::before {
   content: "";
   position: absolute;
-  inset: -1px -0.75rem;
+  inset: -1px 0;
   z-index: -1;
   background: linear-gradient(to right, var(--accent-soft), transparent 78%);
   opacity: 0;
@@ -2304,10 +2311,15 @@ button:not(:disabled),
     transform: translateX(6px);
   }
 
+  /* Steps back by exactly the 6px the row steps forward, so the wash stays
+     keyed to the register's own rules while the row slides out from under it.
+     Without this it rode along and overhung the left rule by those 6px — the
+     one edge where the overhang is visible, the right being past the point the
+     gradient has already faded out. */
   .ledger-row:hover::before,
   .ledger-row:focus-visible::before {
     opacity: 1;
-    transform: none;
+    transform: translateX(-6px);
     transition-duration: 200ms;
   }
 
@@ -2340,11 +2352,16 @@ button:not(:disabled),
   }
 }
 
-/* Colour and the divider still answer the pointer; nothing travels. */
+/* Colour and the divider still answer the pointer; nothing travels. The wash's
+   own -6px belongs in this list too: it exists solely to cancel the row's
+   travel, so where the row holds still it would be an uncorrected 6px shift of
+   its own, in the opposite direction. */
 @media (prefers-reduced-motion: reduce) {
   .ledger-row:hover,
   .ledger-row:focus-visible,
   .ledger-row:active,
+  .ledger-row:hover::before,
+  .ledger-row:focus-visible::before,
   .ledger-row:hover .ledger-row-lead,
   .ledger-row:focus-visible .ledger-row-lead,
   .ledger-row:hover .ledger-row-arrow,
