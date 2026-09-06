@@ -7,7 +7,7 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { AuthProvider } from "@/features/auth/auth-context";
 import { BuzaProvider } from "@/features/home/buza-context";
-import { SmoothScroll } from "@/features/transitions/smooth-scroll";
+import { SmoothScrollMount } from "@/features/transitions/smooth-scroll-mount";
 
 import "./globals.css";
 
@@ -60,17 +60,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${commissioner.variable} ${alegreya.variable} ${plexMono.variable}`}
     >
       <body className="flex min-h-dvh flex-col">
-        <SmoothScroll>
-          <AuthProvider>
-            <BuzaProvider>
-              <RiverSpine />
-              <SiteHeader />
-              <main className="flex-1">{children}</main>
-              <SiteFooter />
-              <ScrollToTop />
-            </BuzaProvider>
-          </AuthProvider>
-        </SmoothScroll>
+        {/* Smooth scroll is a sibling, not a wrapper: it drives
+            `document.documentElement` in Lenis's `root` mode, so it has no
+            need to enclose the page — and not enclosing it is what lets the
+            Lenis/GSAP chunk load after hydration instead of blocking every
+            route. See `smooth-scroll-mount.tsx`. */}
+        <SmoothScrollMount />
+        <AuthProvider>
+          <BuzaProvider>
+            <RiverSpine />
+            <SiteHeader />
+            <main className="flex-1">{children}</main>
+            <SiteFooter />
+            <ScrollToTop />
+          </BuzaProvider>
+        </AuthProvider>
       </body>
     </html>
   );

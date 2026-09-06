@@ -1,10 +1,14 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useLenis } from "lenis/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { IMPULSE_SPRING, IMPULSE_TAP, STOP_SPRING } from "@/lib/motion";
+import {
+  getLenis,
+  getLenisServerSnapshot,
+  subscribeLenis,
+} from "@/features/transitions/lenis-instance";
 
 const SHOW_AFTER_PX = 480;
 
@@ -15,14 +19,21 @@ const SCROLL_TOP_EASING = (t: number) => 1 - Math.pow(1 - t, 5);
  * Floating "back to top" control. Scroll position is tracked off the native
  * `scroll` event rather than Lenis's own callback — Lenis keeps
  * `window.scrollY` in sync every frame regardless of whether it's mounted
- * (see `SmoothScroll`, which skips `ReactLenis` entirely under reduced
- * motion), so this stays correct in both branches without depending on the
- * Lenis context being present.
+ * (see `SmoothScrollMount`, which skips smooth scrolling entirely under
+ * reduced motion), so this stays correct in both branches without depending
+ * on the Lenis context being present.
+ *
+ * The instance is read from `lenis-instance.ts` rather than Lenis's own
+ * `useLenis`: this component sits in the root layout, so importing the Lenis
+ * react bindings here would drag Lenis (and GSAP behind it) back into the
+ * shared chunk of every route — exactly what mounting smooth scroll lazily
+ * was meant to prevent. `null` until that chunk has loaded, which the click
+ * handler below already treats as "no smooth scroll available".
  */
 export function ScrollToTop() {
   const [visible, setVisible] = useState(false);
   const reduceMotion = useReducedMotion();
-  const lenis = useLenis();
+  const lenis = useSyncExternalStore(subscribeLenis, getLenis, getLenisServerSnapshot);
 
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > SHOW_AFTER_PX);

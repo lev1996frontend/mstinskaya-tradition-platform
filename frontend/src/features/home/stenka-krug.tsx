@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { Container, TwoSided, cn } from "@/components/ui";
 import { PhotoReveal } from "@/features/home/stenka-photo-reveal";
 
@@ -83,12 +85,15 @@ function SidePanel({ side, mirror }: { side: Side; mirror: boolean }) {
       </ul>
 
       <figure className="mt-1">
+        {/* Two side-by-side panels above the `sm` breakpoint, stacked below —
+            hence the 50vw upper bound rather than a third. */}
         <PhotoReveal className="block aspect-[3/2] w-full overflow-hidden border border-[var(--border-strong)]">
-          <img
+          <Image
             src={side.image.src}
             alt={side.title}
-            loading="lazy"
-            className="h-full w-full object-cover"
+            fill
+            sizes="(max-width: 640px) 100vw, 50vw"
+            className="object-cover"
           />
         </PhotoReveal>
         <figcaption className="record-label mt-2 text-[var(--text-4)]">{side.image.credit}</figcaption>

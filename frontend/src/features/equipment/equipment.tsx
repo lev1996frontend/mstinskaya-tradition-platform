@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { WeaponGlyph } from "@/features/tournaments/weapon-mark";
 import { Container, EmptyState } from "@/components/ui";
 import type { WeaponRulesView } from "@/types";
@@ -93,11 +95,17 @@ function ArchivalCrop() {
   return (
     <figure className="flex flex-col">
       <div className="relative aspect-[5/4] w-full overflow-hidden border border-[var(--border)] bg-[var(--surface-muted)]">
-        {/* eslint-disable-next-line @next/next/no-img-element -- project convention: no next/image anywhere, no remote-image config */}
-        <img
+        {/* The "no next/image" convention this file used to cite covers images
+            served from the API on an arbitrary host, which would need remote
+            patterns configured. This one is a local file in `public/`, where
+            the optimizer needs no configuration at all and turns a 194 KB JPEG
+            into an AVIF a fraction of that. */}
+        <Image
           src="/archive/kulachnoy-boy-risunok.jpg"
           alt="«Кулачной бой!», рисунок с натуры — рукавицы, кафтаны, пояса и шапки бойцов"
-          className="h-full w-full object-cover"
+          fill
+          sizes="(max-width: 1024px) 100vw, 50vw"
+          className="object-cover"
           style={{
             /* A shade below centre: above the figures is sky and cloud, below
                them the ground and the sheet's own title. */

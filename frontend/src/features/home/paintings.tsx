@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
 
 import { Container } from "@/components/ui";
@@ -61,6 +62,21 @@ const DOCUMENTARY_PHOTO = {
   text: "Нижегородский фотограф М. П. Дмитриев снимал уличную жизнь без постановки — здесь кулачный бой попал в кадр как часть будничной сцены, а не как постановочный сюжет.",
 };
 
+/**
+ * Mount for the plates that are shown *contained* on a board rather than
+ * cropped to the frame (the featured canvas and the row of three).
+ *
+ * Those frames carry their own padding — the board the plate is mounted on.
+ * A `fill` image cannot simply be dropped into them: an absolutely positioned
+ * box resolves `inset: 0` against its ancestor's *padding* box, so it would
+ * paint straight over the mount and the picture would sit flush to the
+ * border. This wrapper re-establishes a containing block inside the padding,
+ * which is where the plate actually belongs.
+ */
+function MountedPlate({ children }: { children: ReactNode }) {
+  return <div className="relative h-full w-full">{children}</div>;
+}
+
 function CreditPlaque({ children }: { children: ReactNode }) {
   return (
     <span className="font-record absolute bottom-2 left-2 rounded-[var(--radius-sm)] bg-[rgba(16,14,12,0.72)] px-2 py-1 text-[0.5rem] uppercase tracking-[0.16em] text-[var(--text-4)]">
@@ -93,11 +109,12 @@ export function Paintings() {
             className="relative block aspect-[1280/868] w-full overflow-hidden border border-[var(--border-strong)]"
             style={{ animationDuration: "1.2s" }}
           >
-            <img
+            <Image
               src={LEAD_SHEET.src}
               alt={`${LEAD_SHEET.title}, ${LEAD_SHEET.year}`}
-              loading="lazy"
-              className="h-full w-full object-cover"
+              fill
+              sizes="100vw"
+              className="object-cover"
             />
             <span
               aria-hidden="true"
@@ -144,13 +161,16 @@ export function Paintings() {
               className="block aspect-[4/3] w-full overflow-hidden border border-[var(--border-strong)] bg-[var(--surface-muted)] p-2.5"
               style={{ animationDuration: "1.1s" }}
             >
-              <img
-                src={FEATURED_PAINTING.src}
-                alt={`${FEATURED_PAINTING.author} · «${FEATURED_PAINTING.title}»`}
-                loading="lazy"
-                className="h-full w-full object-contain"
-                style={{ filter: PAINTING_FILTER }}
-              />
+              <MountedPlate>
+                <Image
+                  src={FEATURED_PAINTING.src}
+                  alt={`${FEATURED_PAINTING.author} · «${FEATURED_PAINTING.title}»`}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 620px"
+                  className="object-contain"
+                  style={{ filter: PAINTING_FILTER }}
+                />
+              </MountedPlate>
             </PhotoReveal>
             <CreditPlaque>
               {FEATURED_PAINTING.author} · {FEATURED_PAINTING.year} · PD
@@ -194,13 +214,16 @@ export function Paintings() {
                 className="block aspect-[4/5] w-full overflow-hidden border border-[var(--border-strong)] bg-[var(--surface-muted)] p-2"
                 style={{ animationDelay: `${index * 120}ms` }}
               >
-                <img
-                  src={painting.src}
-                  alt={`${painting.author} · «${painting.title}»`}
-                  loading="lazy"
-                  className="h-full w-full object-contain"
-                  style={{ filter: PAINTING_FILTER }}
-                />
+                <MountedPlate>
+                  <Image
+                    src={painting.src}
+                    alt={`${painting.author} · «${painting.title}»`}
+                    fill
+                    sizes="(max-width: 640px) 100vw, 33vw"
+                    className="object-contain"
+                    style={{ filter: PAINTING_FILTER }}
+                  />
+                </MountedPlate>
               </PhotoReveal>
               <CreditPlaque>
                 {painting.author} · {painting.year} · PD
@@ -218,11 +241,12 @@ export function Paintings() {
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
           <figure className="relative">
             <PhotoReveal className="block aspect-video w-full overflow-hidden border border-[var(--border-strong)]">
-              <img
+              <Image
                 src={DOCUMENTARY_PHOTO.src}
                 alt={`${DOCUMENTARY_PHOTO.author} · «${DOCUMENTARY_PHOTO.title}»`}
-                loading="lazy"
-                className="h-full w-full object-cover"
+                fill
+                sizes="(max-width: 1024px) 100vw, 66vw"
+                className="object-cover"
               />
             </PhotoReveal>
             <CreditPlaque>

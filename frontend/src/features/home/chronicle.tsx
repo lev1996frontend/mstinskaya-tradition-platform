@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { Container, cn } from "@/components/ui";
 import { PhotoReveal } from "@/features/home/stenka-photo-reveal";
 
@@ -43,8 +45,22 @@ function ChroniclePhotoFrame({ photo }: { photo: ChroniclePhoto }) {
   return (
     <figure className="flex flex-col gap-3">
       <div className={cn("relative overflow-hidden border border-[var(--border-strong)]", photo.aspect)}>
+        {/* `fill` rather than intrinsic width/height: the frame's aspect ratio
+            is set by `photo.aspect` above and the scan is cropped into it, so
+            the picture's own dimensions never reach the layout. `PhotoReveal`
+            renders a `relative` box, which is what `fill` anchors to.
+
+            `sizes` matters here — without it the browser assumes 100vw and
+            fetches a full-width source for what is at most a third of the row
+            on a wide screen. */}
         <PhotoReveal className="block h-full w-full">
-          <img src={photo.src} alt={photo.caption} loading="lazy" className="ken h-full w-full object-cover" />
+          <Image
+            src={photo.src}
+            alt={photo.caption}
+            fill
+            sizes="(max-width: 1024px) 100vw, 33vw"
+            className="ken object-cover"
+          />
         </PhotoReveal>
         <span className="font-record absolute bottom-2 left-2 rounded-[var(--radius-sm)] bg-[rgba(16,14,12,0.72)] px-2 py-1 text-[0.5rem] uppercase tracking-[0.16em] text-[var(--text-4)]">
           {photo.credit}
