@@ -1280,34 +1280,60 @@ button:not(:disabled),
 .footer-link {
   position: relative;
   color: var(--muted);
-  background-image: linear-gradient(
-    to right,
-    var(--accent-strong) 0 50%,
-    currentColor 50% 100%
-  );
-  background-repeat: no-repeat;
-  background-size: 200% 100%;
-  background-position: 100% 0;
-  transition:
-    background-position 220ms var(--ease-out),
-    color 200ms ease;
+  transition: color 200ms ease;
 }
 
-/* Guarded: without the clip the fill would paint a block behind the text, and
-   `text-fill-color: transparent` on its own would erase the word entirely. */
-@supports (background-clip: text) or (-webkit-background-clip: text) {
-  .footer-link {
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+/* The word lifts whole, in one step. It used to fill letter by letter from the
+   left — a gradient clipped to the glyphs, sliding across — which meant the
+   word was two colours at once for the length of the transition and the eye
+   read the seam rather than the word. The colour now just changes; the thing
+   that travels is the ripple below. */
+.footer-link:hover,
+.footer-link:focus-visible {
+  color: var(--foreground);
+}
+
+/* перекат — one wave along the word: each letter rises 3px and sits straight
+   back down, a beat later than the one before it. Not a staircase that holds:
+   letters left standing at different heights re-set the line every time the
+   pointer crosses it, and «Правила и регламенты» would climb a long way. This
+   settles back to nothing, so a word passed over quickly is left exactly as it
+   was found. */
+@keyframes footer-ripple {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  45% {
+    transform: translateY(-3px);
   }
 }
 
-.footer-link:hover,
-.footer-link:focus-visible {
-  background-position: 0 0;
+.footer-link-word {
+  /* Keeps a word whole: the letters are separate boxes, and without this a
+     line could break between any two of them. */
+  display: inline-block;
 }
 
+.footer-link-letter {
+  display: inline-block;
+}
+
+/* 26ms a letter, not the 45ms `letterDelayMs` uses for the kinetic fighter
+   name. That one staggers a handful of display-sized letters making an
+   entrance and is meant to be watched; twenty letters at 45ms would take 855ms
+   to cross «Правила и регламенты», long past the moment a pointer is still
+   likely to be on it. */
+.footer-link:hover .footer-link-letter,
+.footer-link:focus-visible .footer-link-letter {
+  animation: footer-ripple 280ms var(--ease-out);
+  animation-delay: calc(var(--i) * 26ms);
+}
+
+/* The rule is the same gesture read along the bottom, so it runs for as long
+   as the wave takes to cross this particular word — `--letters` is set per
+   link in `site-footer.tsx`. A fixed duration had the short labels' rules
+   lagging their ripple and the long ones' arriving first. */
 .footer-link::after {
   content: "";
   position: absolute;
@@ -1317,7 +1343,7 @@ button:not(:disabled),
   background: var(--accent);
   transform: scaleX(0);
   transform-origin: left center;
-  transition: transform 220ms var(--ease-out);
+  transition: transform calc(var(--letters, 8) * 26ms + 180ms) var(--ease-out);
 }
 
 .footer-link:hover::after,
@@ -1325,15 +1351,46 @@ button:not(:disabled),
   transform: scaleX(1);
 }
 
-/* No `color` change on hover: `currentColor` is the gradient's own resting
-   half, so lifting it would repaint the part of the word the fill has not
-   reached yet — the trailing letters would brighten while the leading ones
-   were still filling, which is the opposite of a fill. */
+/* Знак раздела — stands in the grid gap to the left of the column and steps in
+   from further out, so it reads as arriving beside the word rather than
+   fading up on top of it. Gold, not the rule's oxblood: the rule is the action
+   and the mark is the place. */
+.footer-link-mark {
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 50%;
+  margin-top: -7px;
+  color: var(--gold);
+  opacity: 0;
+  transform: translateX(5px);
+  transition:
+    opacity 200ms ease,
+    transform 240ms var(--ease-out);
+}
 
+.footer-link:hover .footer-link-mark,
+.footer-link:focus-visible .footer-link-mark {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Colour and the mark still answer the pointer; nothing travels and no letter
+   moves — the ripple is pure decoration and the first thing to go. */
 @media (prefers-reduced-motion: reduce) {
   .footer-link,
-  .footer-link::after {
+  .footer-link::after,
+  .footer-link-mark {
     transition-duration: 1ms;
+  }
+
+  .footer-link:hover .footer-link-letter,
+  .footer-link:focus-visible .footer-link-letter {
+    animation: none;
+  }
+
+  .footer-link:hover .footer-link-mark,
+  .footer-link:focus-visible .footer-link-mark {
+    transform: none;
   }
 }
 
