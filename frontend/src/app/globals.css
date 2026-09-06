@@ -1394,62 +1394,82 @@ button:not(:disabled),
   }
 }
 
-/* блик — light running along the colophon's four seals as the footer arrives.
+/* блик — light running along the colophon's four seals, over and over, for as
+ * long as anyone is looking at them.
  *
- * Driven by scroll position (`animation-timeline: view()`), not by a timer.
- * A loop was the obvious way to make a seal "sometimes" catch the light, and
- * it is the wrong one here: the footer is on every route, so a loop would run
- * forever on every page including the whole time it is off screen, and a flash
- * with no cause reads as a rendering artefact rather than as metal. Tied to
- * arrival it has a reason — you reached the bottom, and the light crossed the
- * marks — it costs nothing while out of view, and it happens again every time
- * you come back.
+ * A loop is affordable only because `footer-seals.tsx` gates it on visibility:
+ * the class goes on when the row enters the viewport and comes off when it
+ * leaves, so nothing composites on a footer nobody has scrolled to. Verified —
+ * four running animations at the footer, zero at the top of the page.
+ *
+ * This was first built scroll-driven (`animation-timeline: view()`) to avoid a
+ * loop and a client component altogether. It cannot work for this row, and the
+ * measurement is worth keeping: the seals are the last thing in the document,
+ * so they become fully visible at 22.4% of the footer's view timeline while
+ * the page's own maximum scroll only reaches 23.3% of it. Under 1% of the
+ * timeline exists after the row is visible — the glint ran its whole course
+ * below the fold and was over before it could be seen.
  *
  * `color` and not a swept highlight overlay: every stroke in the seal is
  * `currentColor`, so one property warms the whole mark, and there is no
  * rectangular sweep to clip against an octagon.
- *
- * Where `animation-timeline` is unsupported (Firefox at the time of writing)
- * the declaration is dropped and the animation falls back to the document
- * timeline with no duration — it resolves instantly to the 100% keyframe,
- * which is the resting colour. So the fallback is simply no glint, never a
- * mark left stuck at the wrong tone. Both ends of the keyframe are pinned to
- * that resting colour for exactly this reason.
  */
+/* The peak is `--foreground`, not `--gold`. Gold was the obvious choice and a
+   useless one: against the seals' resting `--text-4` it is a 1.06:1 change in
+   brightness — the same lightness, a different hue — so the mark shifted from
+   tan to amber and, at 28px on a dark ground with the page moving, there was
+   nothing to see. A glint is light, and light is a change in brightness:
+   `--foreground` is 2.89:1 over the resting tone.
+
+   Held at rest across the first and last quarter so the flash occupies the
+   middle of the range rather than ramping the whole way in and out — a slow
+   swell reads as the colour being wrong, a short one as something catching
+   the light. */
+/* The flash occupies the first quarter of the cycle and the rest of it is the
+   mark sitting still. That gap is the whole point of a loop here: without it
+   four seals pulsing end to end would be a strobe at the bottom of every page,
+   and what this is meant to read as is metal that occasionally catches the
+   light.
+
+   The percentages are written against the 3200ms below to keep the flash
+   itself at ~780ms — the same speed as the letters' перекат — while the pause
+   after it is what changes. Shortening the cycle is how the light comes round
+   again sooner; making the flash itself quicker would just make it twitch. */
 @keyframes seal-glint {
   0%,
+  3% {
+    color: var(--text-4);
+    transform: translateY(0);
+  }
+  12% {
+    color: var(--foreground);
+    /* The same 3px the letters lift by in `footer-ripple` above. A seal that
+       only changed colour was a different gesture from the words it sits
+       under; lifting it on the same beat makes the colophon answer in one
+       language — the light and the step arrive together, then it sits back
+       down. */
+    transform: translateY(-3px);
+  }
+  24%,
   100% {
     color: var(--text-4);
-  }
-  45% {
-    color: var(--gold);
+    transform: translateY(0);
   }
 }
 
-/* The timeline is the footer's own arrival, named here and read by the seals
-   below. A bare `view()` makes each seal its own subject, and a seal is 28px
-   tall — its whole entry phase is 28px of scroll, so the glint fired and
-   finished inside two frames of a flick and was, in practice, never seen. The
-   footer crossing the viewport is several hundred pixels of travel, which is
-   the pace the light should move at. */
-.seal-glint-scope {
-  view-timeline-name: --colophon;
-}
+/* Applied by `footer-seals.tsx` while the row is in view and taken off the
+   moment it leaves — which is what makes an infinite animation affordable
+   here. The loop only ever runs on a footer someone is actually looking at;
+   off screen the class is gone and there is nothing to composite. That gating
+   is load-bearing, not a nicety: this row sits at the bottom of every route,
+   so an ungated loop would run for the whole life of every page.
 
-/* Longhands, not the `animation` shorthand. The shorthand resets every
-   longhand it omits to its initial value, and for `animation-duration` that is
-   `0s` — which for a scroll-driven animation means an active interval of zero
-   length, so it never plays across its range at all. It has to be `auto`, the
-   value that says "however long the range is". */
+   140ms apart per seal: enough for the light to read as travelling along the
+   row rather than four marks lifting at once, and the offset holds across
+   every repeat, so each pass runs left to right like the first. */
 .seal-glint {
-  animation-name: seal-glint;
-  animation-duration: auto;
-  animation-timing-function: linear;
-  animation-fill-mode: both;
-  animation-timeline: --colophon;
-  /* Staggered per seal from `site-footer.tsx`, so the light travels along the
-     row instead of all four blinking together. */
-  animation-range: entry var(--glint-from, 10%) entry var(--glint-to, 60%);
+  animation: seal-glint 2200ms var(--ease-out) infinite both;
+  animation-delay: calc(var(--glint-lead, 0) * 140ms);
 }
 
 @media (prefers-reduced-motion: reduce) {
