@@ -9,7 +9,7 @@ import { BoatIcon } from "@/components/brand/boat-icon";
 import { BracketIcon } from "@/components/brand/bracket-icon";
 import { BratinaIcon } from "@/components/brand/bratina-icon";
 import { CanvasesIcon } from "@/components/brand/canvases-icon";
-import { HelmetIcon } from "@/components/brand/helmet-icon";
+import { MaskMark } from "@/components/brand/mask-mark";
 import { LotIcon } from "@/components/brand/lot-icon";
 import { PaintingIcon } from "@/components/brand/painting-icon";
 import { SashIcon } from "@/components/brand/sash-icon";
@@ -282,7 +282,7 @@ const RIVER_BY_PATH: Record<string, Mark[]> = {
     { id: "poedinok", label: "Поединок", note: "Как сходятся", Icon: KrugIcon, material: MATERIAL.brass, strikes: true },
     { id: "setka", label: "Сетка", note: "Кто с кем", Icon: BracketIcon, material: MATERIAL.iron },
     { id: "pravila", label: "Правила", note: "По чему судят", Icon: UstavIcon, material: MATERIAL.wax },
-    { id: "bojcy", label: "Бойцы", note: "Кто вышел", Icon: HelmetIcon, material: MATERIAL.copper },
+    { id: "bojcy", label: "Бойцы", note: "Кто вышел", Icon: MaskMark, material: MATERIAL.copper },
     /* Жребий — this page's братина, and the same argument. Chance is the one
      * thing in a tournament you cannot scroll to: it isn't a place, it's what
      * happens to you at one. So it stands last on the water, leads nowhere, and
@@ -300,7 +300,7 @@ const RIVER_BY_PATH: Record<string, Mark[]> = {
        themselves — and the stick is the one снаряд of the four that reads at
        18px without being mistaken for something else. */
     { id: "snaryazhenie", label: "Разряды", note: "Чем бьются", Icon: PalkaIcon, material: MATERIAL.brass },
-    { id: "arhiv-ekipirovki", label: "Комплект", note: "Что надевают", Icon: HelmetIcon, material: MATERIAL.copper },
+    { id: "arhiv-ekipirovki", label: "Комплект", note: "Что надевают", Icon: MaskMark, material: MATERIAL.copper },
     /* Опаска — this page's братина. The sash is the one thing in the комплект
        a fighter keeps doing something to rather than simply wearing: it is
        pulled tight before a bout. So it stands last, leads nowhere, and
@@ -391,6 +391,18 @@ function chart(progress: number, stops: Stop[]): number {
 }
 
 type Tick = { id: string; progress: number };
+
+/** Whether a fresh measurement says anything new. Sub-pixel jitter in a
+ *  section's position is not news — the tolerance is far below what a notch
+ *  1000 units tall can show — and treating it as news costs a full re-render
+ *  of the rail. */
+function sameTicks(a: Tick[], b: Tick[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every(
+    (tick, index) =>
+      tick.id === b[index].id && Math.abs(tick.progress - b[index].progress) < 0.0005,
+  );
+}
 
 /**
  * Обтекание — the water going round a mark. Two arcs hugging the mark's plate,
@@ -616,28 +628,46 @@ export function RiverSpine() {
       const max = document.documentElement.scrollHeight - window.innerHeight;
       if (max < MIN_SCROLLABLE) {
         setCharted(false);
-        setTicks([]);
+        setTicks((previous) => (previous.length === 0 ? previous : []));
         setHasRoom(false);
         return;
       }
       setCharted(true);
       const sections = Array.from(document.querySelectorAll<HTMLElement>("main section[id]"));
-      setTicks(
-        sections.map((section) => ({
-          id: section.id,
-          progress: Math.min(1, Math.max(0, (section.getBoundingClientRect().top + window.scrollY) / max)),
-        })),
-      );
+      const measured = sections.map((section) => ({
+        id: section.id,
+        progress: Math.min(1, Math.max(0, (section.getBoundingClientRect().top + window.scrollY) / max)),
+      }));
+      /* Only when the page has actually moved. A fresh array every time meant
+         a new `ticks` reference on every observation, which re-ran the `marks`
+         and `stops` memos and re-rendered the whole rail for a document that
+         had not changed by a pixel — and this fires on every layout change on
+         the page, not just a resize. */
+      setTicks((previous) => (sameTicks(previous, measured) ? previous : measured));
       setHasRoom(contentInset(sections) >= RAIL_W + RAIL_CLEARANCE);
     };
 
+    /* Both `chart`'s own `getBoundingClientRect` sweep and `contentInset`'s
+       `getComputedStyle` per child force layout, so a burst of observations —
+       an image landing, a section expanding, a font swapping — is folded into
+       one measurement on the next frame instead of one each. */
+    let frame = 0;
+    const scheduleChart = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        chart();
+      });
+    };
+
     chart();
-    const observer = new ResizeObserver(chart);
+    const observer = new ResizeObserver(scheduleChart);
     observer.observe(document.body);
-    window.addEventListener("resize", chart);
+    window.addEventListener("resize", scheduleChart);
     return () => {
+      if (frame) cancelAnimationFrame(frame);
       observer.disconnect();
-      window.removeEventListener("resize", chart);
+      window.removeEventListener("resize", scheduleChart);
     };
   }, [pathname]);
 

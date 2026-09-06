@@ -3,7 +3,7 @@ import { Fragment, type CSSProperties, type ComponentType } from "react";
 
 import { AnnalIcon } from "@/components/brand/annal-icon";
 import { BracketIcon } from "@/components/brand/bracket-icon";
-import { HelmetIcon } from "@/components/brand/helmet-icon";
+import { MaskMark } from "@/components/brand/mask-mark";
 import { Monogram } from "@/components/brand/monogram";
 import { SashIcon } from "@/components/brand/sash-icon";
 import { UstavIcon } from "@/components/brand/ustav-icon";
@@ -40,7 +40,7 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
   {
     title: "Сообщество",
     links: [
-      { href: "/athletes", label: "Спортсмены", Icon: HelmetIcon },
+      { href: "/athletes", label: "Спортсмены", Icon: MaskMark },
       { href: "/clubs", label: "Клубы", Icon: SashIcon },
     ],
   },
