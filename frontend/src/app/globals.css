@@ -338,12 +338,6 @@ button:not(:disabled),
   font-feature-settings: "tnum" 1, "zero" 1;
 }
 
-/* Digits inside otherwise-sans text (counts in a sentence, table cells that
-   must keep the UI face) — alignment without switching typeface. */
-.tnum {
-  font-variant-numeric: tabular-nums;
-}
-
 /*
  * Field label: the uppercase micro-caption stamped above a value on a paper
  * form. Used for eyebrows, table heads, stat captions, footer column heads —
@@ -742,27 +736,6 @@ button:not(:disabled),
 
 .step-in {
   animation: step-in 220ms cubic-bezier(0.32, 0, 0.67, 0) both;
-}
-
-/*
- * шаг, section scale — same shape as .step-in above but the larger
- * translate/duration the v3 handoff specifies for whole-section entrances
- * (vs. .step-in's tighter row-stagger timing, kept as-is so existing list
- * usages don't shift). Two sizes of the same primitive, not two primitives.
- */
-.step-in-lg {
-  animation: step-in-lg 450ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
-}
-
-@keyframes step-in-lg {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /*
@@ -1307,34 +1280,60 @@ button:not(:disabled),
 .footer-link {
   position: relative;
   color: var(--muted);
-  background-image: linear-gradient(
-    to right,
-    var(--accent-strong) 0 50%,
-    currentColor 50% 100%
-  );
-  background-repeat: no-repeat;
-  background-size: 200% 100%;
-  background-position: 100% 0;
-  transition:
-    background-position 220ms var(--ease-out),
-    color 200ms ease;
+  transition: color 200ms ease;
 }
 
-/* Guarded: without the clip the fill would paint a block behind the text, and
-   `text-fill-color: transparent` on its own would erase the word entirely. */
-@supports (background-clip: text) or (-webkit-background-clip: text) {
-  .footer-link {
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+/* The word lifts whole, in one step. It used to fill letter by letter from the
+   left — a gradient clipped to the glyphs, sliding across — which meant the
+   word was two colours at once for the length of the transition and the eye
+   read the seam rather than the word. The colour now just changes; the thing
+   that travels is the ripple below. */
+.footer-link:hover,
+.footer-link:focus-visible {
+  color: var(--foreground);
+}
+
+/* перекат — one wave along the word: each letter rises 3px and sits straight
+   back down, a beat later than the one before it. Not a staircase that holds:
+   letters left standing at different heights re-set the line every time the
+   pointer crosses it, and «Правила и регламенты» would climb a long way. This
+   settles back to nothing, so a word passed over quickly is left exactly as it
+   was found. */
+@keyframes footer-ripple {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  45% {
+    transform: translateY(-3px);
   }
 }
 
-.footer-link:hover,
-.footer-link:focus-visible {
-  background-position: 0 0;
+.footer-link-word {
+  /* Keeps a word whole: the letters are separate boxes, and without this a
+     line could break between any two of them. */
+  display: inline-block;
 }
 
+.footer-link-letter {
+  display: inline-block;
+}
+
+/* 26ms a letter, not the 45ms `letterDelayMs` uses for the kinetic fighter
+   name. That one staggers a handful of display-sized letters making an
+   entrance and is meant to be watched; twenty letters at 45ms would take 855ms
+   to cross «Правила и регламенты», long past the moment a pointer is still
+   likely to be on it. */
+.footer-link:hover .footer-link-letter,
+.footer-link:focus-visible .footer-link-letter {
+  animation: footer-ripple 280ms var(--ease-out);
+  animation-delay: calc(var(--i) * 26ms);
+}
+
+/* The rule is the same gesture read along the bottom, so it runs for as long
+   as the wave takes to cross this particular word — `--letters` is set per
+   link in `site-footer.tsx`. A fixed duration had the short labels' rules
+   lagging their ripple and the long ones' arriving first. */
 .footer-link::after {
   content: "";
   position: absolute;
@@ -1344,7 +1343,7 @@ button:not(:disabled),
   background: var(--accent);
   transform: scaleX(0);
   transform-origin: left center;
-  transition: transform 220ms var(--ease-out);
+  transition: transform calc(var(--letters, 8) * 26ms + 180ms) var(--ease-out);
 }
 
 .footer-link:hover::after,
@@ -1352,15 +1351,130 @@ button:not(:disabled),
   transform: scaleX(1);
 }
 
-/* No `color` change on hover: `currentColor` is the gradient's own resting
-   half, so lifting it would repaint the part of the word the fill has not
-   reached yet — the trailing letters would brighten while the leading ones
-   were still filling, which is the opposite of a fill. */
+/* Знак раздела — stands in the grid gap to the left of the column and steps in
+   from further out, so it reads as arriving beside the word rather than
+   fading up on top of it. Gold, not the rule's oxblood: the rule is the action
+   and the mark is the place. */
+.footer-link-mark {
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 50%;
+  margin-top: -7px;
+  color: var(--gold);
+  opacity: 0;
+  transform: translateX(5px);
+  transition:
+    opacity 200ms ease,
+    transform 240ms var(--ease-out);
+}
 
+.footer-link:hover .footer-link-mark,
+.footer-link:focus-visible .footer-link-mark {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Colour and the mark still answer the pointer; nothing travels and no letter
+   moves — the ripple is pure decoration and the first thing to go. */
 @media (prefers-reduced-motion: reduce) {
   .footer-link,
-  .footer-link::after {
+  .footer-link::after,
+  .footer-link-mark {
     transition-duration: 1ms;
+  }
+
+  .footer-link:hover .footer-link-letter,
+  .footer-link:focus-visible .footer-link-letter {
+    animation: none;
+  }
+
+  .footer-link:hover .footer-link-mark,
+  .footer-link:focus-visible .footer-link-mark {
+    transform: none;
+  }
+}
+
+/* блик — light running along the colophon's four seals, over and over, for as
+ * long as anyone is looking at them.
+ *
+ * A loop is affordable only because `footer-seals.tsx` gates it on visibility:
+ * the class goes on when the row enters the viewport and comes off when it
+ * leaves, so nothing composites on a footer nobody has scrolled to. Verified —
+ * four running animations at the footer, zero at the top of the page.
+ *
+ * This was first built scroll-driven (`animation-timeline: view()`) to avoid a
+ * loop and a client component altogether. It cannot work for this row, and the
+ * measurement is worth keeping: the seals are the last thing in the document,
+ * so they become fully visible at 22.4% of the footer's view timeline while
+ * the page's own maximum scroll only reaches 23.3% of it. Under 1% of the
+ * timeline exists after the row is visible — the glint ran its whole course
+ * below the fold and was over before it could be seen.
+ *
+ * `color` and not a swept highlight overlay: every stroke in the seal is
+ * `currentColor`, so one property warms the whole mark, and there is no
+ * rectangular sweep to clip against an octagon.
+ */
+/* The peak is `--foreground`, not `--gold`. Gold was the obvious choice and a
+   useless one: against the seals' resting `--text-4` it is a 1.06:1 change in
+   brightness — the same lightness, a different hue — so the mark shifted from
+   tan to amber and, at 28px on a dark ground with the page moving, there was
+   nothing to see. A glint is light, and light is a change in brightness:
+   `--foreground` is 2.89:1 over the resting tone.
+
+   Held at rest across the first and last quarter so the flash occupies the
+   middle of the range rather than ramping the whole way in and out — a slow
+   swell reads as the colour being wrong, a short one as something catching
+   the light. */
+/* The flash occupies the first quarter of the cycle and the rest of it is the
+   mark sitting still. That gap is the whole point of a loop here: without it
+   four seals pulsing end to end would be a strobe at the bottom of every page,
+   and what this is meant to read as is metal that occasionally catches the
+   light.
+
+   The percentages are written against the 3200ms below to keep the flash
+   itself at ~780ms — the same speed as the letters' перекат — while the pause
+   after it is what changes. Shortening the cycle is how the light comes round
+   again sooner; making the flash itself quicker would just make it twitch. */
+@keyframes seal-glint {
+  0%,
+  3% {
+    color: var(--text-4);
+    transform: translateY(0);
+  }
+  12% {
+    color: var(--foreground);
+    /* The same 3px the letters lift by in `footer-ripple` above. A seal that
+       only changed colour was a different gesture from the words it sits
+       under; lifting it on the same beat makes the colophon answer in one
+       language — the light and the step arrive together, then it sits back
+       down. */
+    transform: translateY(-3px);
+  }
+  24%,
+  100% {
+    color: var(--text-4);
+    transform: translateY(0);
+  }
+}
+
+/* Applied by `footer-seals.tsx` while the row is in view and taken off the
+   moment it leaves — which is what makes an infinite animation affordable
+   here. The loop only ever runs on a footer someone is actually looking at;
+   off screen the class is gone and there is nothing to composite. That gating
+   is load-bearing, not a nicety: this row sits at the bottom of every route,
+   so an ungated loop would run for the whole life of every page.
+
+   140ms apart per seal: enough for the light to read as travelling along the
+   row rather than four marks lifting at once, and the offset holds across
+   every repeat, so each pass runs left to right like the first. */
+.seal-glint {
+  animation: seal-glint 2200ms var(--ease-out) infinite both;
+  animation-delay: calc(var(--glint-lead, 0) * 140ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seal-glint {
+    animation: none;
   }
 }
 
@@ -2247,35 +2361,6 @@ button:not(:disabled),
   filter: brightness(1.12) drop-shadow(0 3px 6px rgb(0 0 0 / 0.45));
 }
 
-/* A shield holding the guard shouldn't also be dimmed at rest. `.river-symbol`
-   above idles every symbol at 0.55 and only lifts that on hover, which
-   swallowed the raised pose the moment the pointer moved away — the one state
-   that has to stay readable without a pointer on it, since it's the strip's
-   tell that "Буза" is open. Two classes, so it outranks `.river-symbol`
-   without `!important`. */
-.river-symbol.shield-on-guard {
-  opacity: 1;
-}
-
-/* черпак (mug-tip) — the river mug's click flourish, a quick pour-tip
-   pivoting near its base rather than its center (`river-mug.tsx`). */
-@keyframes mug-tip {
-  0% {
-    transform: rotate(0deg);
-  }
-  35% {
-    transform: rotate(-24deg);
-  }
-  100% {
-    transform: rotate(0deg);
-  }
-}
-
-.mug-tip {
-  animation: mug-tip 420ms cubic-bezier(0.2, 0.8, 0.3, 1);
-  transform-origin: 50% 88%;
-}
-
 /* выемка (ledger-row) — a row of any register on the site (rule editions,
    the roster of fighters, clubs) being drawn out from under the pointer. The plain state change it replaced (border
    colour + a 4px arrow nudge) told you the row was a link but nothing about
@@ -2298,12 +2383,19 @@ button:not(:disabled),
   transition: transform 160ms var(--ease-out);
 }
 
-/* Bleeds into the gutter (and over the rules above and below) so a lit row
-   reads as the page opening around it, not as a boxed cell. */
+/* Runs the full width of the register and 1px over the rules above and below,
+   so a lit row reads as the page opening around it rather than as a boxed cell.
+
+   Flush at the sides, not bled into the gutter as it used to be. The 0.75rem
+   bleed was measured against a row that stays put, but the row travels 6px on
+   hover and carries this pseudo-element with it — so what actually landed was
+   6px of wash sticking out past the register's left rule and 18px past its
+   right, lopsided rather than generous. The compensation lives with the travel
+   itself, in the pointer block below. */
 .ledger-row::before {
   content: "";
   position: absolute;
-  inset: -1px -0.75rem;
+  inset: -1px 0;
   z-index: -1;
   background: linear-gradient(to right, var(--accent-soft), transparent 78%);
   opacity: 0;
@@ -2360,10 +2452,15 @@ button:not(:disabled),
     transform: translateX(6px);
   }
 
+  /* Steps back by exactly the 6px the row steps forward, so the wash stays
+     keyed to the register's own rules while the row slides out from under it.
+     Without this it rode along and overhung the left rule by those 6px — the
+     one edge where the overhang is visible, the right being past the point the
+     gradient has already faded out. */
   .ledger-row:hover::before,
   .ledger-row:focus-visible::before {
     opacity: 1;
-    transform: none;
+    transform: translateX(-6px);
     transition-duration: 200ms;
   }
 
@@ -2396,11 +2493,16 @@ button:not(:disabled),
   }
 }
 
-/* Colour and the divider still answer the pointer; nothing travels. */
+/* Colour and the divider still answer the pointer; nothing travels. The wash's
+   own -6px belongs in this list too: it exists solely to cancel the row's
+   travel, so where the row holds still it would be an uncorrected 6px shift of
+   its own, in the opposite direction. */
 @media (prefers-reduced-motion: reduce) {
   .ledger-row:hover,
   .ledger-row:focus-visible,
   .ledger-row:active,
+  .ledger-row:hover::before,
+  .ledger-row:focus-visible::before,
   .ledger-row:hover .ledger-row-lead,
   .ledger-row:focus-visible .ledger-row-lead,
   .ledger-row:hover .ledger-row-arrow,

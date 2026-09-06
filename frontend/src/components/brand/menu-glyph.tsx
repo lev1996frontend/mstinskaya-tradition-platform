@@ -1,6 +1,6 @@
 /**
  * The mobile nav toggle, in the same hairline single-color line language as
- * `weapon-glyphs.tsx`/`helmet-icon.tsx` (`currentColor`, thin rounded
+ * `weapon-glyphs.tsx`/`mask-mark.tsx` (`currentColor`, thin rounded
  * strokes) — replacing the generic thick-stroked Lucide `Menu`/`X` that was
  * the one off-brand icon on an otherwise bespoke page.
  */

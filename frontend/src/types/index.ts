@@ -391,6 +391,14 @@ export interface WithdrawalView {
 export interface Athlete {
   id: string;
   user_id: string;
+  /**
+   * ФИО off the person's own account, «Фамилия Имя» — read-only and derived by
+   * the backend from the user the profile belongs to, never stored on the
+   * athlete and never sent back. Null only where an account carries neither
+   * half of a name.
+   */
+  full_name: string | null;
+  /** Драковое имя. Optional, and often absent — see `athleteName`. */
   nickname: string | null;
   birth_year: number | null;
   experience_years: number;

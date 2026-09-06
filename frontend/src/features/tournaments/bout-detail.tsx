@@ -253,12 +253,32 @@ export function BoutDetailPanel({
     setBout(fresh);
   }, [matchId]);
 
+  /* Cancelled on unmount and on a change of bout, and failures land in the
+     panel rather than the console.
+
+     Both matter here. `BoutDetailHost` keeps this mounted through its exit
+     animation, so a slow answer for the previous `matchId` could arrive after
+     the judge had already opened the next поединок and overwrite it — a panel
+     showing one bout while every button on it writes to another. And without
+     the `catch`, a failed read left `bout` at `null` forever: "Загрузка…" with
+     no way out and an unhandled rejection behind it. */
   useEffect(() => {
-    void (async () => {
-      const [fresh, ruleset] = await Promise.all([getBout(matchId), getBoutRules()]);
-      setBout(fresh);
-      setRules(ruleset);
-    })();
+    // No clearing of `error` on the way in: `BoutDetailHost` keys this panel by
+    // `matchId`, so a different bout is a different component instance that
+    // starts with no error of its own anyway.
+    let cancelled = false;
+    Promise.all([getBout(matchId), getBoutRules()])
+      .then(([fresh, ruleset]) => {
+        if (cancelled) return;
+        setBout(fresh);
+        setRules(ruleset);
+      })
+      .catch((caught) => {
+        if (!cancelled) setError(describeError(caught));
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [matchId]);
 
   useEffect(() => {
@@ -338,7 +358,18 @@ export function BoutDetailPanel({
         </div>
 
         {!bout ? (
-          <p className="mt-6 text-sm text-[var(--muted)]">Загрузка…</p>
+          /* The error belongs here too, not only inside the loaded panel below:
+             a failed first read never reaches that branch, and "Загрузка…"
+             forever is not a truthful thing to show. */
+          error ? (
+            <div className="mt-6">
+              <Alert tone="danger" title="Поединок не открылся">
+                {error}
+              </Alert>
+            </div>
+          ) : (
+            <p className="mt-6 text-sm text-[var(--muted)]">Загрузка…</p>
+          )
         ) : (
           <div className="mt-4 space-y-4">
             <TwoSided

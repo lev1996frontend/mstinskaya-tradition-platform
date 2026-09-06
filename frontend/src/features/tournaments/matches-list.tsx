@@ -80,11 +80,25 @@ export function MatchesList({
 
   const visible = filter === "ALL" ? matches : matches.filter((m) => m.status === filter);
 
+  /**
+   * Marks a plain bout as running.
+   *
+   * Only a plain one. A bout that draws a lot, and a final, are *staged* by the
+   * backend's `start_bout` — it fixes each side's required соступы and the win
+   * condition before the status moves — and this endpoint does none of that, it
+   * just writes the status. Sending a lot bout through here left it
+   * `IN_PROGRESS` with no required rounds, and the judge panel then hid its own
+   * "Начать соступ" (which only offers itself while the bout is *not* running),
+   * so the поединок could never be staged properly again. Those bouts are
+   * handed to the panel instead — see `runsAsBout` below.
+   */
   async function start(match: MatchView) {
     setBusyId(match.id);
     setError(null);
     try {
-      await updateMatchStatus(match.id, { status: "RUNNING" });
+      // "IN_PROGRESS", not the "RUNNING" alias: it is what `MatchStatus`
+      // actually holds and what every status check in this app compares to.
+      await updateMatchStatus(match.id, { status: "IN_PROGRESS" });
       onChanged();
     } catch (caught) {
       setError(
@@ -143,6 +157,10 @@ export function MatchesList({
           {visible.map((match) => {
             const hasWinner = Boolean(match.winner_id);
             const isLive = match.status === "IN_PROGRESS";
+            /* Run through the judge panel (жребий, соступы, win conditions)
+               rather than the flat status endpoint — same test the workspace
+               uses to decide which dialog to open. */
+            const runsAsBout = match.lot_required || match.stage === "FINAL";
             const MethodIcon = match.result ? RESULT_METHOD_ICONS[match.result.method] : null;
             return (
               <Card
@@ -184,7 +202,7 @@ export function MatchesList({
 
                 {canManage ? (
                   <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
-                    {match.status === "SCHEDULED" ? (
+                    {match.status === "SCHEDULED" && !runsAsBout ? (
                       <Button
                         variant="secondary"
                         size="sm"
@@ -200,7 +218,13 @@ export function MatchesList({
                         size="sm"
                         onClick={() => onEditResult(match)}
                       >
-                        {match.result ? "Изменить результат" : "Внести результат"}
+                        {runsAsBout
+                          ? match.result
+                            ? "Открыть поединок"
+                            : "Провести поединок"
+                          : match.result
+                            ? "Изменить результат"
+                            : "Внести результат"}
                       </Button>
                     ) : null}
                   </div>

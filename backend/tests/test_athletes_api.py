@@ -79,3 +79,51 @@ def test_create_and_get_athlete_profile():
     assert by_user.json()["id"] == athlete["id"]
 
     app.dependency_overrides.clear()
+
+
+def test_athlete_carries_the_person_name_from_the_account():
+    """Every read of an athlete answers with the ФИО off the user account.
+
+    The profile itself stores only a nickname, and a nickname is optional — so
+    without this the platform had no way to say who an athlete is, and both the
+    organizer's entry search and the spreadsheet import could only match a
+    fighter who happened to have one.
+    """
+    client = setup_app_for_tests()
+
+    register_response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "noname@example.com",
+            "password": "StrongPassword123!",
+            "first_name": "Пётр",
+            "last_name": "Лавров",
+        },
+    )
+    assert register_response.status_code == 201, register_response.text
+    token = register_response.json()["access_token"]
+    user_id = client.get("/api/v1/users/me", headers={"Authorization": f"Bearer {token}"}).json()["id"]
+
+    # No nickname at all — the case that used to leave a profile nameless.
+    created = client.post("/api/v1/athletes", json={"user_id": user_id, "birth_year": 1990})
+    assert created.status_code == 201, created.text
+    assert created.json()["nickname"] is None
+    # «Фамилия Имя», and present already on the create response — not only
+    # after a re-read.
+    assert created.json()["full_name"] == "Лавров Пётр"
+
+    athlete_id = created.json()["id"]
+    assert client.get(f"/api/v1/athletes/{athlete_id}").json()["full_name"] == "Лавров Пётр"
+    assert client.get(f"/api/v1/athletes/user/{user_id}").json()["full_name"] == "Лавров Пётр"
+
+    listed = client.get("/api/v1/athletes")
+    assert listed.status_code == 200, listed.text
+    assert [row["full_name"] for row in listed.json()] == ["Лавров Пётр"]
+
+    patched = client.patch(f"/api/v1/athletes/{athlete_id}", json={"nickname": "Лавр"})
+    assert patched.status_code == 200, patched.text
+    # The nickname is the athlete's own; the ФИО keeps coming from the account.
+    assert patched.json()["nickname"] == "Лавр"
+    assert patched.json()["full_name"] == "Лавров Пётр"
+
+    app.dependency_overrides.clear()

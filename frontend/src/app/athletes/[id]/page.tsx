@@ -7,6 +7,7 @@ import { listAthleteTournamentHistory } from "@/api/tournaments";
 import { Container, Section } from "@/components/ui";
 import { Avatar } from "@/components/ui/avatar";
 import { AthleteHistory } from "@/features/tournaments/athlete-history";
+import { athleteName } from "@/lib/athlete-name";
 import { plural } from "@/lib/format";
 import { athleteLevel, labelOf } from "@/lib/labels";
 
@@ -15,7 +16,7 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const athlete = await getAthlete(id);
-  return { title: athlete?.nickname ?? "Спортсмен" };
+  return { title: athlete ? athleteName(athlete, "Спортсмен") : "Спортсмен" };
 }
 
 export default async function AthletePage({ params }: PageProps) {
@@ -34,16 +35,26 @@ export default async function AthletePage({ params }: PageProps) {
           separate facts card below it. */}
       <div className="rule-double-b flex flex-col gap-5 pb-6 sm:flex-row sm:items-center">
         <span className="inline-flex shrink-0 rounded-[var(--radius-md)] bg-[var(--surface-paper)] p-3">
-          <Avatar name={athlete.nickname ?? "?"} photoUrl={athlete.photo_url} size="lg" />
+          <Avatar name={athleteName(athlete, "?")} photoUrl={athlete.photo_url} size="lg" />
         </span>
         <div className="min-w-0 space-y-3">
-          {/* The драковое имя is the headline, and it's labelled as such: it
-              isn't a handle or a shortened surname but a name earned in a
-              fight, worn so death would take longer to find you. */}
-          <span className="record-label block text-[var(--chrome-muted)]">Драковое имя</span>
+          {/* The драковое имя is the headline where there is one, and it's
+              labelled as such: it isn't a handle or a shortened surname but a
+              name earned in a fight, worn so death would take longer to find
+              you. Where there isn't one the ФИО takes the line and the label
+              says so — the masthead used to keep the драковое-имя label over
+              "Профиль спортсмена", which named nobody and mislabelled it into
+              the bargain. */}
+          <span className="record-label block text-[var(--chrome-muted)]">
+            {athlete.nickname ? "Драковое имя" : "Имя"}
+          </span>
           <h1 className="font-display text-3xl font-semibold tracking-tight">
-            {athlete.nickname ?? "Профиль спортсмена"}
+            {athleteName(athlete, "Профиль спортсмена")}
           </h1>
+          {/* The ФИО below the драковое имя, never instead of it. */}
+          {athlete.nickname && athlete.full_name ? (
+            <p className="text-sm text-[var(--muted)]">{athlete.full_name}</p>
+          ) : null}
           <dl className="flex flex-wrap gap-x-6 gap-y-2">
             <div>
               <dt className="record-label text-[var(--chrome-muted)]">Уровень</dt>

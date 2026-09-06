@@ -111,13 +111,36 @@ type Action =
   | { type: "DECLARE"; name: string; weapon: number }
   | { type: "DECLARE_MINE"; weapon: number }
   | { type: "PICK"; name: string }
-  | { type: "THROW_LOT_START"; targetRx: number; targetRy: number; weapon: number }
+  /** Both rolls are drawn by the caller and handed in, never taken here — see
+   *  the note on `reducer` below. `poolRoll` picks between the declared
+   *  разряды, `anyRoll` is the fully random fallback when nobody declared. */
+  | { type: "THROW_LOT_START"; poolRoll: number; anyRoll: number }
   | { type: "THROW_LOT_SPUN" }
   | { type: "THROW_LOT_RESULT" }
   | { type: "START_BOUT" }
   | { type: "CLASH_START" }
-  | { type: "CLASH_RESOLVE" };
+  /** `winRoll` decides the соступ, `flavorRoll` picks its wording. */
+  | { type: "CLASH_RESOLVE"; winRoll: number; flavorRoll: number };
 
+/** Index into `list` from a 0–1 roll, with the `roll === 1` edge folded back
+ *  in so a lucky draw can never land one past the end. */
+function pickFrom<T>(list: readonly T[], roll: number): T {
+  return list[Math.min(list.length - 1, Math.floor(roll * list.length))];
+}
+
+/**
+ * Pure, and deliberately so: every dice roll this walkthrough needs arrives as
+ * a number on the action, drawn by whoever dispatched it.
+ *
+ * `Math.random()` used to be called in here — once to decide a соступ, once to
+ * pick its wording. React invokes a reducer twice per dispatch under
+ * StrictMode and keeps the second answer, so the journal line and the score
+ * could describe two different outcomes of the same exchange, in dev only.
+ * Passing the roll in makes the same action always produce the same state,
+ * which is what a reducer promises. (`clock()` is fine as it stands — it
+ * builds a fixed date from the journal's own length, so it is deterministic
+ * too.)
+ */
 function reducer(state: TournamentPathState, action: Action): TournamentPathState {
   switch (action.type) {
     case "CHOOSE_FIGHTER": {
@@ -207,7 +230,25 @@ function reducer(state: TournamentPathState, action: Action): TournamentPathStat
       return { ...state, picked: state.picked === action.name ? null : action.name };
     case "THROW_LOT_START": {
       if (!canThrowLot(state)) return state;
-      return { ...state, phase: "throw", rx: action.targetRx, ry: action.targetRy, pendingWeapon: action.weapon };
+      /* The choice lives here rather than in `throwLot` so that callback needs
+         no `state` at all and can stay referentially stable for the life of
+         the provider — the whole point of the split action/state contexts
+         below. "declare" is throwable as well as "ready" (see `canThrowLot`):
+         declaring narrows the жребий to the two guesses on the table, and with
+         nothing declared it stays a fully open four-way throw. */
+      const b = bout(state);
+      const pool = [state.declared[b.a], state.declared[b.b]].filter(
+        (weapon): weapon is number => weapon !== undefined,
+      );
+      const weapon = pool.length ? pickFrom(pool, action.poolRoll) : pickFrom([0, 1, 2, 3], action.anyRoll);
+      const base = FACE_ROT[weapon];
+      return {
+        ...state,
+        phase: "throw",
+        rx: base[0] + 360 * 2 + Math.round(state.rx / 360) * 360,
+        ry: base[1] + 360 * 3 + Math.round(state.ry / 360) * 360,
+        pendingWeapon: weapon,
+      };
     }
     case "THROW_LOT_SPUN":
       return state.phase === "throw" ? { ...state, phase: "pause" } : state;
@@ -249,9 +290,14 @@ function reducer(state: TournamentPathState, action: Action): TournamentPathStat
     case "CLASH_START":
       return state.phase === "clash" ? state : { ...state, phase: "clash" };
     case "CLASH_RESOLVE": {
+      // Only a соступ that is actually being fought can be resolved: the
+      // resolution arrives on a timer, and "Заново" can land between the start
+      // and that timer — without this the restarted run inherited an exchange
+      // from the run before it.
+      if (state.phase !== "clash") return state;
       const b = bout(state);
       const last = state.runStep >= 2;
-      const win = Math.random() < 0.5 ? 0 : 1;
+      const win = action.winRoll < 0.5 ? 0 : 1;
       const scores = [...state.scores] as [number, number];
       scores[win] += 1;
       const exchanges = [...state.exchanges, win];
@@ -263,7 +309,7 @@ function reducer(state: TournamentPathState, action: Action): TournamentPathStat
 
       let journal = logEntry(
         state,
-        `Соступ ${round}: ${roundWinFlavor(state.lot)} — ${win === 0 ? b.a : b.b}.`,
+        `Соступ ${round}: ${roundWinFlavor(state.lot, action.flavorRoll)} — ${win === 0 ? b.a : b.b}.`,
       );
 
       if (!done) {
@@ -324,9 +370,9 @@ const ROUND_WIN_FLAVORS: [string[], string[], string[], string[]] = [
   ["точное попадание грузом", "дистанция потеряна, удар пришёлся", "обхват перехвачен, снаряд взят"],
 ];
 
-function roundWinFlavor(lot: number | null): string {
+function roundWinFlavor(lot: number | null, roll: number): string {
   const pool = ROUND_WIN_FLAVORS[lot ?? 0] ?? ROUND_WIN_FLAVORS[0];
-  return pool[Math.floor(Math.random() * pool.length)];
+  return pickFrom(pool, roll);
 }
 
 type TournamentPathActions = {
@@ -365,8 +411,14 @@ export function TournamentPathProvider({
   const [state, dispatch] = useReducer(reducer, initialState);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  /* Finished ids are dropped as they fire rather than accumulating for the
+     life of the page — the array is walked on unmount, and a соступ every few
+     seconds would otherwise leave it growing all session. */
   const schedule = useCallback((fn: () => void, ms: number) => {
-    const id = setTimeout(fn, ms);
+    const id = setTimeout(() => {
+      timers.current = timers.current.filter((pending) => pending !== id);
+      fn();
+    }, ms);
     timers.current.push(id);
   }, []);
 
@@ -377,27 +429,21 @@ export function TournamentPathProvider({
     };
   }, []);
 
+  // Nothing but two rolls and a dispatch: the throwable check, the pool of
+  // declared разряды and the landing angles all live in the reducer now, so
+  // this closes over no state and its identity never changes. That is what
+  // keeps `actions` below stable, and with it every consumer that subscribes
+  // to actions alone.
+  //
+  // No timer scheduling "spun" here either — a `setTimeout` matched to the CSS
+  // transition's own duration can drift from when the cube actually finishes
+  // turning (main-thread jank, a slow device), which is exactly the "result
+  // already showing while the cube still visibly spins" bug reported
+  // 2026-09-01. `LotCube` calls `confirmSpin()` off the real `transitionend`
+  // event instead, so "spun" fires when the cube truly is.
   const throwLot = useCallback(() => {
-    // "declare" is deliberately throwable, not just "ready": declaring a
-    // category (the small icons in `lot-cube.tsx`) is an optional way to
-    // narrow the жребий to your own guess, never a prerequisite — offline,
-    // a fighter can just throw the cube straight away. `pool` below already
-    // falls back to a fully random weapon when nobody has declared.
-    if (!canThrowLot(state)) return;
-    const b = bout(state);
-    const pool = [state.declared[b.a], state.declared[b.b]].filter((x) => x !== undefined);
-    const weapon = pool.length ? pool[Math.floor(Math.random() * pool.length)] : Math.floor(Math.random() * 4);
-    const base = FACE_ROT[weapon];
-    const targetRx = base[0] + 360 * 2 + Math.round(state.rx / 360) * 360;
-    const targetRy = base[1] + 360 * 3 + Math.round(state.ry / 360) * 360;
-    // No timer scheduling "spun" here anymore — a `setTimeout` matched to the
-    // CSS transition's own duration can drift from when the cube actually
-    // finishes turning (main-thread jank, a slow device), which is exactly
-    // the "result already showing while the cube still visibly spins" bug
-    // reported 2026-09-01. `LotCube` calls `confirmSpin()` off the real
-    // `transitionend` event instead, so "spun" fires when the cube truly is.
-    dispatch({ type: "THROW_LOT_START", targetRx, targetRy, weapon });
-  }, [state]);
+    dispatch({ type: "THROW_LOT_START", poolRoll: Math.random(), anyRoll: Math.random() });
+  }, []);
 
   // Fired by `LotCube`'s `onTransitionEnd` once the cube's own CSS rotation
   // genuinely finishes — see `throwLot`'s comment above for why this isn't a
@@ -417,11 +463,21 @@ export function TournamentPathProvider({
     return () => clearTimeout(id);
   }, [state.phase, ritualSpeed]);
 
+  /* One соступ at a time. The guard was `state.phase === "clash"`, which put
+     the whole state into this callback's dependencies; a ref does the same job
+     synchronously — it is set before the dispatch, so even two clicks in the
+     same tick can't schedule two resolutions — and leaves the callback
+     stable. */
+  const clashPending = useRef(false);
   const runRound = useCallback(() => {
-    if (state.phase === "clash") return;
+    if (clashPending.current) return;
+    clashPending.current = true;
     dispatch({ type: "CLASH_START" });
-    schedule(() => dispatch({ type: "CLASH_RESOLVE" }), 760 / ritualSpeed);
-  }, [state.phase, ritualSpeed, schedule]);
+    schedule(() => {
+      clashPending.current = false;
+      dispatch({ type: "CLASH_RESOLVE", winRoll: Math.random(), flavorRoll: Math.random() });
+    }, 760 / ritualSpeed);
+  }, [ritualSpeed, schedule]);
 
   const actions = useMemo<TournamentPathActions>(
     () => ({

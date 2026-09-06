@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Network, Trophy } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { WEAPON_MOTIFS } from "@/components/brand/weapon-glyphs";
 import { Alert, Badge, EmptyState, cn } from "@/components/ui";
@@ -41,13 +41,23 @@ function sortByPosition(matches: MatchView[]): MatchView[] {
   return [...matches].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 }
 
-/** Did this match's winner go on to occupy a slot in `target`? Derived purely
- *  from data already on the wire — no new fields, no behavior change. */
-function advancedInto(source: MatchView, target: MatchView): boolean {
-  if (!source.winner_id) return false;
-  return (
-    target.participant_a?.id === source.winner_id || target.participant_b?.id === source.winner_id
-  );
+/** Every participant standing in a round's slots, as a set — the round after
+ *  this one is asked "does it hold this winner?" once per match instead of
+ *  being scanned for each of them. Derived purely from data already on the
+ *  wire: no new fields, no behaviour change, just O(n) where the pairwise scan
+ *  was O(n²) across each pair of neighbouring rounds. */
+function seatedIn(round: BracketRoundView | undefined): Set<string> {
+  const seated = new Set<string>();
+  for (const match of round?.matches ?? []) {
+    if (match.participant_a?.id) seated.add(match.participant_a.id);
+    if (match.participant_b?.id) seated.add(match.participant_b.id);
+  }
+  return seated;
+}
+
+/** Did this match's winner go on to occupy a slot in the next round? */
+function advancedInto(source: MatchView, seated: Set<string>): boolean {
+  return Boolean(source.winner_id) && seated.has(source.winner_id!);
 }
 
 // ---------------------------------------------------------------- slot row
@@ -446,6 +456,19 @@ export function BracketView({
   const [mobileRoundIndex, setMobileRoundIndex] = useState(0);
   const reduceMotion = useReducedMotion();
 
+  /* Ordering the tree is a function of the bracket alone, so it is not redone
+     when the reader swipes to another round on a phone. Both sorts copy first —
+     `bracket.rounds` and each `matches` array arrive as props and are never
+     reordered in place. Declared above the empty-state return so the hook order
+     stays fixed. */
+  const rounds = useMemo(
+    () =>
+      [...bracket.rounds]
+        .sort((a, b) => a.order - b.order)
+        .map((round) => ({ ...round, matches: sortByPosition(round.matches) })),
+    [bracket.rounds],
+  );
+
   if (bracket.rounds.length === 0 && bracket.unassigned.length === 0) {
     return (
       <EmptyState
@@ -455,10 +478,6 @@ export function BracketView({
       />
     );
   }
-
-  const rounds = [...bracket.rounds]
-    .sort((a, b) => a.order - b.order)
-    .map((round) => ({ ...round, matches: sortByPosition(round.matches) }));
 
   const activeIndex = Math.min(mobileRoundIndex, Math.max(rounds.length - 1, 0));
   const activeRound = rounds[activeIndex];
@@ -478,19 +497,31 @@ export function BracketView({
                   const nextRound = rounds[index + 1];
                   const isFeaturedRound =
                     round.key === "FINAL" || (index === rounds.length - 1 && round.matches.length === 1);
+                  // Two sets, built once per column, instead of scanning the
+                  // neighbouring round once per match in this one.
+                  const seatedNext = seatedIn(nextRound);
                   const advancing = nextRound
-                    ? round.matches.map((match) =>
-                        nextRound.matches.some((next) => advancedInto(match, next)),
-                      )
+                    ? round.matches.map((match) => advancedInto(match, seatedNext))
                     : [];
+                  const prevWinners = new Set(
+                    (prevRound?.matches ?? [])
+                      .map((prev) => prev.winner_id)
+                      .filter((id): id is string => Boolean(id)),
+                  );
                   const arrivedFromPrev = prevRound
-                    ? round.matches.map((match) =>
-                        prevRound.matches.some((prev) => advancedInto(prev, match)),
+                    ? round.matches.map(
+                        (match) =>
+                          (!!match.participant_a?.id && prevWinners.has(match.participant_a.id)) ||
+                          (!!match.participant_b?.id && prevWinners.has(match.participant_b.id)),
                       )
                     : [];
 
                   return (
-                    <div key={round.key} className="flex">
+                    /* `round.key` alone is not guaranteed unique — `roundLabel`
+                       itself allows a bare numeric key, and a group stage can
+                       repeat one — so the column's position carries the
+                       identity with it. */
+                    <div key={`${round.key}-${index}`} className="flex">
                       <div className="relative flex w-64 flex-col">
                         {isFeaturedRound ? <FeaturedRoundMotif /> : null}
                         <RoundHeader round={round} index={index} featured={isFeaturedRound} />
@@ -528,7 +559,7 @@ export function BracketView({
             <div className="scroll-x -mx-1 flex gap-1.5 px-1 pb-1" role="tablist" aria-label="Раунды сетки">
               {rounds.map((round, index) => (
                 <button
-                  key={round.key}
+                  key={`${round.key}-${index}`}
                   type="button"
                   role="tab"
                   aria-selected={activeIndex === index}
@@ -568,7 +599,7 @@ export function BracketView({
             </div>
 
             <motion.div
-              key={activeRound!.key}
+              key={`${activeRound!.key}-${activeIndex}`}
               className="mt-3 cursor-grab space-y-3 active:cursor-grabbing"
               drag="x"
               dragConstraints={{ left: 0, right: 0 }}

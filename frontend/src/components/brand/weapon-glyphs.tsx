@@ -83,26 +83,13 @@ export function StenkaIcon({ className, size = 24 }: GlyphProps) {
   );
 }
 
-/**
- * The protective mask, in the same single-color line-art family as the four
- * weapon glyphs above — used wherever a fighter's category hasn't been
- * declared/drawn yet (`fighter-card.tsx`'s empty slot, mirroring
- * `helmet-reveal.tsx`'s own "no weapon chosen yet → mask" convention on the
- * homepage hero). Not a weapon motif itself, so deliberately kept out of
- * `WEAPON_MOTIFS`/`WeaponMotifKey`.
- */
-export function MaskIcon({ className, size = 24 }: GlyphProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
-      <path
-        d="M12 4 C8.4 4 6.2 6.8 6.2 10.6 C6.2 15.4 8.6 18.6 12 19.6 C15.4 18.6 17.8 15.4 17.8 10.6 C17.8 6.8 15.6 4 12 4 Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      <path d="M7.4 9.4 H16.6 M7.4 12.2 H16.6 M7.6 15 H16.4" stroke="currentColor" strokeWidth="1" opacity="0.65" />
-    </svg>
-  );
-}
+/* `MaskIcon` stood here — a third drawing of the mask, in this file's line-art
+   family, described as the fallback for a fighter with no declared category.
+   Nothing ever called it: `fighter-card.tsx` draws the full
+   `GearMaskIllustration` in that slot instead. It is gone rather than left in
+   place, because the mask now has exactly one small mark (`MaskMark`) and a
+   spare implementation sitting in a shared file is how the wrong one gets
+   picked up next time. */
 
 export type WeaponMotifKey = "hands" | "kisten" | "palka" | "nozh";
 

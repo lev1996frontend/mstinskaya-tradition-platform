@@ -6,6 +6,7 @@ import { listAthletesWithStatus } from "@/api/catalog";
 import { ApiOfflineNotice } from "@/components/api-status";
 import { Badge, Container, EmptyState, PageHeader } from "@/components/ui";
 import { Avatar } from "@/components/ui/avatar";
+import { athleteName } from "@/lib/athlete-name";
 import { athleteLevel, athleteLevelTone, labelOf } from "@/lib/labels";
 
 export const metadata: Metadata = {
@@ -62,7 +63,10 @@ export default async function AthletesPage() {
               and each value is read from its own line instead. */}
           <div className="record-label hidden gap-5 border-b-2 border-[var(--rule)] px-1 pb-2 text-[var(--text-4)] sm:grid sm:grid-cols-[2.5rem_minmax(0,1fr)_9rem_5rem_5rem_1rem] sm:items-end sm:gap-6">
             <span />
-            <span>Драковое имя</span>
+            {/* Not «Драковое имя» any more: the column holds whichever name the
+                fighter has, and a драковое имя is not issued with the account —
+                for many rows it is the ФИО standing here. */}
+            <span>Имя</span>
             <span>Уровень</span>
             <span className="text-right">Опыт, лет</span>
             <span className="text-right">Год рожд.</span>
@@ -71,7 +75,7 @@ export default async function AthletesPage() {
 
           <ul>
             {athletes.map((athlete) => {
-              const name = athlete.nickname ?? "Без имени";
+              const name = athleteName(athlete);
               return (
                 <li
                   key={athlete.id}

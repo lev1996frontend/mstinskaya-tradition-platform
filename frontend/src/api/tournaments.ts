@@ -149,9 +149,21 @@ export const updateMatchResult = (
   },
 ) => apiRequest<MatchResultView>(`/api/v1/matches/${matchId}/result`, { method: "PUT", body });
 
+/**
+ * Flat status write. Note it is *only* a status write — staging a поединок
+ * (required соступы, win conditions) belongs to `startBout`, so a bout that
+ * draws a lot must not be started through here.
+ *
+ * The status is a plain `MatchStatus`. It used to be `MatchStatus | "RUNNING"`:
+ * the backend accepts "RUNNING" and normalises it to "IN_PROGRESS"
+ * (`engine_service.update_match_status`), but nothing else in this app knows
+ * that word — every status check compares against "IN_PROGRESS" — so keeping
+ * the alias in the client's own types only invited a comparison that is always
+ * false.
+ */
 export const updateMatchStatus = (
   matchId: string,
-  body: { status: MatchStatus | "RUNNING"; reason?: string | null },
+  body: { status: MatchStatus; reason?: string | null },
 ) =>
   apiRequest<MatchView>(`/api/v1/competition-matches/${matchId}/status`, {
     method: "PATCH",

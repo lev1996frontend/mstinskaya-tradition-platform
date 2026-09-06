@@ -113,12 +113,22 @@ export function MatchResultDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /* Opening focus is a one-time act and belongs in its own mount-only effect.
+     It used to share the Escape listener's effect, which depends on `onClose` —
+     and `onClose` was an inline arrow in the parent, so any re-render of the
+     workspace (a `router.refresh()`, say) re-ran the whole effect and pulled
+     the caret out of whatever field was being typed into, back onto the first
+     control. The parent now passes a stable callback as well; both halves of
+     that fix are worth having, since this dialog cannot police its callers. */
+  useEffect(() => {
+    dialogRef.current?.querySelector<HTMLElement>("select, input, button")?.focus();
+  }, []);
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") onClose();
     }
     document.addEventListener("keydown", onKeyDown);
-    dialogRef.current?.querySelector<HTMLElement>("select, input, button")?.focus();
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 

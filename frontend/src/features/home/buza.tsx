@@ -18,20 +18,27 @@ import { useBuza, type BuzaVersion } from "@/features/home/buza-context";
  * CLAUDE.md's guardrail on that) — it's the platform's own origin lore, in
  * the same documentary voice as `stenka-krug.tsx`'s illustrative rosters.
  */
-const ETYMOLOGY_CHIPS: { key: BuzaVersion; label: string; text: string }[] = [
+/** `teaser` is the collapsed state's own copy: one line that says what the
+ *  reading claims, short enough to sit in a third of the row without wrapping
+ *  past two lines. Deliberately not the first clause of `text` — a truncated
+ *  sentence reads as a bug, and these have to work as three parallel labels. */
+const ETYMOLOGY_CHIPS: { key: BuzaVersion; label: string; teaser: string; text: string }[] = [
   {
     key: "drink",
     label: "Напиток",
+    teaser: "Хмельное просяное питьё, которым артель отмечала конец сплава.",
     text: "«Буза» — старое название хмельного просяного напитка, которым артель отмечала конец сплава: не крепкий, но горячащий кровь — отсюда и переносное значение «раззадорить».",
   },
   {
     key: "buyat",
     label: "Буянить",
+    teaser: "Глагол «бузить» — поднимать шум, спорить, задираться.",
     text: "Глагол «бузить» — поднимать шум, спорить, задираться — в говорах верхневолжских артелей означал вызов на кулачный спор ещё до того, как «буза» стала именем самого состязания.",
   },
   {
     key: "korabl",
     label: "Корабль",
+    teaser: "«Бузник» — не только боец, но и гребец на гружёной барке.",
     text: "По третьей версии, слово идёт от самих судов: «бузник» — не только боец, но и гребец на груженной барке, и вызов «на бузу» звучал прямо с борта, пока лодки ждали очереди в затоне.",
   },
 ];
@@ -81,7 +88,13 @@ export function Buza() {
   /* The selected reading lives in the shared context, not in local state: the
      river's bays (`river-spine.tsx`) open this section *on* a reading, and the
      chips below have to show that choice rather than contradict it. */
-  const { open, toggle, version: etymologySelected, setVersion: setEtymologySelected } = useBuza();
+  const {
+    open,
+    toggle,
+    openWith,
+    version: etymologySelected,
+    setVersion: setEtymologySelected,
+  } = useBuza();
   const [ritualStepActive, setRitualStepActive] = useState(0);
   const [struck, setStruck] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
@@ -127,7 +140,12 @@ export function Buza() {
             gets a visible posture instead of a visible wound. The margin
             river's застава strikes the identical pose, so the gesture reads as
             one thing in two places. */}
-        <div className="mt-6 flex items-center gap-4 sm:gap-5">
+        {/* `items-start` only from `lg`, where the right-hand column is the
+            doors strip with its own line of copy beneath it: centred, the mark
+            balanced against strip *plus* that line and so sat ~20px below the
+            strip it belongs to. Under `lg` the column is a single line of text
+            and centring is what makes it sit level with the mark, so that stays. */}
+        <div className="mt-6 flex items-center gap-4 sm:gap-5 lg:items-start">
           <button
             type="button"
             onClick={() => {
@@ -157,15 +175,26 @@ export function Buza() {
               open ? "shield-on-guard" : "",
             )}
           >
-            <span className="relative grid size-20 place-items-center">
+            <span className="relative grid size-20 place-items-center lg:size-24">
               <span
                 className={cn("shield-guard grid place-items-center", open ? "shield-guard-raised" : "")}
               >
-                {/* One mark at one size, not a `sm:hidden` pair: `Emblem` sets
-                    its box as an inline style, and an inline style beats a
-                    `hidden` class — rendering two would show both, stacked. */}
-                <span className={cn("grid place-items-center", struck ? "shield-brace" : "")}>
-                  <Emblem size={80} />
+                {/* One mark, sized by its box rather than by a `size` prop.
+                    `Emblem` writes an inline width/height when given one, and an
+                    inline style beats a class — so a `sm:hidden` pair would show
+                    both stacked, and a responsive size could not be expressed at
+                    all. Left off, the mark fills whatever box it is put in,
+                    which is the component's own documented way of sizing it
+                    responsively; the box below is what grows on a wide screen,
+                    and 80/96px both clear the ~34px floor under which this much
+                    detail turns to mud. */}
+                <span
+                  className={cn(
+                    "grid size-20 place-items-center lg:size-24",
+                    struck ? "shield-brace" : "",
+                  )}
+                >
+                  <Emblem />
                 </span>
               </span>
               {struck ? (
@@ -182,9 +211,91 @@ export function Buza() {
             </span>
           </button>
 
-          <p className="text-[0.9375rem] leading-relaxed text-[var(--text-4)]">
+          {/* Narrow screens keep the line they always had. The emptiness this
+              block exists to answer is a wide-screen problem and only that: at
+              1600px the row ran 1280px and everything in it stopped at 591,
+              leaving 66% of the band blank, while at 390px the same row is
+              already full to within 16px. So the doors below appear at `lg`
+              and nothing moves under it. */}
+          <p className="text-[0.9375rem] leading-relaxed text-[var(--text-4)] lg:hidden">
             {open ? "Знак свёрнет рассказ." : "Три версии одного слова — нажмите на знак."}
           </p>
+
+          <div className="hidden min-w-0 flex-1 lg:block">
+            {open ? (
+              <p className="text-[0.9375rem] leading-relaxed text-[var(--text-4)]">
+                Знак свёрнет рассказ.
+              </p>
+            ) : (
+              <>
+                {/* Три двери. The blank two-thirds is given to the thing the
+                    section is actually promising — «три версии одного слова» —
+                    so the band states its content instead of describing it.
+
+                    Hairlines from a `gap-px` grid over a border-coloured
+                    ground: the same construction as the ХРОНИКА strip that
+                    closes this section when it is open, so the collapsed state
+                    opens on the shape the expanded one ends with.
+
+                    Each door is a way in, not a label: `openWith` carries the
+                    reading through, so pressing «Корабль» opens the story
+                    already on that version rather than dropping the reader at
+                    the top to find the chip themselves. That is the same
+                    action the margin river's bays perform, which is why the
+                    machinery for it already exists. */}
+                <div className="grid grid-cols-3 gap-px border border-[var(--border)] bg-[var(--border)]">
+                  {ETYMOLOGY_CHIPS.map((chip) => (
+                    <button
+                      key={chip.key}
+                      type="button"
+                      onClick={() => openWith(chip.key)}
+                      aria-controls="buza-story"
+                      aria-label={`Версия «${chip.label}» — раскрыть рассказ о бузе на ней`}
+                      /* `.record-card` rather than a hover invented here: it is
+                         the site's one answer for a card-shaped thing that
+                         opens something — an oxblood rule struck along the
+                         bottom edge, drawn from the left, and a hairline ring
+                         inside. The first pass lit the cell's background and
+                         turned the word gold instead, which is neither: gold is
+                         this section's *content* colour, and a background swap
+                         appears nowhere else in the hover vocabulary. */
+                      /* The keyboard ring is an inset `box-shadow`, not an
+                         `outline`. `.record-card:focus-within` sets an outline
+                         of its own (a 1px 8%-white hairline) and globals.css is
+                         unlayered, so it beats any Tailwind `outline-*` utility
+                         put here — the gold ring simply lost, and focus landed
+                         as a barely-visible grey line. A shadow is a different
+                         property, so the two stop competing; `inset` keeps it
+                         inside the cell instead of painting over its
+                         neighbours across the hairline gap. These cells carry
+                         no other shadow for it to overwrite. */
+                      className={cn(
+                        "record-card group cursor-pointer bg-[var(--background-deep)] px-5 py-4 text-left",
+                        "focus-visible:shadow-[inset_0_0_0_2px_var(--gold)]",
+                      )}
+                    >
+                      {/* Everything in the cell travels together, 1.5 — the
+                          same distance the record cards on the tournament pages
+                          move. Moving the teaser alone read as a broken hover:
+                          a line sliding out from under a heading that stayed
+                          put. Either all of it goes or none does. */}
+                      <span className="block transition-transform duration-300 group-hover:translate-x-1.5 group-focus-within:translate-x-1.5">
+                        <span className="record-label block text-[var(--text-4)] transition-colors group-hover:text-[var(--foreground)] group-focus-within:text-[var(--foreground)]">
+                          {chip.label}
+                        </span>
+                        <span className="mt-2 block text-sm leading-relaxed text-[var(--muted)]">
+                          {chip.teaser}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-[0.9375rem] leading-relaxed text-[var(--text-4)]">
+                  Нажмите любую версию — или знак, чтобы начать сначала.
+                </p>
+              </>
+            )}
+          </div>
         </div>
 
         {/* The region the emblem's `aria-controls` names. Unmounted rather than

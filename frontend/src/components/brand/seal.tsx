@@ -32,10 +32,16 @@ function octagonPath(size: number, inset: number): string {
 const OUTER = octagonPath(48, 2);
 const INNER = octagonPath(48, 6.5);
 
-export type SealTone = "iron" | "accent" | "gold" | "muted";
+export type SealTone = "iron" | "record" | "accent" | "gold" | "muted";
 
 const toneClass: Record<SealTone, string> = {
   iron: "text-[var(--iron)]",
+  /* The register captions and technical labels are set in — struck metal that
+     has to be read rather than merely sensed. `iron` is very dark by design
+     (1.77:1 on the deep ground), which suits a seal sitting on a lit surface
+     and disappears outright on the colophon's near-black; this is the same
+     mark at 4.9:1, still well under the link text beside it at 10.6. */
+  record: "text-[var(--text-4)]",
   accent: "text-[var(--accent)]",
   gold: "text-[var(--gold)]",
   muted: "text-[var(--muted)]",

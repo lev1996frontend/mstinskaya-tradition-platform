@@ -42,7 +42,9 @@ function TieBreakForm({
 }: {
   groupId: string;
   tie: UnresolvedTieView;
-  onResolved: (stage: GroupStageView) => void;
+  /** Just "it changed" — the fresh stage comes back from the server on the
+   *  refresh this triggers, not from this component's own response. */
+  onResolved: () => void;
 }) {
   const [order, setOrder] = useState(
     tie.participant_ids.map((id, index) => ({ id, name: tie.participant_names[index] ?? "—" })),
@@ -122,7 +124,7 @@ function TieBreakForm({
           setSaving(true);
           setError(null);
           void resolveGroupTie(groupId, { ordering: order.map((row) => row.id), reason: trimmed })
-            .then(onResolved)
+            .then(() => onResolved())
             .catch((caught) => setError(describeError(caught)))
             .finally(() => setSaving(false));
         }}
@@ -140,7 +142,7 @@ function GroupTable({
 }: {
   group: GroupView;
   canManage: boolean;
-  onResolved: (stage: GroupStageView) => void;
+  onResolved: () => void;
 }) {
   return (
     <Card className="space-y-3 p-4">
@@ -231,24 +233,27 @@ export function GroupStandings({
   canManage?: boolean;
   onChanged?: () => void;
 }) {
-  const [current, setCurrent] = useState(stage);
-
+  /* Rendered straight from the prop, with no local copy of it.
+     `useState(stage)` used to hold this: it takes the prop only on the first
+     render, so every later `stage` — a bout finished elsewhere, another
+     organizer's tie decision, any `router.refresh()` — was silently ignored,
+     and the table went on showing whatever the last local mutation had
+     returned. Two sources of truth for one server object. Now the tie decision
+     just reports "changed" and the refreshed `stage` comes down as a prop,
+     which is how every other panel in the workspace already behaves. */
   return (
     <div className="space-y-4">
       <p className="text-sm text-[var(--muted)]">
-        Сыграно боёв: {current.matches_finished} из {current.matches_total}. Только счёт побед —
+        Сыграно боёв: {stage.matches_finished} из {stage.matches_total}. Только счёт побед —
         очков и мест платформа не придумывает.
       </p>
       <div className="grid gap-4 lg:grid-cols-2">
-        {current.groups.map((group) => (
+        {stage.groups.map((group) => (
           <GroupTable
             key={group.id}
             group={group}
             canManage={canManage}
-            onResolved={(updated) => {
-              setCurrent(updated);
-              onChanged?.();
-            }}
+            onResolved={() => onChanged?.()}
           />
         ))}
       </div>

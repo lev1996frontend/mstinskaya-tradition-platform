@@ -4,10 +4,32 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.modules.athletes.models import Athlete
 from app.modules.athletes.schemas.athlete import AthleteCreateRequest, AthleteResponse, AthleteUpdateRequest
 from app.modules.athletes.services.athlete_service import AthleteService
 
 router = APIRouter(prefix="/api/v1/athletes", tags=["athletes"])
+
+
+def _view(athlete: Athlete) -> AthleteResponse:
+    """One shape for every answer this router gives.
+
+    The five hand-written copies this replaces were identical, which is how
+    ``full_name`` would have been added to four of them and forgotten in the
+    fifth. The athlete must have been loaded through ``AthleteService`` for the
+    name to be available — see ``AthleteService._WITH_PERSON``.
+    """
+    return AthleteResponse(
+        id=str(athlete.id),
+        user_id=str(athlete.user_id),
+        full_name=AthleteService.full_name_of(athlete),
+        nickname=athlete.nickname,
+        birth_year=athlete.birth_year,
+        experience_years=athlete.experience_years,
+        level=athlete.level,
+        bio=athlete.bio,
+        photo_url=athlete.photo_url,
+    )
 
 
 @router.post("", response_model=AthleteResponse, status_code=status.HTTP_201_CREATED)
@@ -23,64 +45,25 @@ async def create_athlete(payload: AthleteCreateRequest, session: AsyncSession = 
         photo_url=payload.photo_url,
     )
     await session.commit()
-    return AthleteResponse(
-        id=str(athlete.id),
-        user_id=str(athlete.user_id),
-        nickname=athlete.nickname,
-        birth_year=athlete.birth_year,
-        experience_years=athlete.experience_years,
-        level=athlete.level,
-        bio=athlete.bio,
-        photo_url=athlete.photo_url,
-    )
+    return _view(athlete)
 
 
 @router.get("", response_model=list[AthleteResponse])
 async def list_athletes(session: AsyncSession = Depends(get_db)) -> list[AthleteResponse]:
     athletes = await AthleteService.list_athletes(session)
-    return [
-        AthleteResponse(
-            id=str(athlete.id),
-            user_id=str(athlete.user_id),
-            nickname=athlete.nickname,
-            birth_year=athlete.birth_year,
-            experience_years=athlete.experience_years,
-            level=athlete.level,
-            bio=athlete.bio,
-            photo_url=athlete.photo_url,
-        )
-        for athlete in athletes
-    ]
+    return [_view(athlete) for athlete in athletes]
 
 
 @router.get("/{athlete_id}", response_model=AthleteResponse)
 async def get_athlete(athlete_id: str, session: AsyncSession = Depends(get_db)) -> AthleteResponse:
     athlete = await AthleteService.get_athlete(session, athlete_id)
-    return AthleteResponse(
-        id=str(athlete.id),
-        user_id=str(athlete.user_id),
-        nickname=athlete.nickname,
-        birth_year=athlete.birth_year,
-        experience_years=athlete.experience_years,
-        level=athlete.level,
-        bio=athlete.bio,
-        photo_url=athlete.photo_url,
-    )
+    return _view(athlete)
 
 
 @router.get("/user/{user_id}", response_model=AthleteResponse)
 async def get_athlete_by_user(user_id: str, session: AsyncSession = Depends(get_db)) -> AthleteResponse:
     athlete = await AthleteService.get_by_user_id(session, user_id)
-    return AthleteResponse(
-        id=str(athlete.id),
-        user_id=str(athlete.user_id),
-        nickname=athlete.nickname,
-        birth_year=athlete.birth_year,
-        experience_years=athlete.experience_years,
-        level=athlete.level,
-        bio=athlete.bio,
-        photo_url=athlete.photo_url,
-    )
+    return _view(athlete)
 
 
 @router.patch("/{athlete_id}", response_model=AthleteResponse)
@@ -100,13 +83,4 @@ async def update_athlete(
         photo_url=payload.photo_url,
     )
     await session.commit()
-    return AthleteResponse(
-        id=str(athlete.id),
-        user_id=str(athlete.user_id),
-        nickname=athlete.nickname,
-        birth_year=athlete.birth_year,
-        experience_years=athlete.experience_years,
-        level=athlete.level,
-        bio=athlete.bio,
-        photo_url=athlete.photo_url,
-    )
+    return _view(athlete)
