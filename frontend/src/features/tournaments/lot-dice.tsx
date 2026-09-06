@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Dices, Hand } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Alert, Button, cn } from "@/components/ui";
 import { drawLot, overrideLot } from "@/api/tournaments";
@@ -153,6 +153,16 @@ export function LotDice({
 
   const settled = weapon !== null;
 
+  /* The anticipation beat's timer, kept so it can be cancelled: the panel
+     around this can close inside those 110ms, and a timer that fires into an
+     unmounted component is a write to nothing. */
+  const anticipation = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (anticipation.current) clearTimeout(anticipation.current);
+    };
+  }, []);
+
   async function submit() {
     setBusy(true);
     setError(null);
@@ -167,19 +177,34 @@ export function LotDice({
         ? await overrideLot(matchId, { ...body, reason: reason.trim() })
         : await drawLot(matchId, body);
 
+      /* Under reduced motion the ritual is not slowed down, it is not staged
+         at all: the result simply appears. This also keeps the "done" signal
+         off `onAnimationComplete`, which cannot be relied on to fire for an
+         animation whose target equals where it already is — and that signal is
+         what releases the button and refreshes the bout. */
+      if (reduceMotion) {
+        setRevealed(lot.die_value);
+        setPhase("idle");
+        setBusy(false);
+        onDrawn();
+        return;
+      }
+
       // …напряжение (a brief compress) …
       setPhase("anticipate");
-      window.setTimeout(
-        () => {
-          // …бросок (the toss lands on that exact face) …
-          setRevealed(lot.die_value);
-          setPhase("tumble");
-        },
-        reduceMotion ? 0 : LOT_ANTICIPATION_MS,
-      );
+      anticipation.current = setTimeout(() => {
+        anticipation.current = null;
+        // …бросок (the toss lands on that exact face) …
+        setRevealed(lot.die_value);
+        setPhase("tumble");
+      }, LOT_ANTICIPATION_MS);
+      /* `busy` deliberately stays true through the toss. Releasing it here (in
+         a `finally`, as it was) re-enabled the button while the die was still
+         visibly in the air, and a second press sent a second жребий for a bout
+         whose lot had already been drawn and written to the journal. It is
+         cleared where the ritual actually ends — `onTumbleComplete`. */
     } catch (caught) {
       setError(describeError(caught));
-    } finally {
       setBusy(false);
     }
   }
@@ -193,6 +218,7 @@ export function LotDice({
           onTumbleComplete={() => {
             // …остановка: the toss is over, the record is written.
             setPhase("idle");
+            setBusy(false);
             onDrawn();
           }}
         />

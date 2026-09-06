@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { Stat, cn } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
@@ -49,6 +49,9 @@ type TabKey =
   | "teamBouts"
   | "results"
   | "journal";
+
+/** How long a "the panel changed something" refresh waits for the next one. */
+const REFRESH_COALESCE_MS = 700;
 
 export type CompetitionData = {
   competition: CompetitionView;
@@ -154,16 +157,55 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
   const [tab, setTab] = useState<TabKey>(tabs[0]?.key ?? "participants");
   const activeTab = tabs.some((item) => item.key === tab) ? tab : (tabs[0]?.key ?? "participants");
 
-  /** Re-runs the server component so every tab sees the new result at once. */
-  function refresh() {
-    setEditing(null);
-    startTransition(() => router.refresh());
-  }
+  /* One `router.refresh()` re-reads the whole discipline — fourteen endpoints,
+     all `no-store` (see the competition page's `Promise.all`). That is the
+     right price for a result being saved, and much too high for every tap on a
+     scoring button: the judge panel re-reads the поединок itself through its
+     own `reload()`, so these refreshes exist only to bring the *other* tabs
+     back in step. Coalescing them keeps the panel instant while a burst of
+     очки costs one refresh instead of one each. */
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /** Same, but keeps the judge panel open — it re-reads the bout itself. */
-  function refreshInPlace() {
+  const runRefresh = useCallback(() => {
+    if (refreshTimer.current) {
+      clearTimeout(refreshTimer.current);
+      refreshTimer.current = null;
+    }
     startTransition(() => router.refresh());
-  }
+  }, [router]);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    };
+  }, []);
+
+  /** Re-runs the server component so every tab sees the new result at once. */
+  const refresh = useCallback(() => {
+    setEditing(null);
+    runRefresh();
+  }, [runRefresh]);
+
+  /** Same, but keeps the judge panel open — it re-reads the bout itself, so
+   *  this one may wait for the judge to stop tapping. */
+  const refreshInPlace = useCallback(() => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    refreshTimer.current = setTimeout(() => {
+      refreshTimer.current = null;
+      startTransition(() => router.refresh());
+    }, REFRESH_COALESCE_MS);
+  }, [router]);
+
+  /** Closing the panel is the moment the other tabs are actually looked at, so
+   *  any pending coalesced refresh is spent immediately here. */
+  const closeBout = useCallback(() => {
+    setRunningBoutId(null);
+    // Only if something is actually waiting — a panel opened and closed
+    // without a single change owes the server nothing.
+    if (refreshTimer.current) runRefresh();
+  }, [runRefresh]);
+
+  const closeEditing = useCallback(() => setEditing(null), []);
 
   const canManage = Boolean(user);
   const reduceMotion = useReducedMotion();
@@ -347,10 +389,13 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
         {activeTab === "journal" ? <EventsJournal events={events} /> : null}
       </div>
 
+      {/* Both callbacks are stable: an inline arrow here changes identity on
+          every render of this workspace, and the dialogs below key effects
+          (Escape listener, initial focus) off them. */}
       <BoutDetailHost
         matchId={runningBoutId}
         canManage={canManage}
-        onClose={() => setRunningBoutId(null)}
+        onClose={closeBout}
         onChanged={refreshInPlace}
       />
 
@@ -359,7 +404,7 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
           <MatchResultDialog
             key={editing.id}
             match={editing}
-            onClose={() => setEditing(null)}
+            onClose={closeEditing}
             onSaved={refresh}
           />
         ) : null}

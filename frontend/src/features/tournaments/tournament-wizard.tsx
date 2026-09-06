@@ -26,6 +26,7 @@ import {
 import { Alert, Badge, Button, ButtonLink, Card, cn } from "@/components/ui";
 import { Field, Input, Select } from "@/components/ui/form";
 import { useAuth } from "@/features/auth/auth-context";
+import { athleteMatches, athleteName } from "@/lib/athlete-name";
 import { ApiError, ApiUnreachableError } from "@/lib/api";
 import { competitionFormat, competitionType } from "@/lib/labels";
 import type { Athlete, CompetitionFormat, CompetitionType, ImportReport } from "@/types";
@@ -163,9 +164,28 @@ function describeError(error: unknown): string {
   return "Не удалось сохранить.";
 }
 
+/**
+ * Identity for one row of the wizard's own lists — never sent anywhere, only
+ * used as a React key and to tie an entry to the discipline it was typed
+ * under.
+ *
+ * Not `crypto.randomUUID()` directly: that exists only in a secure context, so
+ * a dev build opened from a phone over plain `http://192.168.x.x:3000` threw
+ * here and took the entire wizard down with it. A counter is a perfectly good
+ * identity for a list that lives inside one component instance.
+ */
+let rowCounter = 0;
+function newKey(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  rowCounter += 1;
+  return `row-${Date.now().toString(36)}-${rowCounter}`;
+}
+
 function newDiscipline(name = ""): Discipline {
   return {
-    key: crypto.randomUUID(),
+    key: newKey(),
     name,
     type: "INDIVIDUAL",
     format: "SINGLE_ELIMINATION",
@@ -177,7 +197,7 @@ function newDiscipline(name = ""): Discipline {
 
 function newEntry(disciplineKey: string): Entry {
   return {
-    key: crypto.randomUUID(),
+    key: newKey(),
     athleteId: null,
     disciplineKey,
     name: "",
@@ -211,13 +231,19 @@ function AthletePicker({
 }) {
   const [query, setQuery] = useState("");
 
+  /* One pass, stopping at six, over both names a fighter answers to — драковое
+     имя and ФИО. It used to search `nickname` alone, so anyone without one
+     could not be found at all and was entered as a new person: the duplicate
+     profile this box exists to prevent. */
   const matches = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return [];
-    return athletes
-      .filter((athlete) => !taken.has(athlete.id))
-      .filter((athlete) => (athlete.nickname ?? "").toLowerCase().includes(needle))
-      .slice(0, 6);
+    const found: Athlete[] = [];
+    for (const athlete of athletes) {
+      if (found.length >= 6) break;
+      if (taken.has(athlete.id)) continue;
+      if (!athleteMatches(athlete, query)) continue;
+      found.push(athlete);
+    }
+    return found;
   }, [athletes, query, taken]);
 
   return (
@@ -248,7 +274,14 @@ function AthletePicker({
                   className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border-strong)] px-3 py-2 text-left text-sm hover:bg-[var(--surface-muted)]"
                 >
                   <Link2 className="size-3.5 shrink-0 text-[var(--accent)]" strokeWidth={2} />
-                  <span className="min-w-0 flex-1 truncate">{athlete.nickname ?? "Без имени"}</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {athleteName(athlete)}
+                    {/* Both names, when there are two: the organizer typed one
+                        of them and has to see they picked the right person. */}
+                    {athlete.nickname && athlete.full_name ? (
+                      <span className="ml-1.5 text-[var(--muted)]">{athlete.full_name}</span>
+                    ) : null}
+                  </span>
                   <Badge tone="info">профиль есть</Badge>
                 </button>
               </li>
@@ -299,19 +332,39 @@ export function TournamentWizard() {
     { id: string; name: string; key: string; entered: number }[]
   >([]);
 
+  // Both lists are catalogue reads, and both can fail. Silently swallowing that
+  // used to leave step 1 with an empty «Регламент» select and a permanently
+  // greyed-out "Дальше" button — `canLeaveStepOne` needs a `rulesetId` — with
+  // nothing on screen saying why. The cancel flag is the usual guard against a
+  // late response writing into an unmounted form.
   useEffect(() => {
-    void (async () => {
-      const [sets, people] = await Promise.all([listRuleSets(), listAthletes()]);
-      setRulesets(sets.map((set) => ({ id: set.id, title: `${set.title} · ${set.version}` })));
-      if (sets[0]) setRulesetId(sets[0].id);
-      setAthletes(people);
-    })();
+    let cancelled = false;
+    Promise.all([listRuleSets(), listAthletes()])
+      .then(([sets, people]) => {
+        if (cancelled) return;
+        setRulesets(sets.map((set) => ({ id: set.id, title: `${set.title} · ${set.version}` })));
+        if (sets[0]) setRulesetId(sets[0].id);
+        setAthletes(people);
+      })
+      .catch((caught) => {
+        if (!cancelled) setError(describeError(caught));
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // A discipline with no name is a half-typed row, not an event.
   const namedDisciplines = disciplines.filter((discipline) => discipline.name.trim());
   const filled = entries.filter((entry) => entry.name.trim());
-  const takenAthleteIds = new Set(entries.map((e) => e.athleteId).filter(Boolean) as string[]);
+  /* Memoised, not rebuilt inline: this is `AthletePicker`'s `taken` prop, and a
+     fresh `Set` on every render invalidated that component's own `useMemo` on
+     every keystroke in any of the ~7 inputs per entry row, re-filtering the
+     whole athlete catalogue each time. */
+  const takenAthleteIds = useMemo(
+    () => new Set(entries.map((entry) => entry.athleteId).filter(Boolean) as string[]),
+    [entries],
+  );
 
   /** The default discipline for a new row — the first one, when there is only one. */
   const defaultDisciplineKey = namedDisciplines[0]?.key ?? disciplines[0]?.key ?? "";
@@ -378,19 +431,34 @@ export function TournamentWizard() {
   async function createTournamentAndDisciplines() {
     await run(async () => {
       if (!user) throw new ApiError(401, null, "Требуется вход в систему.");
-      const tournament = await createTournament({
-        title: title.trim(),
-        status: "REGISTRATION",
-        start_date: startDate ? new Date(startDate).toISOString() : null,
-        location: location.trim() || null,
-        city: city.trim() || null,
-        organizer_id: user.id,
-        ruleset_id: rulesetId,
-      });
 
-      const built: { id: string; name: string; key: string; entered: number }[] = [];
+      /* Every write here is committed the moment the server answers it, so the
+         retry after a failure must not repeat what already landed. The
+         tournament id is stored as soon as it exists — not after the whole
+         loop — and each discipline is recorded as it is created, so pressing
+         the button again picks up exactly where the failed attempt stopped.
+         Before this, a discipline failing halfway left a real tournament in the
+         database that the wizard had no id for, and the retry minted a second
+         one with a duplicate set of disciplines. */
+      let id = tournamentId;
+      if (!id) {
+        const tournament = await createTournament({
+          title: title.trim(),
+          status: "REGISTRATION",
+          start_date: startDate ? new Date(startDate).toISOString() : null,
+          location: location.trim() || null,
+          city: city.trim() || null,
+          organizer_id: user.id,
+          ruleset_id: rulesetId,
+        });
+        id = tournament.id;
+        setTournamentId(id);
+      }
+
+      const alreadyCreated = new Set(created.map((row) => row.key));
       for (const discipline of namedDisciplines) {
-        const competition = await createCompetition(tournament.id, {
+        if (alreadyCreated.has(discipline.key)) continue;
+        const competition = await createCompetition(id, {
           name: discipline.name.trim(),
           type: discipline.type,
           format: discipline.format,
@@ -399,16 +467,12 @@ export function TournamentWizard() {
           max_age: discipline.maxAge.trim() ? Number(discipline.maxAge) : null,
           max_age_gap: discipline.maxAgeGap.trim() ? Number(discipline.maxAgeGap) : null,
         });
-        built.push({
-          id: competition.id,
-          name: competition.name,
-          key: discipline.key,
-          entered: 0,
-        });
+        setCreated((rows) => [
+          ...rows,
+          { id: competition.id, name: competition.name, key: discipline.key, entered: 0 },
+        ]);
       }
 
-      setTournamentId(tournament.id);
-      setCreated(built);
       if (entries.length === 0) {
         setEntries([newEntry(defaultDisciplineKey), newEntry(defaultDisciplineKey)]);
       }
@@ -416,36 +480,93 @@ export function TournamentWizard() {
     });
   }
 
-  /** Enters the manually typed rows. The imported ones go through the review. */
+  /**
+   * Enters the manually typed rows. The imported ones go through the review.
+   *
+   * Same rule as the step above: each row is dropped from `entries` the instant
+   * the server confirms it, so a failure partway through leaves exactly the
+   * un-entered rows on screen and a second press sends only those. Clearing the
+   * whole list at the end (the old shape) meant a retry after row 15 of 30
+   * entered the first fourteen people a second time.
+   *
+   * Nothing is skipped silently any more either: a row whose discipline no
+   * longer exists, or which the server refused, is named in the error instead
+   * of quietly disappearing between "Завести" and the participants list.
+   */
   async function submitTypedEntries() {
     await run(async () => {
       const counts = new Map(created.map((row) => [row.id, row.entered]));
+      const orphans: string[] = [];
+      const teamRows: string[] = [];
+      const failures: string[] = [];
+
       for (const entry of filled) {
+        const name = entry.name.trim();
         const competition = created.find((row) => row.key === entry.disciplineKey);
         const discipline = namedDisciplines.find((row) => row.key === entry.disciplineKey);
+
         // A team discipline has no individual entrants; its teams are built on
         // the discipline's own page, where roles and rosters live.
-        if (!competition || discipline?.type === "TEAM") continue;
-        await addParticipant(competition.id, {
-          // A linked profile wins; the typed name is only a fallback for
-          // someone with no profile at all.
-          athlete_id: entry.athleteId,
-          display_name: entry.athleteId ? null : entry.name.trim(),
-          city: entry.city.trim() || null,
-          club_name: entry.club.trim() || null,
-          birth_year: entry.birthYear.trim() ? Number(entry.birthYear) : null,
-          seed: entry.seed ? Number(entry.seed) : null,
-        });
+        if (discipline?.type === "TEAM") {
+          teamRows.push(name);
+          continue;
+        }
+        if (!competition) {
+          orphans.push(name);
+          continue;
+        }
+
+        try {
+          await addParticipant(competition.id, {
+            // A linked profile wins; the typed name is only a fallback for
+            // someone with no profile at all.
+            athlete_id: entry.athleteId,
+            display_name: entry.athleteId ? null : name,
+            city: entry.city.trim() || null,
+            club_name: entry.club.trim() || null,
+            birth_year: entry.birthYear.trim() ? Number(entry.birthYear) : null,
+            seed: entry.seed ? Number(entry.seed) : null,
+          });
+        } catch (caught) {
+          failures.push(`${name} — ${describeError(caught)}`);
+          continue;
+        }
+
+        setEntries((rows) => rows.filter((row) => row.key !== entry.key));
         counts.set(competition.id, (counts.get(competition.id) ?? 0) + 1);
       }
+
       setCreated((rows) => rows.map((row) => ({ ...row, entered: counts.get(row.id) ?? row.entered })));
-      setEntries([]);
+
+      const problems = [
+        orphans.length > 0
+          ? `Дисциплина не выбрана или была удалена: ${orphans.join(", ")}. Укажите дисциплину в строке.`
+          : null,
+        teamRows.length > 0
+          ? `Командная дисциплина заводится составами на своей странице, поимённо здесь нельзя: ${teamRows.join(", ")}. Удалите эти строки или смените дисциплину.`
+          : null,
+        failures.length > 0 ? `Сервер отказал: ${failures.join("; ")}.` : null,
+      ].filter(Boolean);
+
+      if (problems.length > 0) {
+        // Everything that did go through is already saved and already gone from
+        // the list above — pressing the button again sends only what is left.
+        setError(problems.join(" "));
+        return;
+      }
       setStep(3);
     });
   }
 
   const canLeaveStepOne = title.trim().length >= 2 && Boolean(rulesetId);
-  const canLeaveStepTwo = namedDisciplines.length >= 1;
+  /* Two disciplines under one name is not a style question: the spreadsheet
+     import resolves a row's «Категория» by name, and the commit reports its
+     per-discipline counts keyed by name too — so a duplicate makes both
+     ambiguous. Caught here rather than after the tournament already exists. */
+  const duplicateNames = namedDisciplines
+    .map((discipline) => discipline.name.trim().toLowerCase())
+    .filter((name, index, all) => all.indexOf(name) !== index);
+  const canLeaveStepTwo = namedDisciplines.length >= 1 && duplicateNames.length === 0;
 
   if (!user) {
     return (
@@ -583,7 +704,7 @@ export function TournamentWizard() {
                   icon={<Plus className="size-3.5" strokeWidth={2.5} />}
                   onClick={() =>
                     setDisciplines((rows) => {
-                      const seeded = { ...preset.discipline, key: crypto.randomUUID() };
+                      const seeded = { ...preset.discipline, key: newKey() };
                       // Fill the first blank row rather than leaving it behind.
                       const blank = rows.find((row) => !row.name.trim());
                       return blank
@@ -670,9 +791,26 @@ export function TournamentWizard() {
                     type="button"
                     aria-label={`Удалить дисциплину ${index + 1}`}
                     disabled={disciplines.length === 1}
-                    onClick={() =>
-                      setDisciplines((rows) => rows.filter((row) => row.key !== discipline.key))
-                    }
+                    onClick={() => {
+                      /* Entrants typed under this discipline have to be moved,
+                         not orphaned. Their `disciplineKey` used to keep
+                         pointing at the deleted row: the `<Select>` below has
+                         no such option, so it displayed the *first* discipline
+                         while the state still held the dead key, and the
+                         submit loop then skipped those people without a word.
+                         Re-target them to whatever discipline remains. */
+                      const remaining = disciplines.filter((row) => row.key !== discipline.key);
+                      const fallback =
+                        remaining.find((row) => row.name.trim())?.key ?? remaining[0]?.key ?? "";
+                      setEntries((rows) =>
+                        rows.map((row) =>
+                          row.disciplineKey === discipline.key
+                            ? { ...row, disciplineKey: fallback }
+                            : row,
+                        ),
+                      );
+                      setDisciplines(remaining);
+                    }}
                     className="justify-self-end rounded-full p-1.5 text-[var(--muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--danger)] disabled:opacity-40"
                   >
                     <Trash2 className="size-4" strokeWidth={2} />
@@ -706,6 +844,22 @@ export function TournamentWizard() {
               Добавить дисциплину
             </Button>
 
+            {duplicateNames.length > 0 ? (
+              <Alert tone="warning" title="Названия дисциплин повторяются">
+                Дайте дисциплинам разные названия — по названию сервер разбирает колонку
+                «Категория» в файле заявок, и с двумя одинаковыми он не сможет понять, куда
+                заводить бойца.
+              </Alert>
+            ) : null}
+
+            {tournamentId ? (
+              <Alert tone="info" title="Турнир уже создан">
+                Повторное нажатие дозаведёт только те дисциплины, которых ещё нет — второй турнир
+                не появится. Название и дата турнира уже сохранены и на первом шаге больше не
+                меняются.
+              </Alert>
+            ) : null}
+
             {error ? <Alert tone="danger">{error}</Alert> : null}
 
             <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
@@ -714,9 +868,21 @@ export function TournamentWizard() {
                 disabled={!canLeaveStepTwo || busy}
                 onClick={() => void createTournamentAndDisciplines()}
               >
-                {busy ? "Создаём…" : "Создать турнир и дисциплины"}
+                {busy
+                  ? "Создаём…"
+                  : tournamentId
+                    ? "Продолжить — дозавести дисциплины"
+                    : "Создать турнир и дисциплины"}
               </Button>
-              <Button type="button" variant="ghost" onClick={() => setStep(0)} disabled={busy}>
+              {/* Once the tournament exists, its own fields are already in the
+                  database and editing them on step 1 would change nothing —
+                  so that door is closed rather than left to mislead. */}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setStep(0)}
+                disabled={busy || Boolean(tournamentId)}
+              >
                 Назад
               </Button>
             </div>
@@ -741,7 +907,11 @@ export function TournamentWizard() {
               onPick={(athlete) => {
                 const patch = {
                   athleteId: athlete.id,
-                  name: athlete.nickname ?? "Спортсмен",
+                  // The typed name is only a label here — the entry is linked by
+                  // `athleteId` and the server resolves the real name off the
+                  // profile — but it is what the organizer reads in the list,
+                  // so it should say who this is.
+                  name: athleteName(athlete, "Спортсмен"),
                   birthYear: athlete.birth_year ? String(athlete.birth_year) : "",
                 };
                 const empty = entries.find((entry) => !entry.name.trim());
@@ -889,6 +1059,11 @@ export function TournamentWizard() {
                   onCommitted={(count, perCompetition) => {
                     setImportReport(null);
                     setImportSummary(`Заведено участников из файла: ${count}.`);
+                    // Keyed by discipline *name* — that is the shape the
+                    // server reports (`per_competition` in
+                    // `participant_import.py`). Safe here only because step 2
+                    // refuses to create two disciplines under one name; see
+                    // `duplicateNames`.
                     setCreated((rows) =>
                       rows.map((row) => ({
                         ...row,

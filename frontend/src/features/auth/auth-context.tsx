@@ -75,9 +75,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  /* The tokens are only kept once they have been shown to work.
+     Writing them first left a half-session behind whenever `/users/me` failed
+     right after a successful login: storage said "signed in", `user` said
+     "signed out", and every later request went out with a token the app itself
+     did not believe in — visible only as a login that appeared to do nothing,
+     and unpickable without clearing site data. */
   const applyTokens = useCallback(async (tokens: AuthTokens) => {
-    writeTokens(tokens);
+    // `getCurrentUser` is handed the token explicitly, so nothing has to be in
+    // storage for this check to run — which is what lets the write wait until
+    // the check has passed. A throw here propagates to the form, which shows
+    // it, and leaves storage exactly as it was.
     const me = await authApi.getCurrentUser(tokens.access_token);
+    writeTokens(tokens);
     setUser(me);
   }, []);
 
