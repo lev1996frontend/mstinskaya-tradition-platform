@@ -111,7 +111,7 @@ function RippleLabel({ text }: { text: string }) {
  */
 export function SiteFooter() {
   return (
-    <footer className="mt-14 bg-[var(--background-deep)]">
+    <footer className="seal-glint-scope mt-14 bg-[var(--background-deep)]">
       <Container>
         <div className="rule-double pt-8" />
       </Container>
@@ -175,9 +175,30 @@ export function SiteFooter() {
         <p className="font-record text-[0.7rem] uppercase tracking-[0.14em] text-[var(--muted)]">
           © {new Date().getFullYear()} · Мстинская традиция
         </p>
+        {/* `tone="record"`, not the component's default `iron`: iron is drawn
+            for seals standing on a lit surface and comes out at 1.77:1 on the
+            colophon's near-black ground — below the point at which a shape
+            reads at all. `record` is the same mark at 4.9:1, the register the
+            captions beside it are set in.
+
+            `--glint-from`/`--glint-to` stagger the scroll-driven блик (see
+            `.seal-glint` in globals.css) by 9% of the footer's entry per seal,
+            so the light runs along the row rather than all four lifting at
+            once. */}
         <div className="flex items-center gap-3" aria-hidden="true">
-          {WEAPON_MOTIFS.map((motif) => (
-            <WeaponSeal key={motif.key} motif={motif.key} size={28} tone="iron" />
+          {WEAPON_MOTIFS.map((motif, index) => (
+            <span
+              key={motif.key}
+              className="inline-flex"
+              style={
+                {
+                  "--glint-from": `${6 + index * 9}%`,
+                  "--glint-to": `${58 + index * 9}%`,
+                } as CSSProperties
+              }
+            >
+              <WeaponSeal motif={motif.key} size={28} tone="record" className="seal-glint" />
+            </span>
           ))}
         </div>
       </Container>

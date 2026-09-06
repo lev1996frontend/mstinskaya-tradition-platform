@@ -1394,6 +1394,70 @@ button:not(:disabled),
   }
 }
 
+/* блик — light running along the colophon's four seals as the footer arrives.
+ *
+ * Driven by scroll position (`animation-timeline: view()`), not by a timer.
+ * A loop was the obvious way to make a seal "sometimes" catch the light, and
+ * it is the wrong one here: the footer is on every route, so a loop would run
+ * forever on every page including the whole time it is off screen, and a flash
+ * with no cause reads as a rendering artefact rather than as metal. Tied to
+ * arrival it has a reason — you reached the bottom, and the light crossed the
+ * marks — it costs nothing while out of view, and it happens again every time
+ * you come back.
+ *
+ * `color` and not a swept highlight overlay: every stroke in the seal is
+ * `currentColor`, so one property warms the whole mark, and there is no
+ * rectangular sweep to clip against an octagon.
+ *
+ * Where `animation-timeline` is unsupported (Firefox at the time of writing)
+ * the declaration is dropped and the animation falls back to the document
+ * timeline with no duration — it resolves instantly to the 100% keyframe,
+ * which is the resting colour. So the fallback is simply no glint, never a
+ * mark left stuck at the wrong tone. Both ends of the keyframe are pinned to
+ * that resting colour for exactly this reason.
+ */
+@keyframes seal-glint {
+  0%,
+  100% {
+    color: var(--text-4);
+  }
+  45% {
+    color: var(--gold);
+  }
+}
+
+/* The timeline is the footer's own arrival, named here and read by the seals
+   below. A bare `view()` makes each seal its own subject, and a seal is 28px
+   tall — its whole entry phase is 28px of scroll, so the glint fired and
+   finished inside two frames of a flick and was, in practice, never seen. The
+   footer crossing the viewport is several hundred pixels of travel, which is
+   the pace the light should move at. */
+.seal-glint-scope {
+  view-timeline-name: --colophon;
+}
+
+/* Longhands, not the `animation` shorthand. The shorthand resets every
+   longhand it omits to its initial value, and for `animation-duration` that is
+   `0s` — which for a scroll-driven animation means an active interval of zero
+   length, so it never plays across its range at all. It has to be `auto`, the
+   value that says "however long the range is". */
+.seal-glint {
+  animation-name: seal-glint;
+  animation-duration: auto;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-timeline: --colophon;
+  /* Staggered per seal from `site-footer.tsx`, so the light travels along the
+     row instead of all four blinking together. */
+  animation-range: entry var(--glint-from, 10%) entry var(--glint-to, 60%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seal-glint {
+    animation: none;
+  }
+}
+
 /* Карточка-запись под курсором — the cards that are each one link (a
    tournament, a discipline) had nothing but a border tint and the pointer to
    say they were clickable, which on a card this large is a change you find by
