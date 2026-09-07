@@ -144,6 +144,21 @@ class TournamentEngineService:
             await session.flush()
         except IntegrityError as clash:
             await session.rollback()
+            # Narrowed to the one constraint this duplicate-entry guard is
+            # about. A different integrity failure (a stale competition or
+            # club reference, say) answering the same 409 would send whoever
+            # debugs it looking for a duplicate that was never the actual
+            # problem, so anything else re-raises as the real error it is.
+            # Postgres names the index in the message; SQLite (the test
+            # suite's engine) names the two columns instead — checked for
+            # both rather than branching on dialect.
+            message = str(clash.orig)
+            is_this_index = "uq_participant_athlete_per_competition" in message or (
+                "tournament_participants.competition_id" in message
+                and "tournament_participants.athlete_id" in message
+            )
+            if not is_this_index:
+                raise
             raise HTTPException(
                 status_code=409,
                 detail="Этот боец уже заявлен в этой дисциплине.",

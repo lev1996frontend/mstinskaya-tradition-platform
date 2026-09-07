@@ -184,6 +184,12 @@ class ParticipantImportService:
         )
 
         seen_in_file: set[tuple[UUID | None, str]] = set()
+        #: A separate key for a row that resolved to a profile: the same fighter
+        #: can appear under a драковое имя in one row and their ФИО in another,
+        #: which are different strings and so invisible to the name key above —
+        #: exactly the duplicate identity linking to ``athlete_id`` exists to rule
+        #: out. Rows with no resolved profile still rely on the name key alone.
+        seen_athlete_in_file: set[tuple[UUID, UUID]] = set()
         unknown_categories: set[str] = set()
         reported: list[dict] = []
 
@@ -295,7 +301,11 @@ class ParticipantImportService:
                     )
 
                 key = (competition.id, _normalize(values["fight_name"] or full_name))
-                if key in seen_in_file:
+                athlete_key = (competition.id, athlete.id) if athlete is not None else None
+                duplicate_in_file = key in seen_in_file or (
+                    athlete_key is not None and athlete_key in seen_athlete_in_file
+                )
+                if duplicate_in_file:
                     errors.append(
                         {
                             "code": "DUPLICATE_IN_FILE",
@@ -304,6 +314,8 @@ class ParticipantImportService:
                         }
                     )
                 seen_in_file.add(key)
+                if athlete_key is not None:
+                    seen_athlete_in_file.add(athlete_key)
 
                 already = (
                     athlete is not None and (competition.id, athlete.id) in existing_by_athlete

@@ -64,6 +64,20 @@ def register(client, email: str) -> tuple[str, dict[str, str]]:
     return me.json()["id"], headers
 
 
+def register_athlete(client, email: str, nickname: str, first_name: str, last_name: str) -> str:
+    """A user with an athlete profile — драковое имя and ФИО both resolvable."""
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": "StrongPassword123!", "first_name": first_name, "last_name": last_name},
+    )
+    assert response.status_code == 201, response.text
+    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
+    user_id = client.get("/api/v1/users/me", headers=headers).json()["id"]
+    athlete = client.post("/api/v1/athletes", json={"user_id": user_id, "nickname": nickname})
+    assert athlete.status_code == 201, athlete.text
+    return athlete.json()["id"]
+
+
 def bootstrap(client):
     """A tournament with three disciplines, one of them age-bounded."""
     organizer_id, headers = register(client, "organizer@example.com")
@@ -409,6 +423,32 @@ def test_a_duplicate_inside_the_file_is_reported():
         headers,
     ).json()
     # The first occurrence is fine; the second is the duplicate.
+    assert codes(report, 0) == set()
+    assert "DUPLICATE_IN_FILE" in codes(report, 1)
+
+
+def test_a_duplicate_written_differently_across_rows_is_still_reported():
+    """Драковое имя in one row, ФИО in another — same profile, same discipline.
+
+    The name key alone is blind to this: the two rows are different strings.
+    What makes them the same entrant is that both resolve to the same athlete
+    profile, which is exactly what the duplicate-in-file check has to catch too.
+    """
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+    register_athlete(client, "petr@example.com", "Кистень", "Пётр", "Замятин")
+
+    report = preview(
+        client,
+        tournament_id,
+        sheet_of(
+            [
+                {"full_name": "Замятин Пётр", "fight_name": "Кистень", "category": "Абсолютная мужская"},
+                {"full_name": "Замятин Пётр", "category": "Абсолютная мужская"},
+            ]
+        ),
+        headers,
+    ).json()
     assert codes(report, 0) == set()
     assert "DUPLICATE_IN_FILE" in codes(report, 1)
 
