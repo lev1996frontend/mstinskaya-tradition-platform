@@ -93,20 +93,27 @@ function safeJsonParse(text: string): unknown {
 }
 
 /**
- * Send one file as multipart form data.
+ * Send one or several files as multipart form data.
  *
  * `apiRequest` cannot do this: it unconditionally sets a JSON content type and
  * stringifies the body. Note that `Content-Type` is deliberately *not* set
  * here either — the browser has to write it itself, because only it knows the
  * multipart boundary it generated.
+ *
+ * Several files go out under the *same* field name, repeated, which is how
+ * multipart carries a list and what FastAPI reads back into a `list[UploadFile]`.
  */
-export async function apiUpload<T>(path: string, file: File, field = "file"): Promise<T> {
+export async function apiUpload<T>(
+  path: string,
+  file: File | File[],
+  field = "file",
+): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
   const authToken = readBrowserToken();
   if (authToken) headers.Authorization = `Bearer ${authToken}`;
 
   const form = new FormData();
-  form.append(field, file);
+  for (const item of Array.isArray(file) ? file : [file]) form.append(field, item);
 
   let response: Response;
   try {

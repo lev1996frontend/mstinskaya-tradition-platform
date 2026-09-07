@@ -15,6 +15,10 @@ email-validator==2.3.0
 # .xlsx entry lists: the template the organizer downloads and the file they
 # upload are read by one module, so the columns cannot drift apart.
 openpyxl==3.1.5
+# .docx entry lists: the same blank in Word, for clubs that fill in a document
+# rather than a spreadsheet. Reads and writes one table shaped by the same
+# column definition openpyxl uses.
+python-docx==1.1.2
 # Required by FastAPI for UploadFile; without it the intake router fails at
 # import time, not at request time.
 python-multipart==0.0.9

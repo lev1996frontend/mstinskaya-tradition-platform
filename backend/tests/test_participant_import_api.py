@@ -1,4 +1,4 @@
-"""Entry lists arriving as a spreadsheet.
+﻿"""Entry lists arriving as a spreadsheet.
 
 The load-bearing test here is the round trip: download the template, fill it
 in, upload it back. That is the machine-checkable form of "the template and the
@@ -14,6 +14,7 @@ from datetime import date
 from io import BytesIO
 
 from fastapi.testclient import TestClient
+from docx import Document
 from openpyxl import Workbook, load_workbook
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -25,6 +26,7 @@ from app.modules.tournaments.services.participant_import import IMPORT_COLUMNS, 
 EVENT_YEAR = 2026
 START_DATE = date(EVENT_YEAR, 5, 16).isoformat()
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 
 def setup_app_for_tests():
@@ -476,6 +478,252 @@ def test_a_file_that_is_not_a_spreadsheet_is_refused_clearly():
     refused = preview(client, tournament_id, b"not a workbook at all", headers)
     assert refused.status_code == 400, refused.text
     assert "xlsx" in refused.json()["detail"].lower()
+
+
+# ----------------------------------------------------- несколько файлов сразу
+# An entry list rarely arrives as one file: each club sends its own. The rules
+# below are what makes a stack of them behave like a single заявка.
+
+
+def preview_files(client, tournament_id: str, uploads, headers):
+    """Upload several sheets in one request, the way the panel does."""
+    return client.post(
+        f"/api/v1/tournaments/{tournament_id}/participants/import/preview",
+        files=[("file", (name, payload, XLSX)) for name, payload in uploads],
+        headers=headers,
+    )
+
+
+def test_several_files_are_reviewed_as_one_entry_list():
+    """Two clubs, two files, one report — and each row says where it came from."""
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+
+    buza = sheet_of([{"full_name": "Иван Иванов", "category": "Абсолютная мужская"}])
+    sokol = sheet_of(
+        [
+            {"full_name": "Пётр Петров", "category": "Абсолютная мужская"},
+            {"full_name": "Сергей Сергеев", "category": "Абсолютная мужская"},
+        ]
+    )
+
+    response = preview_files(client, tournament_id, [("buza.xlsx", buza), ("sokol.xlsx", sokol)], headers)
+    assert response.status_code == 200, response.text
+    report = response.json()
+
+    assert report["total_rows"] == 3
+    assert report["valid_rows"] == 3
+    assert [row["source_file"] for row in report["rows"]] == [
+        "buza.xlsx",
+        "sokol.xlsx",
+        "sokol.xlsx",
+    ]
+    assert [(f["name"], f["rows"]) for f in report["files"]] == [("buza.xlsx", 1), ("sokol.xlsx", 2)]
+
+
+def test_a_fighter_sent_in_two_files_is_reported_as_a_duplicate():
+    """Two clubs both claiming the same fighter is the whole point of one report."""
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+    entry = [{"full_name": "Иван Иванов", "category": "Абсолютная мужская"}]
+
+    report = preview_files(
+        client,
+        tournament_id,
+        [("buza.xlsx", sheet_of(entry)), ("sokol.xlsx", sheet_of(entry))],
+        headers,
+    ).json()
+
+    assert codes(report, 0) == set()
+    assert "DUPLICATE_IN_FILE" in codes(report, 1)
+
+
+def test_one_unreadable_file_does_not_sink_the_others():
+    """A coach sending a .doc must not cost the other four clubs their заявка."""
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+    good = sheet_of([{"full_name": "Иван Иванов", "category": "Абсолютная мужская"}])
+
+    response = preview_files(
+        client,
+        tournament_id,
+        [("broken.xlsx", b"not a workbook at all"), ("sokol.xlsx", good)],
+        headers,
+    )
+    assert response.status_code == 200, response.text
+    report = response.json()
+
+    broken, sokol = report["files"]
+    assert broken["name"] == "broken.xlsx"
+    assert "xlsx" in (broken["error"] or "").lower()
+    assert broken["rows"] == 0
+    assert sokol["error"] is None
+
+    assert report["total_rows"] == 1
+    assert report["valid_rows"] == 1
+    assert report["rows"][0]["source_file"] == "sokol.xlsx"
+
+
+def test_the_report_says_how_many_example_rows_it_dropped():
+    """Silently dropping them was the bug: a row written over an example vanished.
+
+    The count is what lets the panel say «две строки-примера пропущены» instead
+    of leaving the organizer to wonder where their fighter went.
+    """
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+
+    downloaded = client.get(f"/api/v1/tournaments/{tournament_id}/participants/template.xlsx")
+    report = preview_files(client, tournament_id, [("blank.xlsx", downloaded.content)], headers).json()
+
+    assert report["total_rows"] == 0
+    assert report["files"][0]["skipped_examples"] == 2
+
+
+# ------------------------------------------------------------- заявка в ворде
+# Some clubs fill in a document rather than a spreadsheet. The blank is the same
+# blank — same columns, same «ПРИМЕР:» rows — so nothing below the parser can
+# tell the two formats apart, and these tests are what holds that true.
+
+
+def doc_of(rows: list[dict]) -> bytes:
+    """Build a .docx the way an organizer would: the blank's table, filled in."""
+    document = Document()
+    table = document.add_table(rows=1, cols=len(IMPORT_COLUMNS))
+    for cell, column in zip(table.rows[0].cells, IMPORT_COLUMNS):
+        cell.text = column.header_ru
+    for row in rows:
+        cells = table.add_row().cells
+        for cell, column in zip(cells, IMPORT_COLUMNS):
+            cell.text = str(row.get(column.key, ""))
+    stream = BytesIO()
+    document.save(stream)
+    return stream.getvalue()
+
+
+def test_the_word_blank_can_be_filled_in_and_uploaded_back():
+    """The anti-drift guarantee again, in the second format."""
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+
+    downloaded = client.get(f"/api/v1/tournaments/{tournament_id}/participants/template.docx")
+    assert downloaded.status_code == 200, downloaded.text
+    assert downloaded.headers["content-type"].startswith(DOCX)
+
+    document = Document(BytesIO(downloaded.content))
+    entries, disciplines = document.tables[0], document.tables[1]
+    assert [cell.text for cell in entries.rows[0].cells] == [
+        column.header_ru for column in IMPORT_COLUMNS
+    ]
+    # The second table replaces the spreadsheet's second sheet: a Word document
+    # has no sheets, and «Категория» is unfillable without the discipline names.
+    assert "Абсолютная ветеранская" in [row.cells[0].text for row in disciplines.rows]
+
+    filled = entries.add_row().cells
+    values = {
+        "full_name": "Замятин Пётр",
+        "fight_name": "Кистень",
+        "city": "Новгород",
+        "club": "Буза",
+        "category": "Абсолютная ветеранская",
+        "birth_year": str(EVENT_YEAR - 50),
+    }
+    for cell, column in zip(filled, IMPORT_COLUMNS):
+        cell.text = values.get(column.key, "")
+    stream = BytesIO()
+    document.save(stream)
+
+    report = preview_files(client, tournament_id, [("заявка.docx", stream.getvalue())], headers)
+    assert report.status_code == 200, report.text
+    body = report.json()
+    assert body["total_rows"] == 1, body["rows"]
+    assert body["valid_rows"] == 1
+    assert body["rows"][0]["competition_name"] == "Абсолютная ветеранская"
+
+
+def test_word_and_excel_files_are_reviewed_together():
+    """One club sends a document, another a spreadsheet, and it is one заявка."""
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+
+    report = preview_files(
+        client,
+        tournament_id,
+        [
+            ("буза.docx", doc_of([{"full_name": "Иван Иванов", "category": "Абсолютная мужская"}])),
+            (
+                "сокол.xlsx",
+                sheet_of([{"full_name": "Пётр Петров", "category": "Абсолютная мужская"}]),
+            ),
+        ],
+        headers,
+    ).json()
+
+    assert report["total_rows"] == 2
+    assert report["valid_rows"] == 2
+    assert [row["source_file"] for row in report["rows"]] == ["буза.docx", "сокол.xlsx"]
+
+
+def test_a_fighter_sent_in_word_and_in_excel_is_still_a_duplicate():
+    """The format a club chose must not be a way in for the same fighter twice."""
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+    entry = [{"full_name": "Иван Иванов", "category": "Абсолютная мужская"}]
+
+    report = preview_files(
+        client,
+        tournament_id,
+        [("буза.docx", doc_of(entry)), ("сокол.xlsx", sheet_of(entry))],
+        headers,
+    ).json()
+
+    assert codes(report, 0) == set()
+    assert "DUPLICATE_IN_FILE" in codes(report, 1)
+
+
+def test_the_word_blank_examples_are_dropped_and_counted():
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+
+    downloaded = client.get(f"/api/v1/tournaments/{tournament_id}/participants/template.docx")
+    report = preview_files(
+        client, tournament_id, [("бланк.docx", downloaded.content)], headers
+    ).json()
+
+    assert report["total_rows"] == 0
+    assert report["files"][0]["skipped_examples"] == 2
+
+
+def test_an_old_doc_file_is_refused_with_the_format_named():
+    """A .doc is a different format entirely, and «не прочитался» would not help."""
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+
+    refused = preview_files(
+        client,
+        tournament_id,
+        # Not a zip archive, unlike .docx — which is exactly what the old binary
+        # format is, and why only the extension can answer this one.
+        [("заявка.doc", b"old binary word document")],
+        headers,
+    )
+    assert refused.status_code == 400, refused.text
+    assert "docx" in refused.json()["detail"].lower()
+
+
+def test_a_document_without_the_entry_table_is_refused_clearly():
+    """Guessing at a free-form list would enter people nobody checked."""
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+
+    document = Document()
+    document.add_paragraph("Заявка клуба «Буза»: Иванов Иван, Петров Пётр")
+    stream = BytesIO()
+    document.save(stream)
+
+    refused = preview_files(client, tournament_id, [("вольная.docx", stream.getvalue())], headers)
+    assert refused.status_code == 400, refused.text
+    assert "бланк" in refused.json()["detail"].lower()
 
 
 # ------------------------------------------------------------------- guards

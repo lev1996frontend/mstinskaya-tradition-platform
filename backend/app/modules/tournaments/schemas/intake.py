@@ -34,6 +34,10 @@ class ImportRow(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     row_number: int
+    #: Which uploaded file the row came from. Several clubs send several files,
+    #: and row 5 of one is not row 5 of another — the review table keys on the
+    #: pair, never on the number alone.
+    source_file: str | None = None
     full_name: str = ""
     fight_name: str | None = None
     city: str | None = None
@@ -56,8 +60,30 @@ class ImportRow(BaseModel):
     valid: bool = False
 
 
+class ImportFileReport(BaseModel):
+    """What became of one uploaded file.
+
+    Reported per file rather than folded into the totals because the organizer
+    uploaded files, not rows: «сокол.xlsx не прочитался» is something they can
+    act on, «одна ошибка где-то» is not.
+    """
+
+    name: str
+    #: Data rows taken from this file — examples and blank spacers excluded.
+    rows: int = 0
+    #: Rows dropped because they still carried the template's «ПРИМЕР:» marker.
+    #: Counted rather than silently swallowed: a fighter typed over an example
+    #: without deleting the word used to disappear leaving no trace at all.
+    skipped_examples: int = 0
+    #: Why this file yielded nothing, when it did. The rest are still read —
+    #: one coach sending a .doc must not cost the other clubs their заявка.
+    error: str | None = None
+
+
 class ImportReport(BaseModel):
     tournament_id: str
+    #: One entry per uploaded file, in the order they were sent.
+    files: list[ImportFileReport] = Field(default_factory=list)
     columns: list[ImportColumnSpec] = Field(default_factory=list)
     competitions: list[ImportCompetitionSpec] = Field(default_factory=list)
     total_rows: int = 0
@@ -80,6 +106,7 @@ class ImportRowInput(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     row_number: int = 0
+    source_file: str | None = None
     full_name: str = ""
     fight_name: str | None = None
     city: str | None = None

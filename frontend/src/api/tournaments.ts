@@ -247,11 +247,27 @@ export const getMatch = (matchId: string) =>
 export const participantTemplateUrl = (tournamentId: string) =>
   `${API_BASE_URL}/api/v1/tournaments/${tournamentId}/participants/template.xlsx`;
 
-/** Reads the file and reports every problem per row. Writes nothing. */
-export const previewParticipantImport = (tournamentId: string, file: File) =>
+/**
+ * The same blank as a Word document.
+ *
+ * Two formats because clubs work in two, and asking a coach to convert is
+ * asking for the conversion to go wrong. Both are generated from one column
+ * definition on the server, so they cannot describe different заявки.
+ */
+export const participantWordTemplateUrl = (tournamentId: string) =>
+  `${API_BASE_URL}/api/v1/tournaments/${tournamentId}/participants/template.docx`;
+
+/**
+ * Reads the files and reports every problem per row. Writes nothing.
+ *
+ * Takes the whole stack at once rather than a request per file: an entry list
+ * arrives as one file per club, and only a single combined report can tell the
+ * organizer that two clubs claimed the same fighter.
+ */
+export const previewParticipantImport = (tournamentId: string, files: File[]) =>
   apiUpload<ImportReport>(
     `/api/v1/tournaments/${tournamentId}/participants/import/preview`,
-    file,
+    files,
   );
 
 /**

@@ -643,6 +643,13 @@ export interface ImportRowError {
 /** One spreadsheet row after the server checked it. */
 export interface ImportRow {
   row_number: number;
+  /**
+   * Which uploaded file the row came from.
+   *
+   * Row 5 of one club's file is not row 5 of another's, so the review table
+   * keys on the pair rather than on the number alone.
+   */
+  source_file: string | null;
   full_name: string;
   fight_name: string | null;
   city: string | null;
@@ -664,8 +671,21 @@ export interface ImportRow {
   valid: boolean;
 }
 
+/** What became of one uploaded file. */
+export interface ImportFileReport {
+  name: string;
+  /** Data rows taken from it — examples and blank spacers excluded. */
+  rows: number;
+  /** Rows dropped for still carrying the template's «ПРИМЕР:» marker. */
+  skipped_examples: number;
+  /** Why it yielded nothing, when it did. The other files are still read. */
+  error: string | null;
+}
+
 export interface ImportReport {
   tournament_id: string;
+  /** One entry per uploaded file, in the order they were sent. */
+  files: ImportFileReport[];
   columns: ImportColumnSpec[];
   competitions: ImportCompetitionSpec[];
   total_rows: number;

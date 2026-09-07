@@ -1,37 +1,21 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import {
-  ArrowRight,
-  Check,
-  FileSpreadsheet,
-  Link2,
-  Download,
-  Plus,
-  Search,
-  Trash2,
-  UserPlus,
-} from "lucide-react";
+import { ArrowRight, Check, Link2, Plus, Search, Trash2, UserPlus } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { listAthletes, listRuleSets } from "@/api/catalog";
-import {
-  addParticipant,
-  createCompetition,
-  createTournament,
-  participantTemplateUrl,
-  previewParticipantImport,
-} from "@/api/tournaments";
+import { addParticipant, createCompetition, createTournament } from "@/api/tournaments";
 import { Alert, Badge, Button, ButtonLink, Card, cn } from "@/components/ui";
 import { Field, Input, Select } from "@/components/ui/form";
 import { useAuth } from "@/features/auth/auth-context";
 import { athleteMatches, athleteName } from "@/lib/athlete-name";
 import { ApiError, ApiUnreachableError } from "@/lib/api";
 import { competitionFormat, competitionType } from "@/lib/labels";
-import type { Athlete, CompetitionFormat, CompetitionType, ImportReport } from "@/types";
+import type { Athlete, CompetitionFormat, CompetitionType } from "@/types";
 
-import { ParticipantImportReview } from "./participant-import-review";
+import { ParticipantImportPanel } from "./participant-import-panel";
 
 /**
  * Organizer wizard: basic info → disciplines → entrants → done.
@@ -321,10 +305,6 @@ export function TournamentWizard() {
   // step 3 — who is entered, and where
   const [entries, setEntries] = useState<Entry[]>([]);
   const [athletes, setAthletes] = useState<Athlete[]>([]);
-  const [importBusy, setImportBusy] = useState(false);
-  const [importSummary, setImportSummary] = useState<string | null>(null);
-  const [importReport, setImportReport] = useState<ImportReport | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // step 4 — what was created
   const [tournamentId, setTournamentId] = useState<string | null>(null);
@@ -379,35 +359,6 @@ export function TournamentWizard() {
 
   function addEntry(patch: Partial<Entry> = {}) {
     setEntries((rows) => [...rows, { ...newEntry(defaultDisciplineKey), ...patch }]);
-  }
-
-  /**
-   * Hands the file to the server and shows what it made of it.
-   *
-   * Nothing is parsed here on purpose. Only the backend can tell whether a name
-   * is already entered, whether a category matches a real discipline, or
-   * whether a birth year clears that discipline's age bound — and
-   * `docs/architecture.md` puts validation there for exactly that reason.
-   * Nothing is saved either: this is a report, and the organizer decides.
-   */
-  async function handleImportFile(file: File) {
-    if (!tournamentId) return;
-    setImportBusy(true);
-    setImportSummary(null);
-    setImportReport(null);
-    setError(null);
-    try {
-      const report = await previewParticipantImport(tournamentId, file);
-      if (report.total_rows === 0) {
-        setError("В файле не найдено ни одной строки с участником.");
-        return;
-      }
-      setImportReport(report);
-    } catch (caught) {
-      setError(describeError(caught));
-    } finally {
-      setImportBusy(false);
-    }
   }
 
   async function run(action: () => Promise<void>) {
@@ -1001,7 +952,36 @@ export function TournamentWizard() {
               })}
             </ul>
 
-            <div className="flex flex-wrap items-center gap-2">
+            {/* The same panel the tournament's own page shows, so the flow an
+                organizer learns here is the flow they get afterwards. Only the
+                "Добавить участника" button is the wizard's own. */}
+            {tournamentId ? (
+              <ParticipantImportPanel
+                tournamentId={tournamentId}
+                onCommitted={(_created, perCompetition) => {
+                  // Keyed by discipline *name* — that is the shape the server
+                  // reports (`per_competition` in `participant_import.py`).
+                  // Safe here only because step 2 refuses to create two
+                  // disciplines under one name; see `duplicateNames`.
+                  setCreated((rows) =>
+                    rows.map((row) => ({
+                      ...row,
+                      entered: row.entered + (perCompetition[row.name] ?? 0),
+                    })),
+                  );
+                }}
+              >
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  icon={<Plus className="size-3.5" strokeWidth={2.5} />}
+                  onClick={() => addEntry()}
+                >
+                  Добавить участника
+                </Button>
+              </ParticipantImportPanel>
+            ) : (
               <Button
                 type="button"
                 variant="secondary"
@@ -1011,77 +991,14 @@ export function TournamentWizard() {
               >
                 Добавить участника
               </Button>
-{/* An ordinary link: the template route is public, so there is no
-                  token to attach and nothing for JavaScript to do. */}
-              <ButtonLink
-                href={tournamentId ? participantTemplateUrl(tournamentId) : "#"}
-                variant="secondary"
-                size="sm"
-                download
-                icon={<Download className="size-3.5" strokeWidth={2.25} />}
-              >
-                Скачать бланк
-              </ButtonLink>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={importBusy}
-                icon={<FileSpreadsheet className="size-3.5" strokeWidth={2.25} />}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {importBusy ? "Проверяем файл…" : "Загрузить заявки"}
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx"
-                className="hidden"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  event.target.value = "";
-                  if (file) void handleImportFile(file);
-                }}
-              />
-            </div>
-            <p className="text-xs text-[var(--muted)]">
-              Скачайте бланк и заполните его — в нём уже есть нужные колонки и второй лист со
-              списком дисциплин. Бланк открыт для всех, так что его можно раздать тренерам клубов.
-              Заполненный файл проверяется на сервере: он покажет ошибки по строкам и ничего не
-              сохранит, пока вы не подтвердите.
-            </p>
+            )}
 
-            {importReport ? (
-              <div className="border-t border-[var(--border)] pt-4">
-                <ParticipantImportReview
-                  report={importReport}
-                  onCancel={() => setImportReport(null)}
-                  onCommitted={(count, perCompetition) => {
-                    setImportReport(null);
-                    setImportSummary(`Заведено участников из файла: ${count}.`);
-                    // Keyed by discipline *name* — that is the shape the
-                    // server reports (`per_competition` in
-                    // `participant_import.py`). Safe here only because step 2
-                    // refuses to create two disciplines under one name; see
-                    // `duplicateNames`.
-                    setCreated((rows) =>
-                      rows.map((row) => ({
-                        ...row,
-                        entered: row.entered + (perCompetition[row.name] ?? 0),
-                      })),
-                    );
-                  }}
-                />
-              </div>
-            ) : null}
-
-            {importSummary ? <Alert tone="success">{importSummary}</Alert> : null}
             {error ? <Alert tone="danger">{error}</Alert> : null}
 
             <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
               <Button
                 type="button"
-                disabled={busy || importBusy}
+                disabled={busy}
                 icon={<UserPlus className="size-3.5" strokeWidth={2.25} />}
                 onClick={() => void submitTypedEntries()}
               >

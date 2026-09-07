@@ -10,7 +10,6 @@ import {
   listCompetitions,
   listDocuments,
   listRegistrations,
-  participantTemplateUrl,
 } from "@/api/tournaments";
 import {
   Badge,
@@ -21,7 +20,9 @@ import {
   PageHeader,
   Section,
 } from "@/components/ui";
+import { SheetMark } from "@/components/brand/sheet-marks";
 import { TournamentStatusBadge } from "@/features/tournaments/badges";
+import { TournamentIntake } from "@/features/tournaments/tournament-intake";
 import { DirectionalTransition } from "@/features/transitions/directional-transition";
 import { formatDateRange, formatPlace, plural } from "@/lib/format";
 import { competitionFormat, competitionType, documentType, labelOf } from "@/lib/labels";
@@ -151,26 +152,15 @@ export default async function TournamentPage({ params }: PageProps) {
             </ul>
           )}
 
-          {/* Открыт для всех: бланк обычно заполняет тренер клуба, а он не
+          {/* Бланк открыт для всех: его обычно заполняет тренер клуба, а он не
               организатор и чаще всего вообще не залогинен. Второй лист бланка
               перечисляет дисциплины этого турнира с возрастными границами — без
-              них колонка «Категория» заполняется наугад, поэтому ссылки нет,
-              пока нет дисциплин. */}
-          {/* No `download` attribute. The API is a different origin to the site
-              (`:8000` vs `:3000`), and a browser ignores `download` across
-              origins — Chrome then also stops honouring the filename the server
-              sent, and saves the sheet under a generated id with no extension.
-              The server already answers with
-              `Content-Disposition: attachment; filename="participants-template.xlsx"`,
-              which is the mechanism that actually names the file, so the
-              attribute was contributing nothing but the bug. */}
+              них колонка «Категория» заполняется наугад, поэтому ни бланка, ни
+              загрузки нет, пока нет дисциплин. */}
           {competitions.length > 0 ? (
-            <a
-              href={participantTemplateUrl(tournament.id)}
-              className="label-link label-link-fwd mt-5 font-record text-xs uppercase tracking-[0.1em] text-[var(--muted)]"
-            >
-              Скачать бланк заявки
-            </a>
+            <div className="mt-5 border-t border-[var(--border)] pt-5">
+              <TournamentIntake tournamentId={tournament.id} />
+            </div>
           ) : null}
         </Section>
 
@@ -197,7 +187,17 @@ export default async function TournamentPage({ params }: PageProps) {
                     rel="noreferrer noopener"
                     className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm transition-colors hover:border-[var(--accent)]"
                   >
-                    <span className="truncate font-medium">{document.title}</span>
+                    {/* The mark says what will open when this is clicked — a
+                        spreadsheet, a document, or a sealed PDF — which the
+                        title and the type badge both leave unsaid. */}
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <SheetMark
+                        name={document.file_url}
+                        size={18}
+                        className="shrink-0 text-[var(--muted)]"
+                      />
+                      <span className="truncate font-medium">{document.title}</span>
+                    </span>
                     <Badge>{labelOf(documentType, document.type)}</Badge>
                   </a>
                 </li>

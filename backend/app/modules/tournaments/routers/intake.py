@@ -11,6 +11,8 @@ people into a roster is the organizer's job alone.
 
 from __future__ import annotations
 
+from io import BytesIO
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +21,7 @@ from app.core.database import get_db
 from app.modules.tournaments.schemas.intake import (
     ImportCommitRequest,
     ImportCommitResponse,
+    ImportFileReport,
     ImportReport,
 )
 from app.modules.tournaments.security.deps import (
@@ -27,15 +30,19 @@ from app.modules.tournaments.security.deps import (
     get_current_manager,
 )
 from app.modules.tournaments.services.participant_import import (
+    MAX_DATA_ROWS,
+    MAX_TOTAL_UPLOAD_BYTES,
     MAX_UPLOAD_BYTES,
+    MAX_UPLOAD_FILES,
     ParticipantImportService,
-    parse_workbook,
+    parse_entry_file,
 )
 from app.modules.tournaments.services.read_service import TournamentReadService
 
 router = APIRouter(prefix="/api/v1", tags=["tournament-intake"])
 
 XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+DOCX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 
 @router.get("/tournaments/{tournament_id}/participants/template.xlsx")
@@ -64,35 +71,116 @@ async def download_template(
     )
 
 
+@router.get("/tournaments/{tournament_id}/participants/template.docx")
+async def download_word_template(
+    tournament_id: str,
+    session: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """The same blank as a Word document.
+
+    Two formats because clubs work in two: one coach keeps the club's roster in
+    a spreadsheet, the next writes заявки in Word, and asking either to convert
+    is asking for the conversion to go wrong. Both blanks are generated from one
+    column definition, and both are read back by it.
+
+    Public for the same reason the .xlsx one is: the coach filling it in is
+    usually not the organizer and usually not signed in.
+    """
+    tournament = await TournamentReadService.get_tournament(session, tournament_id)
+    stream = await ParticipantImportService.word_template(session, tournament)
+    return StreamingResponse(
+        stream,
+        media_type=DOCX_MEDIA_TYPE,
+        headers={"Content-Disposition": 'attachment; filename="participants-template.docx"'},
+    )
+
+
 @router.post("/tournaments/{tournament_id}/participants/import/preview", response_model=ImportReport)
 async def preview_import(
     tournament_id: str,
-    file: UploadFile = File(...),
+    file: list[UploadFile] = File(...),
     manager: TournamentManager = Depends(get_current_manager),
     session: AsyncSession = Depends(get_db),
 ) -> ImportReport:
-    """Read the file and report every problem, writing nothing.
+    """Read the files and report every problem, writing nothing.
 
     Deliberately not a commit: the organizer sees the whole verdict, fixes what
     is wrong, and decides. There is no ``session.commit()`` on this path at all.
+
+    Takes a *list* because an entry list rarely arrives as one file — each club
+    sends its own, and the organizer has them all in one folder. They are
+    validated together rather than one request per file, which is what lets the
+    same fighter claimed by two clubs show up as a duplicate instead of being
+    entered twice.
+
+    A file that cannot be read is reported as that file's failure and the rest
+    are still read: one coach sending a .doc must not cost the others their
+    заявка. Only when nothing at all could be read does the request itself fail.
     """
     tournament = await TournamentReadService.get_tournament(session, tournament_id)
     await ensure_can_manage_tournament(session, manager, tournament)
 
-    payload = await file.read()
-    if len(payload) > MAX_UPLOAD_BYTES:
+    uploads = [item for item in file if item is not None]
+    if len(uploads) > MAX_UPLOAD_FILES:
         raise HTTPException(
-            status_code=413,
-            detail=f"Файл больше {MAX_UPLOAD_BYTES // (1024 * 1024)} МБ — это не заявка одного турнира.",
+            status_code=400,
+            detail=f"За раз можно загрузить не больше {MAX_UPLOAD_FILES} файлов.",
         )
 
-    from io import BytesIO
+    files: list[ImportFileReport] = []
+    rows: list[dict] = []
+    total_bytes = 0
+    # Kept so the all-failed case can answer with the real reason rather than a
+    # generic one — with a single file that is the only answer there is.
+    first_failure: HTTPException | None = None
 
-    rows = parse_workbook(BytesIO(payload))
-    report = await ParticipantImportService.validate(
-        session, tournament, [{"row_number": row.row_number, **row.values} for row in rows]
-    )
-    return ImportReport(**report)
+    for upload in uploads:
+        name = upload.filename or "файл.xlsx"
+        entry = ImportFileReport(name=name)
+        files.append(entry)
+
+        payload = await upload.read()
+        total_bytes += len(payload)
+        if len(payload) > MAX_UPLOAD_BYTES:
+            failure = HTTPException(
+                status_code=413,
+                detail=(
+                    f"Файл больше {MAX_UPLOAD_BYTES // (1024 * 1024)} МБ — "
+                    "это не заявка одного турнира."
+                ),
+            )
+            entry.error = str(failure.detail)
+            first_failure = first_failure or failure
+            continue
+        if total_bytes > MAX_TOTAL_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Файлы весят больше {MAX_TOTAL_UPLOAD_BYTES // (1024 * 1024)} МБ суммарно.",
+            )
+
+        try:
+            sheet = parse_entry_file(name, payload)
+        except HTTPException as failure:
+            entry.error = str(failure.detail)
+            first_failure = first_failure or failure
+            continue
+
+        entry.rows = len(sheet.rows)
+        entry.skipped_examples = sheet.skipped_examples
+        rows += [
+            {"row_number": row.row_number, "source_file": name, **row.values} for row in sheet.rows
+        ]
+
+    if first_failure is not None and all(entry.error for entry in files):
+        raise first_failure
+    if len(rows) > MAX_DATA_ROWS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"В файлах больше {MAX_DATA_ROWS} строк — это не похоже на заявку одного турнира.",
+        )
+
+    report = await ParticipantImportService.validate(session, tournament, rows)
+    return ImportReport(**report, files=files)
 
 
 @router.post(

@@ -4,9 +4,11 @@ import { AlertTriangle, Check } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { commitParticipantImport } from "@/api/tournaments";
+import { SheetMark } from "@/components/brand/sheet-marks";
 import { Alert, Badge, Button, Table, Td, Th, cn } from "@/components/ui";
 import { Select } from "@/components/ui/form";
 import { ApiError, ApiUnreachableError } from "@/lib/api";
+import { plural } from "@/lib/format";
 import type { ImportReport, ImportRow } from "@/types";
 
 /**
@@ -21,6 +23,11 @@ import type { ImportReport, ImportRow } from "@/types";
  * the organizer decides not to enter, and forcing them back into Excel to
  * delete one line would be worse than letting them untick it.
  */
+
+/** Identity of a row across the whole upload: the file it came from, then its number. */
+function keyOf(row: ImportRow): string {
+  return `${row.source_file ?? ""}#${row.row_number}`;
+}
 
 function describeError(error: unknown): string {
   if (error instanceof ApiUnreachableError) return "Не удалось связаться с API.";
@@ -45,21 +52,25 @@ export function ParticipantImportReview({
   // Rows are held locally so the organizer can retarget a discipline or drop a
   // line before committing; the server checks all of it again regardless.
   const [rows, setRows] = useState<ImportRow[]>(report.rows);
-  const [excluded, setExcluded] = useState<Set<number>>(new Set());
+  // Keyed by file *and* row: several clubs send several files, and every one of
+  // them has a row 5. Keying on the number alone silently excluded a stranger.
+  const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const included = useMemo(
-    () => rows.filter((row) => !excluded.has(row.row_number)),
-    [rows, excluded],
-  );
+  const included = useMemo(() => rows.filter((row) => !excluded.has(keyOf(row))), [rows, excluded]);
   const blocking = included.filter((row) => !row.valid);
+  // Worth naming files in the table only when there is more than one to tell
+  // apart; a single upload would just repeat the same name down the column.
+  const manyFiles = report.files.length > 1;
+  const skippedExamples = report.files.reduce((sum, file) => sum + file.skipped_examples, 0);
+  const unreadable = report.files.filter((file) => file.error);
 
-  function retarget(rowNumber: number, competitionId: string) {
+  function retarget(key: string, competitionId: string) {
     const competition = report.competitions.find((item) => item.id === competitionId);
     setRows((current) =>
       current.map((row) =>
-        row.row_number === rowNumber
+        keyOf(row) === key
           ? {
               ...row,
               competition_id: competitionId,
@@ -71,11 +82,11 @@ export function ParticipantImportReview({
     );
   }
 
-  function toggle(rowNumber: number) {
+  function toggle(key: string) {
     setExcluded((current) => {
       const next = new Set(current);
-      if (next.has(rowNumber)) next.delete(rowNumber);
-      else next.add(rowNumber);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }
@@ -102,6 +113,31 @@ export function ParticipantImportReview({
         {excluded.size > 0 ? <Badge>исключено {excluded.size}</Badge> : null}
       </div>
 
+      {unreadable.length > 0 ? (
+        <Alert tone="danger" title="Эти файлы не прочитались">
+          <ul className="space-y-0.5">
+            {unreadable.map((file) => (
+              <li key={file.name} className="flex items-start gap-1.5">
+                <SheetMark name={file.name} size={14} className="mt-0.5 shrink-0" />
+                <span>
+                  <span className="font-medium">{file.name}</span> — {file.error}
+                </span>
+              </li>
+            ))}
+          </ul>
+          Остальные файлы разобраны, их можно завести и без этих.
+        </Alert>
+      ) : null}
+
+      {skippedExamples > 0 ? (
+        <Alert tone="warning" title="Строки-примеры пропущены">
+          {plural(skippedExamples, "строка", "строки", "строк")} из бланка{" "}
+          {skippedExamples === 1 ? "осталась" : "остались"} со словом «ПРИМЕР:» в ФИО и{" "}
+          {skippedExamples === 1 ? "не попала" : "не попали"} в заявку. Если вы вписывали бойца
+          поверх примера — удалите это слово и загрузите файл заново.
+        </Alert>
+      ) : null}
+
       {report.unknown_categories.length > 0 ? (
         <Alert tone="warning" title="Категории не совпали с дисциплинами">
           {report.unknown_categories.join(", ")}. Выберите дисциплину в строке или поправьте файл —
@@ -127,11 +163,23 @@ export function ParticipantImportReview({
           </thead>
           <tbody>
             {rows.map((row) => {
-              const off = excluded.has(row.row_number);
+              const key = keyOf(row);
+              const off = excluded.has(key);
               return (
-                <tr key={row.row_number} className={cn(off && "opacity-45")}>
+                <tr key={key} className={cn(off && "opacity-45")}>
                   <Td align="center" className="font-record text-[var(--muted)]">
                     {row.row_number}
+                    {manyFiles && row.source_file ? (
+                      <span
+                        className="mt-0.5 flex items-center justify-center gap-1"
+                        title={row.source_file}
+                      >
+                        <SheetMark name={row.source_file} size={12} />
+                        <span className="max-w-16 truncate text-[10px] normal-case">
+                          {row.source_file}
+                        </span>
+                      </span>
+                    ) : null}
                   </Td>
                   <Td>
                     <span className="block font-medium">{row.display_name || "—"}</span>
@@ -147,8 +195,10 @@ export function ParticipantImportReview({
                   <Td>
                     <Select
                       value={row.competition_id ?? ""}
-                      onChange={(event) => retarget(row.row_number, event.target.value)}
-                      aria-label={`Дисциплина в строке ${row.row_number}`}
+                      onChange={(event) => retarget(key, event.target.value)}
+                      aria-label={`Дисциплина в строке ${row.row_number}${
+                        row.source_file ? ` файла ${row.source_file}` : ""
+                      }`}
                     >
                       <option value="">— не выбрана —</option>
                       {report.competitions.map((competition) => (
@@ -186,8 +236,10 @@ export function ParticipantImportReview({
                     <input
                       type="checkbox"
                       checked={!off}
-                      onChange={() => toggle(row.row_number)}
-                      aria-label={`Включить строку ${row.row_number} в заявку`}
+                      onChange={() => toggle(key)}
+                      aria-label={`Включить строку ${row.row_number}${
+                        row.source_file ? ` файла ${row.source_file}` : ""
+                      } в заявку`}
                       className="size-4 accent-[var(--accent)]"
                     />
                   </Td>
@@ -216,7 +268,7 @@ export function ParticipantImportReview({
           {saving ? "Сохраняем…" : `Завести участников (${included.length})`}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
-          Загрузить другой файл
+          Загрузить другие файлы
         </Button>
       </div>
     </div>
