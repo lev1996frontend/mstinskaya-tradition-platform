@@ -6,16 +6,20 @@
 
 import asyncio
 from datetime import date
+from io import BytesIO
 
 from fastapi.testclient import TestClient
+from openpyxl import Workbook
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core import database as database_module
 from app.main import app
 from app.models.base import Base
+from app.modules.tournaments.services.participant_import import IMPORT_COLUMNS, SHEET_ENTRIES
 
 EVENT_YEAR = 2026
 START_DATE = date(EVENT_YEAR, 5, 16).isoformat()
+XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 def setup_app_for_tests():
@@ -144,3 +148,77 @@ def test_namesakes_without_profiles_are_still_allowed():
             json={"competition_id": absolute["id"], "display_name": "Иван Иванов"},
         )
         assert created.status_code == 201, created.text
+
+
+# ------------------------------------------------------ idempotency key
+
+
+def sheet_of(rows: list[dict]) -> bytes:
+    """Build an .xlsx the way an organizer would, from the real headers."""
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = SHEET_ENTRIES
+    sheet.append([column.header_ru for column in IMPORT_COLUMNS])
+    for row in rows:
+        sheet.append([row.get(column.key, "") for column in IMPORT_COLUMNS])
+    stream = BytesIO()
+    workbook.save(stream)
+    return stream.getvalue()
+
+
+def preview(client, tournament_id: str, payload: bytes, headers: dict[str, str]):
+    return client.post(
+        f"/api/v1/tournaments/{tournament_id}/participants/import/preview",
+        files={"file": ("entries.xlsx", payload, XLSX)},
+        headers=headers,
+    )
+
+
+def participants(client, tournament_id: str) -> list[dict]:
+    competitions = client.get(f"/api/v1/tournaments/{tournament_id}/competitions").json()
+    everyone: list[dict] = []
+    for competition in competitions:
+        everyone += client.get(f"/api/v1/competitions/{competition['id']}/participants").json()
+    return everyone
+
+
+def test_the_same_commit_sent_twice_enters_people_once():
+    """Двойной клик по «Завести» — не второй заход, а тот же самый."""
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+    payload = sheet_of([{"full_name": "Иван Иванов", "category": "Абсолютная мужская"}])
+    report = preview(client, tournament_id, payload, headers).json()
+
+    key = {"Idempotency-Key": "11111111-1111-1111-1111-111111111111", **headers}
+    first = client.post(
+        f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
+        json={"rows": report["rows"]},
+        headers=key,
+    )
+    assert first.status_code == 200, first.text
+
+    second = client.post(
+        f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
+        json={"rows": report["rows"]},
+        headers=key,
+    )
+    assert second.status_code == 200, second.text
+    assert second.json() == first.json(), "повтор обязан вернуть прежний ответ"
+
+    assert len(participants(client, tournament_id)) == 1
+
+
+def test_a_commit_without_a_key_still_works():
+    """Ключ необязателен: старый клиент не должен сломаться."""
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+    payload = sheet_of([{"full_name": "Пётр Петров", "category": "Абсолютная мужская"}])
+    report = preview(client, tournament_id, payload, headers).json()
+
+    committed = client.post(
+        f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
+        json={"rows": report["rows"]},
+        headers=headers,
+    )
+    assert committed.status_code == 200, committed.text
+    assert len(participants(client, tournament_id)) == 1

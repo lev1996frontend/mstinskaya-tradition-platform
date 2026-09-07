@@ -13,11 +13,12 @@ from __future__ import annotations
 
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.idempotency import remember_response, remembered_response
 from app.modules.tournaments.schemas.intake import (
     ImportCommitRequest,
     ImportCommitResponse,
@@ -190,6 +191,7 @@ async def preview_import(
 async def commit_import(
     tournament_id: str,
     payload: ImportCommitRequest,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     manager: TournamentManager = Depends(get_current_manager),
     session: AsyncSession = Depends(get_db),
 ) -> ImportCommitResponse:
@@ -200,14 +202,28 @@ async def commit_import(
     would discard those edits. The server therefore re-runs the identical
     validator over what arrives, and refuses the whole batch if anything is
     wrong: a half-imported entry list is worse than a rejected one.
+
+    Повтор с тем же ``Idempotency-Key`` не заносит никого второй раз, а
+    возвращает ответ первого запроса. Ключ занимается до работы, поэтому
+    одновременный второй запрос упирается в первичный ключ таблицы, а не
+    успевает пройти ту же проверку на ещё пустой базе.
     """
     tournament = await TournamentReadService.get_tournament(session, tournament_id)
     await ensure_can_manage_tournament(session, manager, tournament)
+
+    endpoint = f"POST /tournaments/{tournament_id}/participants/import/commit"
+    remembered = await remembered_response(session, idempotency_key, endpoint)
+    if remembered is not None:
+        # Тот же самый запрос, а не второй заход: никто не заводится повторно.
+        await session.commit()
+        return ImportCommitResponse(**remembered)
+
     result = await ParticipantImportService.commit(
         session,
         tournament,
         [row.model_dump() for row in payload.rows],
         actor_id=manager.user.id,
     )
+    await remember_response(session, idempotency_key, endpoint, result)
     await session.commit()
     return ImportCommitResponse(**result)
