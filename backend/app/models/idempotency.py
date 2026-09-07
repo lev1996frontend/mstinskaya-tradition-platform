@@ -1,7 +1,8 @@
-"""Ключ идемпотентности: повтор запроса возвращает прежний ответ.
+"""Idempotency key: a repeated request returns the answer of the first one.
 
-Живёт в ``app/models``, а не внутри домена: механизм ничего не знает про
-турниры и понадобится любому будущему «занесению» — а такие всегда появляются.
+Lives in ``app/models`` rather than inside a domain: the mechanism knows
+nothing about tournaments, and any future "commit a batch" endpoint will need
+it too — that shape keeps recurring.
 """
 
 from __future__ import annotations
@@ -17,12 +18,13 @@ from app.models.base import Base
 class IdempotencyKey(Base):
     __tablename__ = "idempotency_keys"
 
-    #: Ключ придумывает клиент, один раз на сеанс. Первичный ключ здесь —
-    #: не оптимизация, а весь механизм: одновременный второй запрос упирается
-    #: в него и потому не может пройти проверку параллельно с первым.
+    #: The client makes the key up, once per attempt. The primary key here is
+    #: not an optimization — it is the whole mechanism: a concurrent second
+    #: request runs into it and so cannot claim the same row alongside the
+    #: first.
     key: Mapped[str] = mapped_column(String(128), primary_key=True)
     endpoint: Mapped[str] = mapped_column(String(200), nullable=False)
-    #: Пусто, пока первый запрос не закончил работу.
+    #: Empty until the first request has finished its work.
     response: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False

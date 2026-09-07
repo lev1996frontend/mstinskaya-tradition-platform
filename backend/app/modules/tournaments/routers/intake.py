@@ -203,10 +203,11 @@ async def commit_import(
     validator over what arrives, and refuses the whole batch if anything is
     wrong: a half-imported entry list is worse than a rejected one.
 
-    Повтор с тем же ``Idempotency-Key`` не заносит никого второй раз, а
-    возвращает ответ первого запроса. Ключ занимается до работы, поэтому
-    одновременный второй запрос упирается в первичный ключ таблицы, а не
-    успевает пройти ту же проверку на ещё пустой базе.
+    A repeat with the same ``Idempotency-Key`` does not enter anyone a second
+    time — it returns the first request's answer. The key is claimed before
+    the work runs, so a concurrent second request meets the table's primary
+    key instead of getting to run the same validation against a still-empty
+    database.
     """
     tournament = await TournamentReadService.get_tournament(session, tournament_id)
     await ensure_can_manage_tournament(session, manager, tournament)
@@ -214,7 +215,7 @@ async def commit_import(
     endpoint = f"POST /tournaments/{tournament_id}/participants/import/commit"
     remembered = await remembered_response(session, idempotency_key, endpoint)
     if remembered is not None:
-        # Тот же самый запрос, а не второй заход: никто не заводится повторно.
+        # The same request replayed, not a second attempt: nobody is entered again.
         await session.commit()
         return ImportCommitResponse(**remembered)
 

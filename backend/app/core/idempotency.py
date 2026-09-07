@@ -1,9 +1,11 @@
-"""Занять ключ до работы, вернуть прежний ответ вместо повторной работы.
+"""Claim the key before the work, return the earlier answer instead of redoing it.
 
-Порядок важен и обратному не эквивалентен: ключ занимается **до** того, как
-запрос что-либо сделает. Тогда второй запрос с тем же ключом упирается в
-первичный ключ таблицы и ждёт, вместо того чтобы параллельно пройти ту же
-проверку на пустой базе и завести тех же людей второй раз.
+The order matters and is not interchangeable: the key is claimed **before**
+the request does anything. A concurrent second request with the same key then
+cannot pass the same validation against a still-empty database and enter the
+same people twice — its own claim insert conflicts with the first request's
+row on the table's primary key, and it answers 409 immediately rather than
+waiting for the first request to finish.
 """
 
 from __future__ import annotations
@@ -19,10 +21,10 @@ from app.models.idempotency import IdempotencyKey
 async def remembered_response(
     session: AsyncSession, key: str | None, endpoint: str
 ) -> dict | None:
-    """Ответ прежнего запроса, либо ``None`` — и тогда ключ занят за нами.
+    """The earlier request's answer, or ``None`` — in which case the key is now claimed.
 
-    ``None`` в ключе означает «клиент не прислал заголовок»: работаем как
-    раньше. Ключ необязателен, чтобы старый клиент не сломался.
+    ``None`` for ``key`` means the client sent no header: behave exactly as
+    before. The key is optional so an old client keeps working.
     """
     if not key:
         return None
@@ -34,8 +36,11 @@ async def remembered_response(
     )
     if existing is not None:
         if existing.response is None:
-            # Первый запрос ещё в работе. Второй не имеет права ни ждать его,
-            # ни сделать то же самое: он говорит, что запрос уже принят.
+            # The first request claimed this key and has not stored an answer
+            # yet. Under session-per-request with a single commit that first
+            # request has already failed or is racing this one; either way the
+            # second request has no answer to hand back and must not redo the
+            # work, so it reports the conflict instead.
             raise HTTPException(
                 status_code=409,
                 detail="Этот запрос уже выполняется. Подождите ответа первого.",
@@ -57,7 +62,7 @@ async def remembered_response(
 async def remember_response(
     session: AsyncSession, key: str | None, endpoint: str, response: dict
 ) -> None:
-    """Записать ответ в занятый ключ. Вызывается до ``session.commit()``."""
+    """Store the answer on the claimed key. Called before ``session.commit()``."""
     if not key:
         return
     claimed = await session.scalar(

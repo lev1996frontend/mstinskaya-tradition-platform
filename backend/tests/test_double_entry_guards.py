@@ -222,3 +222,39 @@ def test_a_commit_without_a_key_still_works():
     )
     assert committed.status_code == 200, committed.text
     assert len(participants(client, tournament_id)) == 1
+
+
+def test_a_rejected_batch_does_not_burn_the_key_for_the_corrected_retry():
+    """A 400 must not lock the key: the organizer fixes the bad row and resends it.
+
+    If the claim from the failed attempt survived, the corrected retry would
+    find the key already occupied and get refused too — a заявка stuck for good
+    reason (bad data) turning into one stuck for no reason at all.
+    """
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+    payload = sheet_of(
+        [
+            {"full_name": "Хороший", "category": "Абсолютная мужская"},
+            {"full_name": "Плохой", "category": "Женская абсолютка"},
+        ]
+    )
+    report = preview(client, tournament_id, payload, headers).json()
+
+    key = {"Idempotency-Key": "33333333-3333-3333-3333-333333333333", **headers}
+    rejected = client.post(
+        f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
+        json={"rows": report["rows"]},
+        headers=key,
+    )
+    assert rejected.status_code == 400, rejected.text
+    assert participants(client, tournament_id) == []
+
+    good_row = next(row for row in report["rows"] if row["full_name"] == "Хороший")
+    retried = client.post(
+        f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
+        json={"rows": [good_row]},
+        headers=key,
+    )
+    assert retried.status_code == 200, retried.text
+    assert len(participants(client, tournament_id)) == 1
