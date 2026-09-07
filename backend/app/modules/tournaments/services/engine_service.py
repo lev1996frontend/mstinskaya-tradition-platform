@@ -5,6 +5,7 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.athletes.models import Athlete
@@ -139,7 +140,14 @@ class TournamentEngineService:
             display_name=data.get("display_name") if athlete_id is None else None,
         )
         session.add(item)
-        await session.flush()
+        try:
+            await session.flush()
+        except IntegrityError as clash:
+            await session.rollback()
+            raise HTTPException(
+                status_code=409,
+                detail="Этот боец уже заявлен в этой дисциплине.",
+            ) from clash
         return item
 
     @staticmethod

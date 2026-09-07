@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, Index, String, text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,6 +23,22 @@ if TYPE_CHECKING:
 
 class Participant(Base):
     __tablename__ = "tournament_participants"
+
+    #: Один и тот же профиль не может быть заявлен в одну дисциплину дважды —
+    #: это правда о предметной области, а не защита от двойного клика, и потому
+    #: живёт в схеме. Индекс частичный: у заявленного вручную бойца профиля может
+    #: не быть вовсе, а по имени уникальности быть не должно — полные тёзки
+    #: возможны, и запрещать их схемой нельзя.
+    __table_args__ = (
+        Index(
+            "uq_participant_athlete_per_competition",
+            "competition_id",
+            "athlete_id",
+            unique=True,
+            postgresql_where=text("athlete_id IS NOT NULL AND competition_id IS NOT NULL"),
+            sqlite_where=text("athlete_id IS NOT NULL AND competition_id IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     tournament_id: Mapped[UUID] = mapped_column(
