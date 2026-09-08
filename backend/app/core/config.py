@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     #: Comma-separated browser origins allowed to call the API.
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    #: Where uploaded documents are kept. A directory rather than a bucket for
+    #: now; see docs/superpowers/specs/2026-09-07-files-architecture.md.
+    upload_dir: str = "./var/uploads"
 
     @property
     def cors_origin_list(self) -> list[str]:
