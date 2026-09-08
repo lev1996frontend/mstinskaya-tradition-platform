@@ -16,10 +16,11 @@ import hashlib
 from io import BytesIO
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.background import BackgroundTask
 
 from app.core.database import get_db
 from app.core.file_format import sniff
@@ -47,6 +48,7 @@ REFUSALS = {
 @router.post("/uploads", status_code=201)
 async def upload_file(
     file: UploadFile = File(...),
+    content_length: int | None = Header(default=None),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
     storage: Storage = Depends(get_storage),
@@ -56,13 +58,30 @@ async def upload_file(
     The format is decided by looking inside the file, never by its name, and
     the refusal names the format it found — «PDF мы не принимаем» sends the
     sender to fix the right thing, «не прочиталось» does not.
+
+    Honest limit of the size check below: Starlette has already spooled the
+    whole request body to disk/memory before this function is ever called, so
+    reading in chunks does not stop a hostile client from *sending* 20+ MB —
+    only ASGI-level limits could do that. What chunking buys is that this
+    handler never *holds* more than the ceiling in one `bytes` object, and
+    that a client honest enough to declare `Content-Length` gets refused
+    before a single chunk is read.
     """
-    payload = await file.read()
-    if len(payload) > MAX_UPLOAD_BYTES:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Файл больше {MAX_UPLOAD_BYTES // (1024 * 1024)} МБ.",
-        )
+    too_large = HTTPException(
+        status_code=413,
+        detail=f"Файл больше {MAX_UPLOAD_BYTES // (1024 * 1024)} МБ.",
+    )
+    if content_length is not None and content_length > MAX_UPLOAD_BYTES:
+        raise too_large
+
+    chunks: list[bytes] = []
+    total = 0
+    while chunk := await file.read(1024 * 1024):
+        total += len(chunk)
+        if total > MAX_UPLOAD_BYTES:
+            raise too_large
+        chunks.append(chunk)
+    payload = b"".join(chunks)
 
     kind = sniff(payload)
     if kind in REFUSALS:
@@ -161,4 +180,8 @@ async def download_file(
         stream,
         media_type=stored.mime_type or "application/octet-stream",
         headers={"Content-Disposition": disposition},
+        # Without this the handle `storage.open` returned is never closed on
+        # the success path — the failure path is fine, since the exception
+        # fires before any handle exists.
+        background=BackgroundTask(stream.close),
     )

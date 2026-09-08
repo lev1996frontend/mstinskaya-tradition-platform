@@ -170,6 +170,30 @@ def test_the_same_bytes_twice_do_not_make_a_second_file(tmp_path):
     assert len(list(tmp_path.rglob("*.docx"))) == 1, "второй объект на диск не пишется"
 
 
+def test_an_oversized_upload_is_refused_and_nothing_lands_in_storage(tmp_path, monkeypatch):
+    """A payload over the ceiling gets 413 and never reaches disk.
+
+    The real ceiling is 20 MB; materialising that just to exercise the check
+    would make this test slow for no reason, so the ceiling itself is turned
+    down for the duration of the test instead.
+    """
+    from app.modules.media import uploads as uploads_module
+
+    monkeypatch.setattr(uploads_module, "MAX_UPLOAD_BYTES", 10)
+
+    client = setup_app_for_tests()
+    use_temp_storage(tmp_path)
+    _, headers = register(client, "organizer@example.com")
+
+    refused = client.post(
+        "/api/v1/media/uploads",
+        files={"file": ("положение.docx", b"x" * 100, DOCX)},
+        headers=headers,
+    )
+    assert refused.status_code == 413, refused.text
+    assert list(tmp_path.rglob("*")) == [], "ничего не должно попасть на диск"
+
+
 def test_uploading_requires_a_login(tmp_path):
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
