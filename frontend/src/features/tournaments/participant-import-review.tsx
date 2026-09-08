@@ -58,9 +58,9 @@ export function ParticipantImportReview({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Один ключ на сеанс просмотра: пока организатор правит строки, это тот же
-  // самый заход, сколько бы раз он ни нажал «Завести». Новый отчёт — новый
-  // компонент и новый ключ.
+  // One key per review session: while the organizer edits rows, however many times
+  // they click «Завести» it stays the same request. New report means a new component
+  // and therefore a new key.
   const [idempotencyKey] = useState(() =>
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID()
