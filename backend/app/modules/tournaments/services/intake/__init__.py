@@ -11,12 +11,12 @@ either way, and validation judges rows.
 
 from __future__ import annotations
 
-import zipfile
 from io import BytesIO
 from typing import BinaryIO
 
 from fastapi import HTTPException
 
+from app.core.file_format import sniff
 from .columns import (
     COLUMN_BY_KEY,
     EXAMPLE_MARKER,
@@ -62,11 +62,6 @@ __all__ = [
     "text",
 ]
 
-#: Members that identify the two formats from the inside. Both .xlsx and .docx
-#: are zip archives, and what they carry says what they are.
-EXCEL_MEMBER = "xl/workbook.xml"
-WORD_MEMBER = "word/document.xml"
-
 #: Extensions worth naming in the refusal when the file is not a readable
 #: archive at all. A user who sent the old binary format needs to be told to
 #: re-save, not that "the file could not be read".
@@ -83,15 +78,10 @@ def parse_entry_file(filename: str, payload: bytes) -> ParsedSheet:
     readable archive, and then only to make the refusal specific.
     """
     stream: BinaryIO = BytesIO(payload)
-    try:
-        with zipfile.ZipFile(BytesIO(payload)) as archive:
-            names = set(archive.namelist())
-    except zipfile.BadZipFile:
-        names = set()
-
-    if WORD_MEMBER in names:
+    kind = sniff(payload)
+    if kind == "docx":
         return parse_document(stream)
-    if EXCEL_MEMBER in names:
+    if kind == "xlsx":
         return parse_workbook(stream)
 
     lowered = filename.lower()
