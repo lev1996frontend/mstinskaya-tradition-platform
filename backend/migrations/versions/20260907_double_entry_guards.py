@@ -60,12 +60,13 @@ def upgrade() -> None:
         ["competition_id", "athlete_id"],
         unique=True,
         postgresql_where=sa.text(PARTIAL_WHERE),
+        sqlite_where=sa.text(PARTIAL_WHERE),
     )
 
     op.create_table(
         "idempotency_keys",
         sa.Column("key", sa.String(length=128), primary_key=True),
-        sa.Column("endpoint", sa.String(length=200), nullable=False),
+        sa.Column("endpoint", sa.String(length=200), primary_key=True),
         sa.Column("response", sa.JSON(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )

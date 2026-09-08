@@ -191,7 +191,9 @@ async def preview_import(
 async def commit_import(
     tournament_id: str,
     payload: ImportCommitRequest,
-    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    idempotency_key: str | None = Header(
+        default=None, alias="Idempotency-Key", max_length=128
+    ),
     manager: TournamentManager = Depends(get_current_manager),
     session: AsyncSession = Depends(get_db),
 ) -> ImportCommitResponse:

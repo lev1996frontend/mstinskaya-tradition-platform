@@ -18,14 +18,20 @@ from app.models.base import Base
 class IdempotencyKey(Base):
     __tablename__ = "idempotency_keys"
 
-    #: The client makes the key up, once per attempt. The primary key here is
-    #: not an optimization — it is the whole mechanism: a concurrent second
-    #: request runs into it and so cannot claim the same row alongside the
-    #: first.
+    #: The client makes the key up, once per attempt. The primary key is
+    #: composite with ``endpoint`` — not an optimization, it is the whole
+    #: mechanism: every query filters on ``(key, endpoint)``, and the same key
+    #: reused against a different endpoint (endpoint strings embed the
+    #: tournament id, so this is reachable) must not collide with an unrelated
+    #: claim. A concurrent second request for the *same* endpoint still runs
+    #: into this row and so cannot claim it alongside the first.
     key: Mapped[str] = mapped_column(String(128), primary_key=True)
-    endpoint: Mapped[str] = mapped_column(String(200), nullable=False)
+    endpoint: Mapped[str] = mapped_column(String(200), primary_key=True)
     #: Empty until the first request has finished its work.
     response: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        index=True,
     )

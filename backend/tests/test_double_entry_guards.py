@@ -8,13 +8,17 @@ import asyncio
 from datetime import date
 from io import BytesIO
 
+import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from openpyxl import Workbook
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core import database as database_module
+from app.core.idempotency import remembered_response
 from app.main import app
 from app.models.base import Base
+from app.models.idempotency import IdempotencyKey
 from app.modules.tournaments.services.participant_import import IMPORT_COLUMNS, SHEET_ENTRIES
 
 EVENT_YEAR = 2026
@@ -258,3 +262,68 @@ def test_a_rejected_batch_does_not_burn_the_key_for_the_corrected_retry():
     )
     assert retried.status_code == 200, retried.text
     assert len(participants(client, tournament_id)) == 1
+
+
+def test_a_claimed_key_with_a_stored_answer_is_returned_not_409():
+    """The concurrent-repeat case: by the time a second request's claim insert
+    unblocks and collides, the row it collided with may already hold the first
+    request's answer — that answer must come back, not a 409 telling the
+    organizer to wait for a request that has already finished.
+    """
+    setup_app_for_tests()
+
+    async def scenario() -> dict:
+        async with database_module.AsyncSessionLocal() as session:
+            session.add(
+                IdempotencyKey(
+                    key="seeded-key",
+                    endpoint="POST /example",
+                    response={"created": 3},
+                )
+            )
+            await session.commit()
+
+        async with database_module.AsyncSessionLocal() as session:
+            return await remembered_response(session, "seeded-key", "POST /example")
+
+    assert asyncio.run(scenario()) == {"created": 3}
+
+
+def test_a_claim_row_still_without_an_answer_answers_409():
+    """A row with no stored answer, seen without hitting an IntegrityError,
+    means the first request is genuinely still running — that is the one case
+    409 exists for.
+    """
+    setup_app_for_tests()
+
+    async def scenario() -> int:
+        async with database_module.AsyncSessionLocal() as session:
+            session.add(
+                IdempotencyKey(key="in-flight-key", endpoint="POST /example", response=None)
+            )
+            await session.commit()
+
+        async with database_module.AsyncSessionLocal() as session:
+            with pytest.raises(HTTPException) as exc_info:
+                await remembered_response(session, "in-flight-key", "POST /example")
+            return exc_info.value.status_code
+
+    assert asyncio.run(scenario()) == 409
+
+
+def test_an_oversized_idempotency_key_is_refused_not_500():
+    """A header longer than the column's String(128) must be a clean 4xx —
+    on Postgres, letting it through to the insert raises StringDataRightTruncation.
+    """
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+    payload = sheet_of([{"full_name": "Иван Иванов", "category": "Абсолютная мужская"}])
+    report = preview(client, tournament_id, payload, headers).json()
+
+    key = {"Idempotency-Key": "x" * 129, **headers}
+    response = client.post(
+        f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
+        json={"rows": report["rows"]},
+        headers=key,
+    )
+    assert 400 <= response.status_code < 500, response.text
