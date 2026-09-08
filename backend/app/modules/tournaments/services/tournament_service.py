@@ -371,7 +371,12 @@ class TournamentService:
         if media_file_id:
             # An uploaded file supplies its own address; a bare file_url is only
             # for the old external-link path, so the two never fight over it.
-            media_file = await session.get(MediaFile, UUID(media_file_id))
+            try:
+                parsed_media_file_id = UUID(str(media_file_id))
+            except (ValueError, TypeError):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid media file id") from None
+
+            media_file = await session.get(MediaFile, parsed_media_file_id)
             if media_file is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
             resolved_media_file_id = media_file.id
@@ -402,7 +407,13 @@ class TournamentService:
     @staticmethod
     async def remove_document(session: AsyncSession, tournament_id: str, document_id: str) -> None:
         tournament = await TournamentService.get_tournament(session, tournament_id)
-        document = await session.get(TournamentDocument, UUID(document_id))
+
+        try:
+            parsed_document_id = UUID(str(document_id))
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid document id") from None
+
+        document = await session.get(TournamentDocument, parsed_document_id)
         if document is None or document.tournament_id != tournament.id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
 

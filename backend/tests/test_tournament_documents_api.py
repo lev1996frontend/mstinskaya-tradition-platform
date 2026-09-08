@@ -166,6 +166,31 @@ def test_removing_a_document_hides_it_but_keeps_the_file(tmp_path):
     assert client.get(uploaded["url"]).status_code == 200, "файл остаётся живым"
 
 
+def test_an_unparsable_media_file_id_is_a_bad_request_not_a_crash(tmp_path):
+    """Same convention as get_tournament: malformed id is 400, not a 500."""
+    client = setup_app_for_tests()
+    use_temp_storage(tmp_path)
+    tournament_id, headers = bootstrap(client)
+
+    refused = client.post(
+        f"/api/v1/tournaments/{tournament_id}/documents",
+        json={"title": "Положение", "media_file_id": "not-a-uuid"},
+        headers=headers,
+    )
+    assert refused.status_code == 400, refused.text
+
+
+def test_removing_with_an_unparsable_document_id_is_a_bad_request_not_a_crash(tmp_path):
+    client = setup_app_for_tests()
+    use_temp_storage(tmp_path)
+    tournament_id, headers = bootstrap(client)
+
+    refused = client.delete(
+        f"/api/v1/tournaments/{tournament_id}/documents/not-a-uuid", headers=headers
+    )
+    assert refused.status_code == 400, refused.text
+
+
 def test_attaching_a_document_requires_a_manager(tmp_path):
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
