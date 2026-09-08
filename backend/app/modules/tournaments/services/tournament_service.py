@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.athletes.models import Athlete
 from app.modules.identity.models import User
+from app.modules.media.models import MediaFile
 from app.modules.rules.models import RuleSet
 from app.modules.tournaments.models import (
     JudgeAssignment,
@@ -354,7 +355,8 @@ class TournamentService:
         *,
         tournament_id: str,
         title: str,
-        file_url: str,
+        media_file_id: str | None,
+        file_url: str | None,
         type: str,
     ) -> TournamentDocument:
         tournament = await TournamentService.get_tournament(session, tournament_id)
@@ -364,10 +366,22 @@ class TournamentService:
         if normalized_type not in valid_types:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid document type")
 
+        resolved_media_file_id: UUID | None = None
+        resolved_file_url = file_url
+        if media_file_id:
+            # An uploaded file supplies its own address; a bare file_url is only
+            # for the old external-link path, so the two never fight over it.
+            media_file = await session.get(MediaFile, UUID(media_file_id))
+            if media_file is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
+            resolved_media_file_id = media_file.id
+            resolved_file_url = media_file.url
+
         document = TournamentDocument(
             tournament_id=tournament.id,
             title=title,
-            file_url=file_url,
+            media_file_id=resolved_media_file_id,
+            file_url=resolved_file_url,
             type=normalized_type,
         )
         session.add(document)
@@ -378,6 +392,21 @@ class TournamentService:
     async def list_documents(session: AsyncSession, tournament_id: str) -> list[TournamentDocument]:
         tournament = await TournamentService.get_tournament(session, tournament_id)
         result = await session.execute(
-            select(TournamentDocument).where(TournamentDocument.tournament_id == tournament.id).order_by(TournamentDocument.created_at.asc())
+            select(TournamentDocument)
+            .where(TournamentDocument.tournament_id == tournament.id)
+            .where(TournamentDocument.removed_at.is_(None))
+            .order_by(TournamentDocument.created_at.asc())
         )
         return list(result.scalars().all())
+
+    @staticmethod
+    async def remove_document(session: AsyncSession, tournament_id: str, document_id: str) -> None:
+        tournament = await TournamentService.get_tournament(session, tournament_id)
+        document = await session.get(TournamentDocument, UUID(document_id))
+        if document is None or document.tournament_id != tournament.id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
+
+        # Off the page, not gone: the bytes and the download link stay live
+        # because an old положение may already be cited or handed out.
+        document.removed_at = datetime.now(timezone.utc)
+        await session.flush()

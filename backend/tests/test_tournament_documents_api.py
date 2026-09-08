@@ -1,0 +1,180 @@
+"""Документы турнира ссылаются на файл.
+
+Until now a `tournament_documents` row was only ever a bare `file_url` pointing
+somewhere else. This adds a second way to fill that row — an uploaded file —
+without breaking the first: an old положение linked from elsewhere must keep
+resolving. Removing a document is taking it off the page, not deleting it, so
+the underlying file and its download link stay alive after removal.
+"""
+
+import asyncio
+from io import BytesIO
+
+from docx import Document
+from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from app.core import database as database_module
+from app.main import app
+from app.models.base import Base
+
+DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+
+def docx_bytes() -> bytes:
+    stream = BytesIO()
+    Document().save(stream)
+    return stream.getvalue()
+
+
+def setup_app_for_tests():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", future=True)
+    database_module.engine = engine
+    database_module.AsyncSessionLocal = async_sessionmaker(
+        bind=engine, class_=AsyncSession, expire_on_commit=False
+    )
+
+    async def setup_db() -> None:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+    asyncio.run(setup_db())
+
+    def override_get_db():
+        async def _override():
+            async with database_module.AsyncSessionLocal() as session:
+                yield session
+
+        return _override
+
+    app.dependency_overrides[database_module.get_db] = override_get_db()
+    return TestClient(app)
+
+
+def use_temp_storage(tmp_path):
+    """Настоящее дисковое хранилище во временном каталоге, не заглушка."""
+    from app.core import storage as storage_module
+
+    app.dependency_overrides[storage_module.get_storage] = lambda: (
+        storage_module.LocalDiskStorage(tmp_path)
+    )
+
+
+def register(client, email: str) -> tuple[str, dict[str, str]]:
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Организатор"},
+    )
+    assert response.status_code == 201, response.text
+    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
+    me = client.get("/api/v1/users/me", headers=headers)
+    assert me.status_code == 200, me.text
+    return me.json()["id"], headers
+
+
+def bootstrap(client):
+    """A tournament with three disciplines, one of them age-bounded."""
+    organizer_id, headers = register(client, "organizer@example.com")
+    ruleset = client.post("/api/v1/rulesets", json={"title": "Base", "version": "1.0", "status": "ACTIVE"})
+    tournament = client.post(
+        "/api/v1/tournaments",
+        json={
+            "title": "Мстинская традиция 2026",
+            "status": "REGISTRATION",
+            "start_date": "2026-05-16",
+            "organizer_id": organizer_id,
+            "ruleset_id": ruleset.json()["id"],
+        },
+    )
+    assert tournament.status_code == 201, tournament.text
+    return tournament.json()["id"], headers
+
+
+def test_an_uploaded_file_becomes_a_tournament_document(tmp_path):
+    """Загрузили файл, приложили к турниру, скачали по ссылке из списка."""
+    client = setup_app_for_tests()
+    use_temp_storage(tmp_path)
+    tournament_id, headers = bootstrap(client)
+
+    uploaded = client.post(
+        "/api/v1/media/uploads",
+        files={"file": ("положение.docx", docx_bytes(), DOCX)},
+        headers=headers,
+    ).json()
+
+    created = client.post(
+        f"/api/v1/tournaments/{tournament_id}/documents",
+        json={"title": "Положение", "media_file_id": uploaded["id"], "type": "POSITION"},
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["file_url"] == uploaded["url"]
+
+    listed = client.get(f"/api/v1/tournaments/{tournament_id}/documents").json()
+    assert [d["title"] for d in listed] == ["Положение"]
+    assert client.get(uploaded["url"]).status_code == 200
+
+
+def test_an_external_link_still_works(tmp_path):
+    """Старый способ — голая ссылка наружу — ломать нельзя."""
+    client = setup_app_for_tests()
+    use_temp_storage(tmp_path)
+    tournament_id, headers = bootstrap(client)
+
+    created = client.post(
+        f"/api/v1/tournaments/{tournament_id}/documents",
+        json={"title": "Регламент", "file_url": "https://example.org/reg.docx"},
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+
+
+def test_a_document_neither_uploaded_nor_linked_is_refused(tmp_path):
+    client = setup_app_for_tests()
+    use_temp_storage(tmp_path)
+    tournament_id, headers = bootstrap(client)
+
+    refused = client.post(
+        f"/api/v1/tournaments/{tournament_id}/documents",
+        json={"title": "Ничто"},
+        headers=headers,
+    )
+    assert refused.status_code == 422, refused.text
+
+
+def test_removing_a_document_hides_it_but_keeps_the_file(tmp_path):
+    """Снятие со страницы — не удаление: старое положение могли процитировать."""
+    client = setup_app_for_tests()
+    use_temp_storage(tmp_path)
+    tournament_id, headers = bootstrap(client)
+    uploaded = client.post(
+        "/api/v1/media/uploads",
+        files={"file": ("положение.docx", docx_bytes(), DOCX)},
+        headers=headers,
+    ).json()
+    document = client.post(
+        f"/api/v1/tournaments/{tournament_id}/documents",
+        json={"title": "Положение", "media_file_id": uploaded["id"]},
+        headers=headers,
+    ).json()
+
+    removed = client.delete(
+        f"/api/v1/tournaments/{tournament_id}/documents/{document['id']}", headers=headers
+    )
+    assert removed.status_code == 204, removed.text
+    assert client.get(f"/api/v1/tournaments/{tournament_id}/documents").json() == []
+    assert client.get(uploaded["url"]).status_code == 200, "файл остаётся живым"
+
+
+def test_attaching_a_document_requires_a_manager(tmp_path):
+    client = setup_app_for_tests()
+    use_temp_storage(tmp_path)
+    tournament_id, headers = bootstrap(client)
+    _, stranger = register(client, "stranger@example.com")
+
+    refused = client.post(
+        f"/api/v1/tournaments/{tournament_id}/documents",
+        json={"title": "Чужое", "file_url": "https://example.org/x.docx"},
+        headers=stranger,
+    )
+    assert refused.status_code == 403, refused.text

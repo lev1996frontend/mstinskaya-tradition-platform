@@ -26,6 +26,17 @@ class TournamentDocument(Base):
     )
     title: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
     file_url: Mapped[str] = mapped_column(String(500), nullable=False)
+    #: Set when the document was uploaded here. Null when it is a link to
+    #: somewhere else — those rows predate the storage and must keep working.
+    media_file_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("media_files.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    #: Taken off the page, not deleted. The bytes and the link stay alive
+    #: because an old положение may have been cited somewhere.
+    removed_at: Mapped[datetime | None] = mapped_column(nullable=True)
     type: Mapped[str] = mapped_column(String(20), nullable=False, default="RULES")
     created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(

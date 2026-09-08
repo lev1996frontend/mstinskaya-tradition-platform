@@ -195,6 +195,7 @@ def test_tournament_foundation_flow():
             "file_url": "https://example.com/rules.pdf",
             "type": "RULES",
         },
+        headers={"Authorization": f"Bearer {organizer_token}"},
     )
     assert document.status_code == 201, document.text
     assert document.json()["type"] == "RULES"

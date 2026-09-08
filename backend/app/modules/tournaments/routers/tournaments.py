@@ -11,6 +11,7 @@ from app.modules.tournaments.schemas.participant import ParticipantCreateRequest
 from app.modules.tournaments.schemas.tournament import TournamentCreateRequest, TournamentResponse
 from app.modules.tournaments.schemas.tournament_category import TournamentCategoryCreateRequest, TournamentCategoryResponse
 from app.modules.tournaments.schemas.tournament_document import TournamentDocumentCreateRequest, TournamentDocumentResponse
+from app.modules.tournaments.security.deps import TournamentManager, ensure_can_manage_tournament, get_current_manager
 from app.modules.tournaments.services.tournament_service import TournamentService
 
 router = APIRouter(prefix="/api/v1/tournaments", tags=["tournaments"])
@@ -279,12 +280,17 @@ async def list_match_decisions(match_id: str, session: AsyncSession = Depends(ge
 async def create_document(
     tournament_id: str,
     payload: TournamentDocumentCreateRequest,
+    manager: TournamentManager = Depends(get_current_manager),
     session: AsyncSession = Depends(get_db),
 ) -> TournamentDocumentResponse:
+    tournament = await TournamentService.get_tournament(session, tournament_id)
+    await ensure_can_manage_tournament(session, manager, tournament)
+
     document = await TournamentService.create_document(
         session,
         tournament_id=tournament_id,
         title=payload.title,
+        media_file_id=payload.media_file_id,
         file_url=payload.file_url,
         type=payload.type,
     )
@@ -311,3 +317,22 @@ async def list_documents(tournament_id: str, session: AsyncSession = Depends(get
         )
         for d in documents
     ]
+
+
+@router.delete("/{tournament_id}/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
+async def remove_document(
+    tournament_id: str,
+    document_id: str,
+    manager: TournamentManager = Depends(get_current_manager),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    """Take the document off the page. The file itself stays.
+
+    Not a delete: an old положение may have been cited or handed out, and a
+    link that stops answering is worse than a page that no longer lists it.
+    """
+    tournament = await TournamentService.get_tournament(session, tournament_id)
+    await ensure_can_manage_tournament(session, manager, tournament)
+
+    await TournamentService.remove_document(session, tournament_id, document_id)
+    await session.commit()
