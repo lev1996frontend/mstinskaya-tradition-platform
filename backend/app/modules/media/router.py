@@ -7,6 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.modules.identity.models import User
+from app.modules.identity.security.depends import get_current_user
 from app.modules.media.schemas.content_access import ContentAccessCreate, ContentAccessRead
 from app.modules.media.schemas.document import DocumentCreate, DocumentRead
 from app.modules.media.schemas.media_file import MediaFileCreate, MediaFileRead
@@ -24,6 +26,10 @@ async def get_media_service(db: Annotated[AsyncSession, Depends(get_db)]) -> Med
 async def create_media_file(
     payload: MediaFileCreate,
     service: Annotated[MediaService, Depends(get_media_service)],
+    # Recording a file was open to anonymous callers for as long as this route
+    # has existed. Nothing behind it was writable then; that stops being true
+    # on the next line of this branch.
+    current_user: User = Depends(get_current_user),
 ):
     return await service.create_media_file(payload=payload.model_dump())
 

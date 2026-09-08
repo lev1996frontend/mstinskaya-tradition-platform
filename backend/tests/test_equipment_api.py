@@ -105,6 +105,7 @@ def test_equipment_catalog_foundation_flow():
             "mime_type": "image/jpeg",
             "uploaded_by": user_id,
         },
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert media_file_response.status_code == 201, media_file_response.text
     media_file_id = media_file_response.json()["id"]

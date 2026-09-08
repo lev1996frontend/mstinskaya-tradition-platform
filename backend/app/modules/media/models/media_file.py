@@ -27,6 +27,13 @@ class MediaFile(Base):
     #: rows pointing at one stored object would make deletion of either destroy
     #: the other's file.
     storage_key: Mapped[str] = mapped_column(String(500), nullable=False, unique=True)
+    #: SHA-256 of the stored bytes, so the same file sent twice — a coach
+    #: resending «на всякий случай», a mail server delivering twice — reuses the
+    #: one stored object instead of quietly doubling it. Indexed because every
+    #: upload looks itself up here before writing anything.
+    content_sha256: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
     url: Mapped[str] = mapped_column(String(1000), nullable=False)
     type: Mapped[str] = mapped_column(String(20), nullable=False, default="DOCUMENT")
     size: Mapped[int | None] = mapped_column(Integer, nullable=True)

@@ -64,6 +64,7 @@ def test_media_foundation_flow():
             "mime_type": "video/mp4",
             "uploaded_by": uploaded_by,
         },
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert file_response.status_code == 201, file_response.text
     file_data = file_response.json()

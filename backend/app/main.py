@@ -10,6 +10,7 @@ from app.modules.education.routers import router as education_router
 from app.modules.equipment.routers import router as equipment_router
 from app.modules.identity.routers import router as identity_router
 from app.modules.media.router import router as media_router
+from app.modules.media.uploads import router as media_uploads_router
 from app.modules.ratings.router import router as ratings_router
 from app.modules.rules.routers import router as rules_router
 from app.modules.tournaments.routers import (
@@ -42,6 +43,7 @@ app.include_router(athletes_router)
 app.include_router(education_router)
 app.include_router(equipment_router)
 app.include_router(media_router)
+app.include_router(media_uploads_router)
 app.include_router(ratings_router)
 app.include_router(rules_router)
 app.include_router(tournaments_router)
