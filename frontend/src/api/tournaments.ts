@@ -273,14 +273,18 @@ export const previewParticipantImport = (tournamentId: string, files: File[]) =>
 /**
  * Enter the reviewed rows.
  *
- * Sends rows rather than the file again, because the organizer may have fixed
- * a discipline or a birth year in the review table. The server re-validates
- * them and refuses the whole batch if anything is still wrong.
+ * The idempotency key is generated once per review session, so a double click
+ * — or a retry after a dropped connection — returns the first answer instead of
+ * entering everyone a second time.
  */
-export const commitParticipantImport = (tournamentId: string, rows: ImportRow[]) =>
+export const commitParticipantImport = (
+  tournamentId: string,
+  rows: ImportRow[],
+  idempotencyKey: string,
+) =>
   apiRequest<ImportCommitResponse>(
     `/api/v1/tournaments/${tournamentId}/participants/import/commit`,
-    { method: "POST", body: { rows } },
+    { method: "POST", body: { rows }, headers: { "Idempotency-Key": idempotencyKey } },
   );
 
 // ------------------------------------------------- bracket / жребий / соступ

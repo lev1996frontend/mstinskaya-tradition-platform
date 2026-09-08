@@ -58,6 +58,15 @@ export function ParticipantImportReview({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Один ключ на сеанс просмотра: пока организатор правит строки, это тот же
+  // самый заход, сколько бы раз он ни нажал «Завести». Новый отчёт — новый
+  // компонент и новый ключ.
+  const [idempotencyKey] = useState(() =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
+
   const included = useMemo(() => rows.filter((row) => !excluded.has(keyOf(row))), [rows, excluded]);
   const blocking = included.filter((row) => !row.valid);
   // Worth naming files in the table only when there is more than one to tell
@@ -95,7 +104,7 @@ export function ParticipantImportReview({
     setSaving(true);
     setError(null);
     try {
-      const result = await commitParticipantImport(report.tournament_id, included);
+      const result = await commitParticipantImport(report.tournament_id, included, idempotencyKey);
       onCommitted(result.created, result.per_competition);
     } catch (caught) {
       setError(describeError(caught));

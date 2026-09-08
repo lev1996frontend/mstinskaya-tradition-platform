@@ -28,6 +28,12 @@ type RequestOptions = {
   /** Public tournament data changes during an event, so it is never cached. */
   revalidate?: number | false;
   signal?: AbortSignal;
+  /**
+   * Extra headers for this one request — an idempotency key, say. Applied
+   * after the defaults so a caller can override `Accept`, and before the
+   * bearer token, which the caller has no business replacing.
+   */
+  headers?: Record<string, string>;
 };
 
 function readBrowserToken(): string | null {
@@ -53,10 +59,10 @@ function extractDetail(payload: unknown): string | undefined {
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, token, revalidate = false, signal } = options;
+  const { method = "GET", body, token, revalidate = false, signal, headers: extra } = options;
   const authToken = token !== undefined ? token : readBrowserToken();
 
-  const headers: Record<string, string> = { Accept: "application/json" };
+  const headers: Record<string, string> = { Accept: "application/json", ...(extra ?? {}) };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (authToken) headers.Authorization = `Bearer ${authToken}`;
 
