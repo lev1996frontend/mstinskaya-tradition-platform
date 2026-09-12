@@ -20,12 +20,12 @@ import {
   PageHeader,
   Section,
 } from "@/components/ui";
-import { SheetMark } from "@/components/brand/sheet-marks";
+import { TournamentDocumentsPanel } from "@/features/documents/document-upload";
 import { TournamentStatusBadge } from "@/features/tournaments/badges";
 import { TournamentIntake } from "@/features/tournaments/tournament-intake";
 import { DirectionalTransition } from "@/features/transitions/directional-transition";
 import { formatDateRange, formatPlace, plural } from "@/lib/format";
-import { competitionFormat, competitionType, documentType, labelOf } from "@/lib/labels";
+import { competitionFormat, competitionType, labelOf } from "@/lib/labels";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -176,35 +176,14 @@ export default async function TournamentPage({ params }: PageProps) {
           </Section>
         ) : null}
 
-        {documents.length > 0 ? (
-          <Section title="Документы">
-            <ul className="space-y-2">
-              {documents.map((document) => (
-                <li key={document.id}>
-                  <a
-                    href={document.file_url}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm transition-colors hover:border-[var(--accent)]"
-                  >
-                    {/* The mark says what will open when this is clicked — a
-                        spreadsheet, a document, or a sealed PDF — which the
-                        title and the type badge both leave unsaid. */}
-                    <span className="flex min-w-0 items-center gap-2.5">
-                      <SheetMark
-                        name={document.file_url}
-                        size={18}
-                        className="shrink-0 text-[var(--muted)]"
-                      />
-                      <span className="truncate font-medium">{document.title}</span>
-                    </span>
-                    <Badge>{labelOf(documentType, document.type)}</Badge>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </Section>
-        ) : null}
+        {/* Always shown, not just when there is already a document: a manager
+            needs somewhere to attach the first положение too. The panel
+            itself decides what an anonymous visitor sees (the public list
+            only) versus a signed-in one (the list, a remove cross, and the
+            upload form) — the same split `TournamentIntake` makes above. */}
+        <Section title="Документы">
+          <TournamentDocumentsPanel tournamentId={tournament.id} initialDocuments={documents} />
+        </Section>
       </Container>
     </DirectionalTransition>
   );

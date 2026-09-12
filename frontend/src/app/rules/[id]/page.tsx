@@ -4,7 +4,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { listRuleSections, listRuleSets, listRules } from "@/api/catalog";
-import { Badge, Container, EmptyState, PageHeader } from "@/components/ui";
+import { listRuleSetDocuments } from "@/api/rules";
+import { Badge, Container, EmptyState, PageHeader, Section } from "@/components/ui";
+import { RuleSetDocumentsPanel } from "@/features/documents/document-upload";
 import { labelOf, ruleType } from "@/lib/labels";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -36,6 +38,7 @@ export default async function RuleSetPage({ params }: PageProps) {
       .sort((left, right) => left.order_number - right.order_number)
       .map(async (section) => ({ section, rules: await listRules(section.id) })),
   );
+  const documents = await listRuleSetDocuments(id);
 
   return (
     <Container className="max-w-3xl space-y-8 py-10">
@@ -105,6 +108,15 @@ export default async function RuleSetPage({ params }: PageProps) {
           ))}
         </div>
       )}
+
+      {/* Always shown, not just when a file is already attached: the person
+          who can attach the first one needs somewhere to do it. Reading the
+          list is public; the panel itself decides whether to also show the
+          remove cross and the upload form, matching the INSTRUCTOR/ADMIN
+          check the server makes. */}
+      <Section title="Документы">
+        <RuleSetDocumentsPanel ruleSetId={ruleSet.id} initialDocuments={documents} />
+      </Section>
     </Container>
   );
 }

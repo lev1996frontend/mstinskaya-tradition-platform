@@ -70,6 +70,29 @@ export const listDocuments = (tournamentId: string) =>
   apiListOrEmpty<TournamentDocument>(`/api/v1/tournaments/${tournamentId}/documents`);
 
 /**
+ * Attach an uploaded file (or, still, a plain link) to the tournament as a
+ * document. `media_file_id` and `file_url` are mutually exclusive on the
+ * server — pass whichever the caller has.
+ */
+export const attachTournamentDocument = (
+  tournamentId: string,
+  body: { title: string; type: TournamentDocument["type"]; media_file_id?: string; file_url?: string },
+) =>
+  apiRequest<TournamentDocument>(`/api/v1/tournaments/${tournamentId}/documents`, {
+    method: "POST",
+    body,
+  });
+
+/**
+ * Take a document off the tournament's page. Not a delete: the file and its
+ * download link stay live, because an old положение may already be cited.
+ */
+export const removeTournamentDocument = (tournamentId: string, documentId: string) =>
+  apiRequest<void>(`/api/v1/tournaments/${tournamentId}/documents/${documentId}`, {
+    method: "DELETE",
+  });
+
+/**
  * The tournament's own entry list — who has been entered, and in which category,
  * before any discipline is drawn.
  *

@@ -111,6 +111,30 @@ export interface TournamentDocument {
 }
 
 /**
+ * What one call to `POST /media/uploads` produced. `media_file_id` on an
+ * attach request is this response's `id` — the upload and the attach are two
+ * separate calls because storage never parses and intake never stores.
+ */
+export interface MediaUploadResponse {
+  id: string;
+  url: string;
+  original_name: string;
+  size: number | null;
+  mime_type: string | null;
+  /** Set when identical bytes were already stored; `id` above is that file's. */
+  duplicate_of: string | null;
+}
+
+/** The Word file one edition of the rules was published as. */
+export interface RuleSetDocument {
+  id: string;
+  rule_set_id: string;
+  title: string;
+  media_file_id: string;
+  url: string;
+}
+
+/**
  * A registration on the tournament itself — the entry list, filed against a
  * category before any discipline has been drawn. Distinct from
  * `ParticipantView`, which is an entrant *inside* one competition and carries
