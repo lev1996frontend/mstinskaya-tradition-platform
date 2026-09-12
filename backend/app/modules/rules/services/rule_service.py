@@ -8,7 +8,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.identity.models import User
-from app.modules.rules.models import JudgeCertification, JudgingScenario, Rule, RuleSection, RuleSet
+from app.modules.media.models import MediaFile
+from app.modules.rules.models import JudgeCertification, JudgingScenario, Rule, RuleSection, RuleSet, RuleSetDocument
+
+#: A регламент is edited and versioned; a spreadsheet is not that. Judged from
+#: the already-stored file's mime_type, not from the filename it was uploaded
+#: under, since a rename shouldn't change what format is accepted.
+_WORD_MIME_TYPES = frozenset(
+    {
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+)
 
 
 class RuleService:
@@ -244,3 +255,67 @@ class RuleService:
             query = query.where(JudgeCertification.user_id == parsed_user_id)
         result = await session.execute(query.order_by(JudgeCertification.issued_at.asc()))
         return list(result.scalars().all())
+
+    @staticmethod
+    async def create_rule_set_document(
+        session: AsyncSession,
+        *,
+        rule_set_id: str,
+        title: str,
+        media_file_id: str,
+    ) -> tuple[RuleSetDocument, MediaFile]:
+        rule_set = await RuleService.get_rule_set(session, rule_set_id)
+
+        try:
+            parsed_media_file_id = UUID(str(media_file_id))
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid media file id") from None
+
+        media_file = await session.get(MediaFile, parsed_media_file_id)
+        if media_file is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
+
+        if media_file.mime_type not in _WORD_MIME_TYPES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Файл правил принимается только в формате Word (.docx).",
+            )
+
+        document = RuleSetDocument(
+            rule_set_id=rule_set.id,
+            media_file_id=media_file.id,
+            title=title,
+        )
+        session.add(document)
+        await session.flush()
+        return document, media_file
+
+    @staticmethod
+    async def list_rule_set_documents(session: AsyncSession, rule_set_id: str) -> list[tuple[RuleSetDocument, MediaFile]]:
+        rule_set = await RuleService.get_rule_set(session, rule_set_id)
+        result = await session.execute(
+            select(RuleSetDocument, MediaFile)
+            .join(MediaFile, MediaFile.id == RuleSetDocument.media_file_id)
+            .where(RuleSetDocument.rule_set_id == rule_set.id)
+            .where(RuleSetDocument.removed_at.is_(None))
+            .order_by(RuleSetDocument.created_at.asc())
+        )
+        return [(document, media_file) for document, media_file in result.all()]
+
+    @staticmethod
+    async def remove_rule_set_document(session: AsyncSession, rule_set_id: str, document_id: str) -> None:
+        rule_set = await RuleService.get_rule_set(session, rule_set_id)
+
+        try:
+            parsed_document_id = UUID(str(document_id))
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid document id") from None
+
+        document = await session.get(RuleSetDocument, parsed_document_id)
+        if document is None or document.rule_set_id != rule_set.id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
+
+        # Off the page, not gone: the bytes and the download link stay live
+        # because an old edition may already be cited or handed out.
+        document.removed_at = datetime.now(timezone.utc)
+        await session.flush()

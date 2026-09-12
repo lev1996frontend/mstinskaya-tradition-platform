@@ -44,8 +44,37 @@ def upgrade() -> None:
         sa.Column("removed_at", sa.DateTime(timezone=True), nullable=True),
     )
 
+    # An edition of the rules can carry the Word file it was published as.
+    # A table rather than a column on rule_sets: editions are historical and
+    # never rewritten, so the 1.0 file must survive the arrival of 2.0.
+    op.create_table(
+        "rule_set_documents",
+        sa.Column("id", sa.UUID(as_uuid=True), primary_key=True),
+        sa.Column(
+            "rule_set_id",
+            sa.UUID(as_uuid=True),
+            sa.ForeignKey("rule_sets.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "media_file_id",
+            sa.UUID(as_uuid=True),
+            sa.ForeignKey("media_files.id", ondelete="RESTRICT"),
+            nullable=False,
+        ),
+        sa.Column("title", sa.String(length=200), nullable=False),
+        sa.Column("removed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    )
+    op.create_index("ix_rule_set_documents_rule_set_id", "rule_set_documents", ["rule_set_id"])
+    op.create_index("ix_rule_set_documents_media_file_id", "rule_set_documents", ["media_file_id"])
+
 
 def downgrade() -> None:
+    op.drop_index("ix_rule_set_documents_media_file_id", table_name="rule_set_documents")
+    op.drop_index("ix_rule_set_documents_rule_set_id", table_name="rule_set_documents")
+    op.drop_table("rule_set_documents")
+
     op.drop_column("tournament_documents", "removed_at")
     op.drop_index("ix_tournament_documents_media_file_id", table_name="tournament_documents")
     op.drop_constraint(

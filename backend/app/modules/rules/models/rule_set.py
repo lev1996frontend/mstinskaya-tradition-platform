@@ -12,6 +12,7 @@ from app.models.base import Base
 
 if TYPE_CHECKING:
     from .rule_section import RuleSection
+    from .rule_set_document import RuleSetDocument
 
 
 class RuleSet(Base):
@@ -31,6 +32,7 @@ class RuleSet(Base):
     )
 
     sections: Mapped[list[RuleSection]] = relationship(back_populates="rule_set", cascade="all, delete-orphan")
+    documents: Mapped[list[RuleSetDocument]] = relationship(back_populates="rule_set", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"RuleSet(id={self.id!r}, title={self.title!r}, version={self.version!r})"

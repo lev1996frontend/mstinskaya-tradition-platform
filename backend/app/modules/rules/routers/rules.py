@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -9,7 +9,14 @@ from app.modules.rules.schemas.judging_scenario import JudgingScenarioCreateRequ
 from app.modules.rules.schemas.rule import RuleCreateRequest, RuleResponse
 from app.modules.rules.schemas.rule_section import RuleSectionCreateRequest, RuleSectionResponse
 from app.modules.rules.schemas.rule_set import RuleSetCreateRequest, RuleSetResponse
+from app.modules.rules.schemas.rule_set_document import RuleSetDocumentCreateRequest, RuleSetDocumentResponse
 from app.modules.rules.services.rule_service import RuleService
+# Reused rather than duplicated: `docs/architecture.md`'s guardrail is about
+# reaching into another domain's models, not its security helpers, and the
+# tournaments module already has this exact role check (user_role_codes,
+# MANAGER_ROLE_CODES) built and tested. Building a second copy in `rules`
+# would be the parallel mechanism the task brief explicitly asked to avoid.
+from app.modules.tournaments.security.deps import MANAGER_ROLE_CODES, get_current_manager
 
 router = APIRouter(prefix="/api/v1", tags=["rules"])
 
@@ -205,3 +212,80 @@ async def list_judge_certifications(
         )
         for certification in certifications
     ]
+
+
+@router.post(
+    "/rulesets/{rule_set_id}/documents",
+    response_model=RuleSetDocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_rule_set_document(
+    rule_set_id: str,
+    payload: RuleSetDocumentCreateRequest,
+    manager=Depends(get_current_manager),
+    session: AsyncSession = Depends(get_db),
+) -> RuleSetDocumentResponse:
+    # Loading a rules file is the first permission check anywhere on this
+    # router — the pre-existing ruleset/section/rule routes stay exactly as
+    # they were; only the two new document routes are guarded.
+    if not manager.is_privileged:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только инструктор или администратор может прикрепить файл правил",
+        )
+
+    document, media_file = await RuleService.create_rule_set_document(
+        session,
+        rule_set_id=rule_set_id,
+        title=payload.title,
+        media_file_id=payload.media_file_id,
+    )
+    await session.commit()
+    return RuleSetDocumentResponse(
+        id=str(document.id),
+        rule_set_id=str(document.rule_set_id),
+        title=document.title,
+        media_file_id=str(document.media_file_id),
+        url=media_file.url,
+    )
+
+
+@router.get("/rulesets/{rule_set_id}/documents", response_model=list[RuleSetDocumentResponse])
+async def list_rule_set_documents(rule_set_id: str, session: AsyncSession = Depends(get_db)) -> list[RuleSetDocumentResponse]:
+    documents = await RuleService.list_rule_set_documents(session, rule_set_id)
+    return [
+        RuleSetDocumentResponse(
+            id=str(document.id),
+            rule_set_id=str(document.rule_set_id),
+            title=document.title,
+            media_file_id=str(document.media_file_id),
+            url=media_file.url,
+        )
+        for document, media_file in documents
+    ]
+
+
+@router.delete(
+    "/rulesets/{rule_set_id}/documents/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+)
+async def remove_rule_set_document(
+    rule_set_id: str,
+    document_id: str,
+    manager=Depends(get_current_manager),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    """Take the document off the page. The file itself stays.
+
+    Not a delete: an old edition may have been cited or handed out, and a
+    link that stops answering is worse than a page that no longer lists it.
+    """
+    if not manager.is_privileged:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Только инструктор или администратор может снять файл правил",
+        )
+
+    await RuleService.remove_rule_set_document(session, rule_set_id, document_id)
+    await session.commit()
