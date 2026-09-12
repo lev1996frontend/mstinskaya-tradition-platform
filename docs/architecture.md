@@ -94,6 +94,8 @@ The API should be versioned under /api/v1/ and should be resource-oriented.
 
 Large files, including videos, images, and PDFs, should not sit directly in PostgreSQL. They should be stored in S3-compatible object storage with metadata retained in the database.
 
+Recorded exception: the file-storage seam (`Storage`/`LocalDiskStorage`, `POST /api/v1/media/uploads`) currently writes to local disk, not S3. This is one running instance with no cloud storage bill yet, and the `Storage` interface keeps the eventual move to an object store to a single file when that becomes necessary. The target above stands — this is a deliberate, temporary deviation, not a change of direction.
+
 This keeps the relational model clean while preserving access control and relationships.
 
 ## Scalability and future growth

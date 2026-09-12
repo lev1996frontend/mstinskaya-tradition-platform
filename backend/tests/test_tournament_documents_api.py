@@ -191,6 +191,76 @@ def test_removing_with_an_unparsable_document_id_is_a_bad_request_not_a_crash(tm
     assert refused.status_code == 400, refused.text
 
 
+def test_attaching_the_same_file_twice_to_the_same_tournament_is_a_conflict(tmp_path):
+    """The spec's 409: attaching the same stored file to the same tournament
+    a second time is refused, naming the document that already has it."""
+    client = setup_app_for_tests()
+    use_temp_storage(tmp_path)
+    tournament_id, headers = bootstrap(client)
+    uploaded = client.post(
+        "/api/v1/media/uploads",
+        files={"file": ("положение.docx", docx_bytes(), DOCX)},
+        headers=headers,
+    ).json()
+
+    first = client.post(
+        f"/api/v1/tournaments/{tournament_id}/documents",
+        json={"title": "Положение (черновик)", "media_file_id": uploaded["id"], "type": "POSITION"},
+        headers=headers,
+    )
+    assert first.status_code == 201, first.text
+
+    second = client.post(
+        f"/api/v1/tournaments/{tournament_id}/documents",
+        json={"title": "Положение (копия)", "media_file_id": uploaded["id"], "type": "POSITION"},
+        headers=headers,
+    )
+    assert second.status_code == 409, second.text
+    assert "Положение (черновик)" in second.json()["detail"]
+
+
+def test_attaching_the_same_file_to_a_different_tournament_still_succeeds(tmp_path):
+    """The 409 is scoped to one tournament — a second, unrelated tournament
+    can cite the same uploaded file with no conflict."""
+    client = setup_app_for_tests()
+    use_temp_storage(tmp_path)
+    tournament_id, headers = bootstrap(client)
+    uploaded = client.post(
+        "/api/v1/media/uploads",
+        files={"file": ("положение.docx", docx_bytes(), DOCX)},
+        headers=headers,
+    ).json()
+
+    first = client.post(
+        f"/api/v1/tournaments/{tournament_id}/documents",
+        json={"title": "Положение", "media_file_id": uploaded["id"], "type": "POSITION"},
+        headers=headers,
+    )
+    assert first.status_code == 201, first.text
+
+    ruleset = client.post("/api/v1/rulesets", json={"title": "Base", "version": "1.0", "status": "ACTIVE"})
+    me = client.get("/api/v1/users/me", headers=headers).json()
+    other_tournament = client.post(
+        "/api/v1/tournaments",
+        json={
+            "title": "Мстинская традиция 2027",
+            "status": "REGISTRATION",
+            "start_date": "2027-05-16",
+            "organizer_id": me["id"],
+            "ruleset_id": ruleset.json()["id"],
+        },
+    )
+    assert other_tournament.status_code == 201, other_tournament.text
+    other_tournament_id = other_tournament.json()["id"]
+
+    second = client.post(
+        f"/api/v1/tournaments/{other_tournament_id}/documents",
+        json={"title": "Положение", "media_file_id": uploaded["id"], "type": "POSITION"},
+        headers=headers,
+    )
+    assert second.status_code == 201, second.text
+
+
 def test_attaching_a_document_requires_a_manager(tmp_path):
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)

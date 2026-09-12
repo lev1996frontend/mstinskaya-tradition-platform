@@ -194,6 +194,44 @@ def test_an_oversized_upload_is_refused_and_nothing_lands_in_storage(tmp_path, m
     assert list(tmp_path.rglob("*")) == [], "ничего не должно попасть на диск"
 
 
+def test_an_oversized_upload_without_a_declared_length_is_refused_by_the_chunk_loop(tmp_path, monkeypatch):
+    """The early Content-Length check is one guard; this exercises the other.
+
+    The existing oversized-upload test declares an accurate, oversized
+    Content-Length, which trips the check that runs BEFORE the chunk-reading
+    loop — the loop itself never runs. This test sends the body through a
+    generator instead of a fixed `bytes` payload, which makes httpx fall back
+    to a body with no Content-Length header at all (verified: FastAPI's
+    `Header(default=None)` sees `None` for a generator body), so the early
+    check cannot fire and only the accumulation loop can refuse the request.
+    """
+    from app.modules.media import uploads as uploads_module
+
+    monkeypatch.setattr(uploads_module, "MAX_UPLOAD_BYTES", 10)
+
+    client = setup_app_for_tests()
+    use_temp_storage(tmp_path)
+    _, headers = register(client, "organizer@example.com")
+
+    boundary = "xxxxxxxxxxxxxxxxxxxxboundary"
+    body = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="file"; filename="положение.docx"\r\n'
+        f"Content-Type: {DOCX}\r\n\r\n"
+    ).encode("utf-8") + (b"x" * 100) + f"\r\n--{boundary}--\r\n".encode("utf-8")
+
+    def body_generator():
+        yield body
+
+    refused = client.post(
+        "/api/v1/media/uploads",
+        content=body_generator(),
+        headers={**headers, "Content-Type": f"multipart/form-data; boundary={boundary}"},
+    )
+    assert refused.status_code == 413, refused.text
+    assert list(tmp_path.rglob("*")) == [], "ничего не должно попасть на диск"
+
+
 def test_uploading_requires_a_login(tmp_path):
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)

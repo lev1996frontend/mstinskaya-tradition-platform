@@ -17,7 +17,9 @@ class MediaFileBase(BaseModel):
 
 
 class MediaFileCreate(MediaFileBase):
-    uploaded_by: UUID
+    """No `uploaded_by` here: the router derives it from the authenticated
+    caller server-side, so a client cannot attribute a recorded file to
+    someone else's id."""
 
 
 class MediaFileRead(MediaFileBase):

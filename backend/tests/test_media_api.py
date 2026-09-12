@@ -62,7 +62,6 @@ def test_media_foundation_flow():
             "type": "VIDEO",
             "size": 102400,
             "mime_type": "video/mp4",
-            "uploaded_by": uploaded_by,
         },
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -70,6 +69,9 @@ def test_media_foundation_flow():
     file_data = file_response.json()
     assert file_data["filename"] == "intro.mp4"
     assert file_data["type"] == "VIDEO"
+    # uploaded_by is derived server-side from the authenticated caller, not
+    # taken from the request body.
+    assert file_data["uploaded_by"] == uploaded_by
 
     video_response = client.post(
         "/api/v1/media/videos",
@@ -105,5 +107,51 @@ def test_media_foundation_flow():
     )
     assert access_response.status_code == 201, access_response.text
     assert access_response.json()["access_level"] == "USER"
+
+    app.dependency_overrides.clear()
+
+
+def test_uploaded_by_cannot_be_spoofed_by_the_request_body():
+    """A logged-in caller cannot attribute a recorded file to someone else's id.
+
+    `uploaded_by` used to come straight from the request body; the server now
+    always uses the authenticated caller's id, regardless of what the payload
+    claims.
+    """
+    client = setup_app_for_tests()
+
+    register_response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "spoofer@example.com",
+            "password": "StrongPassword123!",
+            "first_name": "Spoof",
+            "last_name": "Attempt",
+        },
+    )
+    assert register_response.status_code == 201, register_response.text
+    token = register_response.json()["access_token"]
+
+    me_response = client.get("/api/v1/users/me", headers={"Authorization": f"Bearer {token}"})
+    assert me_response.status_code == 200, me_response.text
+    caller_id = me_response.json()["id"]
+
+    someone_elses_id = "00000000-0000-0000-0000-000000000042"
+    file_response = client.post(
+        "/api/v1/media/files",
+        json={
+            "filename": "intro.mp4",
+            "original_name": "intro.mp4",
+            "storage_key": "videos/intro.mp4",
+            "url": "https://example.com/videos/intro.mp4",
+            "type": "VIDEO",
+            "size": 102400,
+            "mime_type": "video/mp4",
+            "uploaded_by": someone_elses_id,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert file_response.status_code == 201, file_response.text
+    assert file_response.json()["uploaded_by"] == caller_id
 
     app.dependency_overrides.clear()

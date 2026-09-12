@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.athletes.models import Athlete
 from app.modules.identity.models import User
-from app.modules.media.models import MediaFile
+from app.modules.media.service import MediaService
 from app.modules.rules.models import RuleSet
 from app.modules.tournaments.models import (
     JudgeAssignment,
@@ -376,11 +376,26 @@ class TournamentService:
             except (ValueError, TypeError):
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid media file id") from None
 
-            media_file = await session.get(MediaFile, parsed_media_file_id)
+            media_file = await MediaService(session).get_media_file(parsed_media_file_id)
             if media_file is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
             resolved_media_file_id = media_file.id
             resolved_file_url = media_file.url
+
+            # The spec's rule is about the same stored file, not about arbitrary
+            # external URLs — two different documents can legitimately share a
+            # file_url by coincidence, so this check only fires for an upload.
+            existing = await session.scalar(
+                select(TournamentDocument)
+                .where(TournamentDocument.tournament_id == tournament.id)
+                .where(TournamentDocument.media_file_id == resolved_media_file_id)
+                .where(TournamentDocument.removed_at.is_(None))
+            )
+            if existing is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Этот файл уже приложен как «{existing.title}».",
+                )
 
         document = TournamentDocument(
             tournament_id=tournament.id,

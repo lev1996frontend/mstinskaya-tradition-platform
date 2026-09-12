@@ -22,7 +22,9 @@ Scope note: this guard is applied to the **new** bout/bracket endpoints only.
 The pre-existing tournament routes were left exactly as they were, per the
 "preserve existing behavior" constraint; tightening them is a separate,
 deliberate change because it breaks every unauthenticated client and test that
-depends on them today.
+depends on them today. Update: the document attach/remove routes, though
+pre-existing, are now also guarded by this same check — attaching a file is
+not something an anonymous or unrelated caller should be able to do.
 """
 
 from __future__ import annotations

@@ -16,7 +16,7 @@ from app.modules.rules.services.rule_service import RuleService
 # tournaments module already has this exact role check (user_role_codes,
 # MANAGER_ROLE_CODES) built and tested. Building a second copy in `rules`
 # would be the parallel mechanism the task brief explicitly asked to avoid.
-from app.modules.tournaments.security.deps import MANAGER_ROLE_CODES, get_current_manager
+from app.modules.tournaments.security.deps import get_current_manager
 
 router = APIRouter(prefix="/api/v1", tags=["rules"])
 

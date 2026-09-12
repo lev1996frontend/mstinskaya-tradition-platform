@@ -14,10 +14,12 @@ from __future__ import annotations
 
 import hashlib
 from io import BytesIO
+from typing import IO
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.background import BackgroundTask
@@ -30,6 +32,16 @@ from app.modules.identity.security.depends import get_current_user
 from app.modules.media.models.media_file import MediaFile
 
 router = APIRouter(prefix="/api/v1/media", tags=["media-uploads"])
+
+
+class MediaUploadResponse(BaseModel):
+    id: str
+    url: str
+    original_name: str
+    size: int | None
+    mime_type: str | None
+    duplicate_of: str | None
+
 
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 
@@ -45,14 +57,14 @@ REFUSALS = {
 }
 
 
-@router.post("/uploads", status_code=201)
+@router.post("/uploads", status_code=201, response_model=MediaUploadResponse)
 async def upload_file(
     file: UploadFile = File(...),
     content_length: int | None = Header(default=None),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
     storage: Storage = Depends(get_storage),
-) -> dict:
+) -> MediaUploadResponse:
     """Take one document in.
 
     The format is decided by looking inside the file, never by its name, and
@@ -125,15 +137,15 @@ async def upload_file(
     return _described(stored, duplicate_of=None)
 
 
-def _described(stored: MediaFile, *, duplicate_of: str | None) -> dict:
-    return {
-        "id": str(stored.id),
-        "url": stored.url,
-        "original_name": stored.original_name,
-        "size": stored.size,
-        "mime_type": stored.mime_type,
-        "duplicate_of": duplicate_of,
-    }
+def _described(stored: MediaFile, *, duplicate_of: str | None) -> MediaUploadResponse:
+    return MediaUploadResponse(
+        id=str(stored.id),
+        url=stored.url,
+        original_name=stored.original_name,
+        size=stored.size,
+        mime_type=stored.mime_type,
+        duplicate_of=duplicate_of,
+    )
 
 
 @router.get("/files/{media_file_id}/download")
@@ -175,13 +187,26 @@ async def download_file(
 
     # RFC 5987: the name is Russian more often than not, and a bare
     # `filename=` would arrive mangled or truncated at the first non-ASCII byte.
-    disposition = f"attachment; filename*=UTF-8''{quote(stored.original_name)}"
+    # safe="" also percent-encodes "/", so a submitted filename containing one
+    # cannot smuggle a path segment into the header value.
+    disposition = f"attachment; filename*=UTF-8''{quote(stored.original_name, safe='')}"
     return StreamingResponse(
-        stream,
+        _chunks(stream),
         media_type=stored.mime_type or "application/octet-stream",
-        headers={"Content-Disposition": disposition},
+        headers={"Content-Disposition": disposition, "Content-Length": str(stored.size)},
         # Without this the handle `storage.open` returned is never closed on
         # the success path — the failure path is fine, since the exception
         # fires before any handle exists.
         background=BackgroundTask(stream.close),
     )
+
+
+def _chunks(handle: IO[bytes], size: int = 64 * 1024):
+    """Read fixed-size blocks instead of handing the raw handle to StreamingResponse.
+
+    A binary file object still iterates line-by-line (`b"\\n"` splits it), so a
+    compressed .docx with no newlines for tens of megabytes turns into on the
+    order of 10^5 single-byte-ish reads — correct output, pathological cost.
+    """
+    while block := handle.read(size):
+        yield block

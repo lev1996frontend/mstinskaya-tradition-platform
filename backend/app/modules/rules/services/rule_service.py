@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.identity.models import User
 from app.modules.media.models import MediaFile
+from app.modules.media.service import MediaService
 from app.modules.rules.models import JudgeCertification, JudgingScenario, Rule, RuleSection, RuleSet, RuleSetDocument
 
 #: A регламент is edited and versioned; a spreadsheet is not that. Judged from
@@ -269,9 +270,9 @@ class RuleService:
         try:
             parsed_media_file_id = UUID(str(media_file_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid media file id") from None
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Некорректный идентификатор файла") from None
 
-        media_file = await session.get(MediaFile, parsed_media_file_id)
+        media_file = await MediaService(session).get_media_file(parsed_media_file_id)
         if media_file is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
 
@@ -309,7 +310,7 @@ class RuleService:
         try:
             parsed_document_id = UUID(str(document_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid document id") from None
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Некорректный идентификатор документа") from None
 
         document = await session.get(RuleSetDocument, parsed_document_id)
         if document is None or document.rule_set_id != rule_set.id:

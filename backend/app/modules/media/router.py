@@ -31,7 +31,10 @@ async def create_media_file(
     # on the next line of this branch.
     current_user: User = Depends(get_current_user),
 ):
-    return await service.create_media_file(payload=payload.model_dump())
+    # uploaded_by comes from the authenticated caller, never from the request
+    # body — otherwise any logged-in user could attribute a file to someone
+    # else's id.
+    return await service.create_media_file(payload={**payload.model_dump(), "uploaded_by": current_user.id})
 
 
 @router.get("/files", response_model=list[MediaFileRead])
