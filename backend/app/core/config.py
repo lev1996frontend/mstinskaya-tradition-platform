@@ -1,6 +1,12 @@
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+#: The shipped-in-source default. Fine for a laptop running against SQLite in
+#: tests; a real deployment that never overrode it would sign every JWT with a
+#: secret anyone can read on GitHub.
+_DEFAULT_JWT_SECRET_KEY = "change-me-super-secret-key"
 
 
 class Settings(BaseSettings):
@@ -11,17 +17,38 @@ class Settings(BaseSettings):
     postgres_db: str = "mstina"
     postgres_user: str = "mstina"
     postgres_password: str = "change_me"
-    jwt_secret_key: str = "change-me-super-secret-key"
+    jwt_secret_key: str = _DEFAULT_JWT_SECRET_KEY
     jwt_algorithm: str = "HS256"
     #: Comma-separated browser origins allowed to call the API.
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     #: Where uploaded documents are kept. A directory rather than a bucket for
     #: now; see docs/superpowers/specs/2026-09-07-files-architecture.md.
     upload_dir: str = "./var/uploads"
+    #: The auth cookies' `Secure` flag. Off by default so the plain-HTTP dev
+    #: server (browser talks to the Next.js proxy over http://localhost) can
+    #: still receive them; a real deployment is HTTPS and must turn this on,
+    #: which `env_cookie_secure_default` below does automatically once
+    #: `app_env` says so, without needing its own line in every `.env`.
+    cookie_secure: bool | None = None
 
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def resolved_cookie_secure(self) -> bool:
+        if self.cookie_secure is not None:
+            return self.cookie_secure
+        return self.app_env not in {"development", "test"}
+
+    @model_validator(mode="after")
+    def _reject_default_secret_outside_dev(self) -> "Settings":
+        if self.app_env not in {"development", "test"} and self.jwt_secret_key == _DEFAULT_JWT_SECRET_KEY:
+            raise ValueError(
+                "JWT_SECRET_KEY is still the placeholder default outside development/test — "
+                "set a real secret in the environment before starting this app_env."
+            )
+        return self
 
     model_config = SettingsConfigDict(
         env_file=".env",

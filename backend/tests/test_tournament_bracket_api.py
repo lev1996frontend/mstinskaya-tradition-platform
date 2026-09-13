@@ -341,6 +341,7 @@ def test_bracket_generation_requires_an_authorized_manager():
         client, [("A", "Тверь"), ("B", "Псков"), ("C", "Москва"), ("D", "Новгород")]
     )
 
+    client.cookies.clear()
     anonymous = client.post(f"/api/v1/competitions/{competition_id}/bracket/generate", json={})
     assert anonymous.status_code == 401, anonymous.text
 

@@ -65,6 +65,10 @@ def test_register_and_login(client):
 
 
 def test_current_user_requires_token(client):
+    # The client fixture is module-scoped and test_register_and_login (which
+    # ran first) left an auth cookie behind; clear it so this request is
+    # genuinely token-less rather than riding on that leftover session.
+    client.cookies.clear()
     response = client.get("/api/v1/users/me")
     assert response.status_code == 401
 

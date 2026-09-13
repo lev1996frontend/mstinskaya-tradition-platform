@@ -344,6 +344,7 @@ def test_repointing_without_a_login_is_refused():
     tournament_id, _ = bootstrap(client)
     ruleset = client.post("/api/v1/rulesets", json={"title": "Base", "version": "4.0", "status": "ACTIVE"})
 
+    client.cookies.clear()
     refused = client.patch(
         f"/api/v1/tournaments/{tournament_id}/ruleset",
         json={"ruleset_id": ruleset.json()["id"]},

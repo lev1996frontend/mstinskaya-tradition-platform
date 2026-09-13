@@ -26,9 +26,9 @@ from starlette.background import BackgroundTask
 
 from app.core.database import get_db
 from app.core.file_format import sniff
+from app.core.identity_access import User
+from app.core.session_auth import get_current_user
 from app.core.storage import Storage, get_storage
-from app.modules.identity.models import User
-from app.modules.identity.security.depends import get_current_user
 from app.modules.media.models.media_file import MediaFile
 
 router = APIRouter(prefix="/api/v1/media", tags=["media-uploads"])

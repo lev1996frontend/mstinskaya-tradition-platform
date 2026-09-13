@@ -2,9 +2,10 @@
 
 ``docs/clubs-domain.md`` states the identity module must not be modified, so
 this lives in the tournaments module and only *reads* identity: it wraps
-identity's existing ``get_current_user`` and joins ``roles``/``user_roles``
-read-only. No column, no service and no route in ``app/modules/identity`` is
-touched.
+``app.core.session_auth.get_current_user`` (itself a read-only wrapper around
+identity's own token decoding and user lookup — see that module) and joins
+``roles``/``user_roles`` read-only. No column, no service and no route in
+``app/modules/identity`` is touched.
 
 Identity's ``Role`` model is a generic ``code``/``name`` pair with no fixed
 enum, so it can express "this user is an instructor" as-is — a row with
@@ -38,7 +39,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.identity_access import User, get_role_codes
 from app.core.privileged_access import PRIVILEGED_ROLE_CODES
-from app.modules.identity.security.depends import get_current_user
+from app.core.session_auth import get_current_user
 from app.modules.tournaments.models import Competition, Match, Participant, Tournament
 
 #: Role codes that may run any tournament. Same set `rules` uses for its own

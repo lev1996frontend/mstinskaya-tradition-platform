@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.modules.identity.models import User
-from app.modules.identity.security.depends import get_current_user
+from app.core.identity_access import User
+from app.core.session_auth import get_current_user
 from app.modules.media.schemas.content_access import ContentAccessCreate, ContentAccessRead
 from app.modules.media.schemas.document import DocumentCreate, DocumentRead
 from app.modules.media.schemas.media_file import MediaFileCreate, MediaFileRead

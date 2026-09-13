@@ -619,6 +619,7 @@ def test_bout_writes_require_an_authorized_manager():
     _, competition_id, headers = bootstrap_bracket(client)
     match = semis(client, competition_id)[0]
 
+    client.cookies.clear()
     anonymous = client.post(
         f"/api/v1/matches/{match['id']}/lot", json={"side": "RED", "method": "ONLINE_DICE"}
     )

@@ -805,6 +805,7 @@ def test_entering_people_still_requires_an_authorized_manager():
     tournament_id, _ = bootstrap(client)
     payload = sheet_of([{"full_name": "Чужой", "category": "Абсолютная мужская"}])
 
+    client.cookies.clear()
     anonymous = client.post(
         f"/api/v1/tournaments/{tournament_id}/participants/import/preview",
         files={"file": ("entries.xlsx", payload, XLSX)},

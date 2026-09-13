@@ -324,6 +324,7 @@ def test_replacing_requires_an_authorized_manager():
     client = setup_app_for_tests()
     competition_id, ids, _, _ = four_with_reserve(client)
 
+    client.cookies.clear()
     refused = client.post(
         f"/api/v1/participants/{ids['Иван']}/withdraw",
         json={"reason": "Травма", "replacement_participant_id": ids["Запас"]},
@@ -510,6 +511,7 @@ def test_a_late_replacement_requires_an_authorized_manager():
     client = setup_app_for_tests()
     _, ids, _ = withdrawn_first(client)
 
+    client.cookies.clear()
     refused = client.post(
         f"/api/v1/participants/{ids['Иван']}/replace",
         json={"reason": "Клуб выставил замену", "replacement_participant_id": ids["Запас"]},

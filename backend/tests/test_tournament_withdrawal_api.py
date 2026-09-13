@@ -390,6 +390,7 @@ def test_withdrawal_requires_an_authorized_manager():
     client = setup_app_for_tests()
     _, ids, _ = four_fighter_bracket(client)
 
+    client.cookies.clear()
     anonymous = client.post(f"/api/v1/participants/{ids['Иван']}/withdraw", json={"reason": "Травма"})
     assert anonymous.status_code == 401, anonymous.text
 

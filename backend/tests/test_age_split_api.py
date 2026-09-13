@@ -316,6 +316,9 @@ def test_the_split_requires_an_authorized_manager():
     client = setup_app_for_tests()
     _, competition_id, _, _ = bootstrap(client, [8, 12, 14])
 
+    # bootstrap() logged in on this client, which left an auth cookie behind;
+    # clear it so this request is genuinely anonymous rather than riding on it.
+    client.cookies.clear()
     anonymous = client.post(f"/api/v1/competitions/{competition_id}/age-split")
     assert anonymous.status_code == 401, anonymous.text
 

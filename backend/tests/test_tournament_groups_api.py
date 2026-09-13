@@ -543,6 +543,7 @@ def test_group_writes_require_an_authorized_manager():
     client = setup_app_for_tests()
     _, competition_id, _, _ = nine_fighters(client)
 
+    client.cookies.clear()
     anonymous = client.post(
         f"/api/v1/competitions/{competition_id}/groups/generate",
         json={"group_count": 2, "advance_per_group": 3},

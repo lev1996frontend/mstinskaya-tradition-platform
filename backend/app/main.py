@@ -1,8 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.router import router
 from app.core.config import get_settings
+from app.core.rate_limit import limiter
+from app.modules.auth import me_router as auth_me_router
 from app.modules.auth import router as auth_router
 from app.modules.athletes.routers import router as athletes_router
 from app.modules.clubs.routers import router as clubs_router
@@ -35,8 +40,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+#: Only `/api/v1/auth/*` carries a `@limiter.limit(...)` decorator today (see
+#: that router) — this wiring is what makes the decorator do anything.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
 app.include_router(router)
 app.include_router(auth_router)
+app.include_router(auth_me_router)
 app.include_router(identity_router)
 app.include_router(clubs_router)
 app.include_router(athletes_router)
