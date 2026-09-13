@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.privileged_access import get_current_privileged_caller
 from app.modules.rules.schemas.judge_certification import JudgeCertificationCreateRequest, JudgeCertificationResponse
 from app.modules.rules.schemas.judging_scenario import JudgingScenarioCreateRequest, JudgingScenarioResponse
 from app.modules.rules.schemas.rule import RuleCreateRequest, RuleResponse
@@ -11,12 +12,6 @@ from app.modules.rules.schemas.rule_section import RuleSectionCreateRequest, Rul
 from app.modules.rules.schemas.rule_set import RuleSetCreateRequest, RuleSetResponse
 from app.modules.rules.schemas.rule_set_document import RuleSetDocumentCreateRequest, RuleSetDocumentResponse
 from app.modules.rules.services.rule_service import RuleService
-# Reused rather than duplicated: `docs/architecture.md`'s guardrail is about
-# reaching into another domain's models, not its security helpers, and the
-# tournaments module already has this exact role check (user_role_codes,
-# MANAGER_ROLE_CODES) built and tested. Building a second copy in `rules`
-# would be the parallel mechanism the task brief explicitly asked to avoid.
-from app.modules.tournaments.security.deps import get_current_manager
 
 router = APIRouter(prefix="/api/v1", tags=["rules"])
 
@@ -222,7 +217,7 @@ async def list_judge_certifications(
 async def create_rule_set_document(
     rule_set_id: str,
     payload: RuleSetDocumentCreateRequest,
-    manager=Depends(get_current_manager),
+    manager=Depends(get_current_privileged_caller),
     session: AsyncSession = Depends(get_db),
 ) -> RuleSetDocumentResponse:
     # Loading a rules file is the first permission check anywhere on this
@@ -273,7 +268,7 @@ async def list_rule_set_documents(rule_set_id: str, session: AsyncSession = Depe
 async def remove_rule_set_document(
     rule_set_id: str,
     document_id: str,
-    manager=Depends(get_current_manager),
+    manager=Depends(get_current_privileged_caller),
     session: AsyncSession = Depends(get_db),
 ) -> None:
     """Take the document off the page. The file itself stays.

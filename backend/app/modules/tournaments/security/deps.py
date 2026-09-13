@@ -37,13 +37,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.identity_access import User, get_role_codes
+from app.core.privileged_access import PRIVILEGED_ROLE_CODES
 from app.modules.identity.security.depends import get_current_user
 from app.modules.tournaments.models import Competition, Match, Participant, Tournament
 
-#: Role codes that may run any tournament. "INSTRUCTOR" is the code the client
-#: asked for; "ADMIN" is included because an instance without it would have no
-#: way to intervene in an event whose organizer account is unavailable.
-MANAGER_ROLE_CODES: frozenset[str] = frozenset({"INSTRUCTOR", "ADMIN"})
+#: Role codes that may run any tournament. Same set `rules` uses for its own
+#: privileged actions (see app.core.privileged_access) — re-exported under
+#: this name since other modules already import it from here.
+MANAGER_ROLE_CODES: frozenset[str] = PRIVILEGED_ROLE_CODES
 
 
 @dataclass
