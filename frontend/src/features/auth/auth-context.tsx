@@ -4,12 +4,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 
 import * as authApi from "@/api/auth";
-import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from "@/lib/config";
-import type { AuthTokens, CurrentUser } from "@/types";
+import { ApiError } from "@/lib/api";
+import type { CurrentUser } from "@/types";
 
 type AuthState = {
   user: CurrentUser | null;
-  /** True until the stored token has been checked against `/users/me`. */
+  /** True until the session cookie (if any) has been checked against `/users/me`. */
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (input: {
@@ -23,28 +23,6 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-function readStorage(key: string): string | null {
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function writeTokens(tokens: AuthTokens | null) {
-  try {
-    if (tokens) {
-      window.localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
-      window.localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
-    } else {
-      window.localStorage.removeItem(ACCESS_TOKEN_KEY);
-      window.localStorage.removeItem(REFRESH_TOKEN_KEY);
-    }
-  } catch {
-    // Private mode or blocked storage: the session simply won't survive a reload.
-  }
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,17 +31,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function restore() {
-      const token = readStorage(ACCESS_TOKEN_KEY);
-      if (!token) {
-        if (!cancelled) setLoading(false);
-        return;
-      }
+      // No token to check for — the session, if any, lives in an httpOnly
+      // cookie the browser attaches by itself. A 401 here just means
+      // "signed out", not an error worth surfacing.
       try {
-        const me = await authApi.getCurrentUser(token);
+        const me = await authApi.getCurrentUser();
         if (!cancelled) setUser(me);
-      } catch {
-        // Expired or invalid token — drop it rather than looping on 401s.
-        writeTokens(null);
+      } catch (error) {
+        if (!(error instanceof ApiError && error.status === 401)) throw error;
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -75,47 +50,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  /* The tokens are only kept once they have been shown to work.
-     Writing them first left a half-session behind whenever `/users/me` failed
-     right after a successful login: storage said "signed in", `user` said
-     "signed out", and every later request went out with a token the app itself
-     did not believe in — visible only as a login that appeared to do nothing,
-     and unpickable without clearing site data. */
-  const applyTokens = useCallback(async (tokens: AuthTokens) => {
-    // `getCurrentUser` is handed the token explicitly, so nothing has to be in
-    // storage for this check to run — which is what lets the write wait until
-    // the check has passed. A throw here propagates to the form, which shows
-    // it, and leaves storage exactly as it was.
-    const me = await authApi.getCurrentUser(tokens.access_token);
-    writeTokens(tokens);
-    setUser(me);
+  const login = useCallback(async (email: string, password: string) => {
+    await authApi.login({ email, password });
+    setUser(await authApi.getCurrentUser());
   }, []);
-
-  const login = useCallback(
-    async (email: string, password: string) => {
-      await applyTokens(await authApi.login({ email, password }));
-    },
-    [applyTokens],
-  );
 
   const register = useCallback(
     async (input: { email: string; password: string; first_name: string; last_name: string }) => {
-      await applyTokens(await authApi.register(input));
+      await authApi.register(input);
+      setUser(await authApi.getCurrentUser());
     },
-    [applyTokens],
+    [],
   );
 
   const logout = useCallback(async () => {
-    const refreshToken = readStorage(REFRESH_TOKEN_KEY);
-    if (refreshToken) {
-      // Best effort: the local session is cleared even if the server call fails.
-      try {
-        await authApi.logout(refreshToken);
-      } catch {
-        /* ignored */
-      }
+    // Best effort: the local session is cleared even if the server call fails.
+    try {
+      await authApi.logout();
+    } catch {
+      /* ignored */
     }
-    writeTokens(null);
     setUser(null);
   }, []);
 

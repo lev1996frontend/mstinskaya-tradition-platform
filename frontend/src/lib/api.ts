@@ -1,4 +1,4 @@
-import { ACCESS_TOKEN_KEY, API_BASE_URL } from "./config";
+import { API_BASE_URL } from "./config";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -24,25 +24,26 @@ export class ApiUnreachableError extends Error {
 type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
-  token?: string | null;
   /** Public tournament data changes during an event, so it is never cached. */
   revalidate?: number | false;
   signal?: AbortSignal;
   /**
    * Extra headers for this one request — an idempotency key, say. Applied
-   * after the defaults so a caller can override `Accept`, and before the
-   * bearer token, which the caller has no business replacing.
+   * after the defaults, so a caller can override `Accept`.
    */
   headers?: Record<string, string>;
 };
 
-function readBrowserToken(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.localStorage.getItem(ACCESS_TOKEN_KEY);
-  } catch {
-    return null;
-  }
+/**
+ * In the browser, a relative path so the request goes to Next's own origin
+ * and its `/api/v1/*` rewrite (see `next.config.ts`) forwards it to the
+ * backend — same-origin from the browser's point of view, which is what lets
+ * the auth cookie ride along as a plain `SameSite=Lax` cookie. Server
+ * components have no browser and no rewrite to go through, so they call the
+ * backend directly.
+ */
+function resolveUrl(path: string): string {
+  return typeof window === "undefined" ? `${API_BASE_URL}${path}` : path;
 }
 
 function extractDetail(payload: unknown): string | undefined {
@@ -59,20 +60,21 @@ function extractDetail(payload: unknown): string | undefined {
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, token, revalidate = false, signal, headers: extra } = options;
-  const authToken = token !== undefined ? token : readBrowserToken();
+  const { method = "GET", body, revalidate = false, signal, headers: extra } = options;
 
   const headers: Record<string, string> = { Accept: "application/json", ...(extra ?? {}) };
   if (body !== undefined) headers["Content-Type"] = "application/json";
-  if (authToken) headers.Authorization = `Bearer ${authToken}`;
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(resolveUrl(path), {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
       signal,
+      // The httpOnly auth cookie is only ever relevant in the browser — a
+      // server component's fetch has no browser session to send.
+      ...(typeof window === "undefined" ? {} : { credentials: "include" as const }),
       ...(revalidate === false ? { cache: "no-store" as const } : { next: { revalidate } }),
     });
   } catch (error) {
@@ -115,18 +117,17 @@ export async function apiUpload<T>(
   field = "file",
 ): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
-  const authToken = readBrowserToken();
-  if (authToken) headers.Authorization = `Bearer ${authToken}`;
 
   const form = new FormData();
   for (const item of Array.isArray(file) ? file : [file]) form.append(field, item);
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(resolveUrl(path), {
       method: "POST",
       headers,
       body: form,
+      credentials: "include",
       cache: "no-store",
     });
   } catch (error) {
