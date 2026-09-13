@@ -43,14 +43,16 @@
   --foreground: #e8dcc4;
   --muted: #c9bfa8; /* text-2 */
   --text-3: #9a8f7c; /* descriptions */
-  --text-4: #8b7f6b; /* captions, technical/mono labels */
+  --text-4: #8f836e; /* captions, technical/mono labels — lightened fractionally
+                    (L 48.2%→49.6%) to meet 4.5:1 contrast against --surface */
 
   /* Old paper — NOT a general surface. Reserved for the few moments that are
      genuinely a physical document: the champion record, an athlete dossier
      header, a bio note. Everywhere else stays wood/charcoal on purpose. */
   --surface-paper: #d6c7a7;
   --surface-paper-ink: #241c15;
-  --surface-paper-label: #6b5c42; /* club/spec captions on paper */
+  --surface-paper-label: #60523b; /* club/spec captions on paper — darkened fractionally
+                                    (L 33.9%→30.3%) to meet 4.5:1 contrast against --surface-paper */
   --surface-paper-muted: #7a6b50; /* secondary paper copy */
 
   /* warm neutral ramp — kept for the rare paper-toned accent (an avatar
