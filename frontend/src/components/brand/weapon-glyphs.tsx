@@ -8,7 +8,7 @@
  *
  * `WEAPON_MOTIFS` is presentational config only, colocated here on purpose:
  * the real backend weapon enum is `WeaponCategory` in `@/types` (see
- * `features/tournaments/weapon-mark.tsx` for the domain-typed bridge) — this
+ * `./weapon-glyph.tsx` for the domain-typed bridge) — this
  * list must never be imported as if it were that type, since it also carries
  * `krug`/`stenka` below, which are decorative-only (header nav backs, the
  * `/tournaments` lot cube's two non-outcome faces) and have no domain meaning.

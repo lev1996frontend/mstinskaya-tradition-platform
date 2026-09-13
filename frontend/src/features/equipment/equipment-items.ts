@@ -1,7 +1,7 @@
 /**
  * The nine items a fighter wears regardless of drawn weapon category — the
  * single source of truth for this list. Ported originally from the design
- * canvas's "опись обязательного снаряжения" (see `hero-clash.tsx`'s
+ * canvas's "опись обязательного снаряжения" (see `features/home/hero-clash.tsx`'s
  * `EquipmentPlate`, which shows all nine at once as a grid) and now also
  * used by `gear-archive.tsx` (which shows them one at a time as archive
  * exhibits, including the `purpose`/`construction`/`fixation`/`material`

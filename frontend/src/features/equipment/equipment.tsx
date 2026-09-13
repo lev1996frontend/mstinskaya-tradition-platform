@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-import { WeaponGlyph } from "@/features/tournaments/weapon-mark";
+import { WeaponGlyph } from "@/components/brand/weapon-glyph";
 import { Container, EmptyState } from "@/components/ui";
 import type { WeaponRulesView } from "@/types";
 

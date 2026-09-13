@@ -1,42 +1,16 @@
 /**
- * Bridge between the backend's weapon enum and the shared hand-drawn glyphs.
+ * Weapon with its name — the standard way a drawn lot is shown.
  *
- * `components/brand/weapon-glyphs.tsx` owns the four drawings and is a stable
- * shared export — this file only maps `WeaponCategory` onto them, so the real
- * per-bout weapon data can be rendered without forking a second copy of the
- * artwork.
+ * The bare-glyph renderer this used to define, `WeaponGlyph`, now lives in
+ * `@/components/brand/weapon-glyph` — it's a generic presentational
+ * component (weapon-class icon only, no label), reused by both this feature
+ * and `features/equipment`, so it belongs in shared `components/`, not here.
  */
-import {
-  HandsIcon,
-  KistenIcon,
-  NozhIcon,
-  PalkaIcon,
-} from "@/components/brand/weapon-glyphs";
+import { WeaponGlyph } from "@/components/brand/weapon-glyph";
 import { cn } from "@/components/ui";
 import { weaponCategory } from "@/lib/labels";
 import type { WeaponCategory } from "@/types";
 
-const GLYPHS = {
-  PALKA: PalkaIcon,
-  NOZH: NozhIcon,
-  HANDS: HandsIcon,
-  KISTEN: KistenIcon,
-} as const;
-
-export function WeaponGlyph({
-  weapon,
-  size = 20,
-  className,
-}: {
-  weapon: WeaponCategory;
-  size?: number;
-  className?: string;
-}) {
-  const Icon = GLYPHS[weapon];
-  return <Icon size={size} className={className} />;
-}
-
-/** Weapon with its name — the standard way a drawn lot is shown. */
 export function WeaponMark({
   weapon,
   size = 18,

@@ -5,7 +5,7 @@ import { useEffect, useId, useState, type CSSProperties } from "react";
 import { AnimatePresence, motion, useReducedMotion, type PanInfo, type Variants } from "framer-motion";
 
 import { Container, cn } from "@/components/ui";
-import { EQUIPMENT_ITEMS } from "@/features/home/equipment-items";
+import { EQUIPMENT_ITEMS } from "./equipment-items";
 import { TURN_EASE } from "@/lib/motion";
 
 const TOTAL = EQUIPMENT_ITEMS.length;

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Seal } from "@/components/brand/seal";
 import { WEAPON_MOTIFS, randomWeaponMotif, type WeaponMotifKey } from "@/components/brand/weapon-glyphs";
 import { CLASH_RESULT_LINES, ClashCard } from "@/features/home/clash-card";
-import { EQUIPMENT_ITEMS } from "@/features/home/equipment-items";
+import { EQUIPMENT_ITEMS } from "@/features/equipment/equipment-items";
 
 type Clash = { a: WeaponMotifKey; b: WeaponMotifKey; nonce: number; result: string };
 type IllustrationMode = "mask" | "equipment";

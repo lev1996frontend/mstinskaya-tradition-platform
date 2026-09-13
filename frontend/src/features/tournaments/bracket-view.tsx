@@ -17,7 +17,7 @@ import type {
   WeaponCategory,
 } from "@/types";
 
-import { WeaponGlyph } from "./weapon-mark";
+import { WeaponGlyph } from "@/components/brand/weapon-glyph";
 
 const ROUND_LABELS: Record<string, string> = {
   QUALIFICATION: "Квалификация",

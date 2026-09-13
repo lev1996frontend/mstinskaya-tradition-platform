@@ -11,7 +11,7 @@ import { weaponCategory } from "@/lib/labels";
 import { IMPULSE_SPRING, IMPULSE_TAP, TURN_EASE } from "@/lib/motion";
 import type { BoutSide, LotMethod, WeaponCategory } from "@/types";
 
-import { WeaponGlyph } from "./weapon-mark";
+import { WeaponGlyph } from "@/components/brand/weapon-glyph";
 
 /**
  * The жребий, for real.

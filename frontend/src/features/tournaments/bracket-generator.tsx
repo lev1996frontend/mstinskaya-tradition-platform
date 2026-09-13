@@ -9,7 +9,7 @@ import { ApiError, ApiUnreachableError } from "@/lib/api";
 import { weaponCategory } from "@/lib/labels";
 import type { BracketPlanView, CityCollisionView, WeaponCategory } from "@/types";
 
-import { WeaponGlyph } from "./weapon-mark";
+import { WeaponGlyph } from "@/components/brand/weapon-glyph";
 
 /**
  * Distribution review: the organizer sees the bracket shape, the byes and the

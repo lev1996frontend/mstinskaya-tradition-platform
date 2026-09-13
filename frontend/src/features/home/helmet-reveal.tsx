@@ -5,7 +5,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useMotionValue, useReducedMotion, useSpring } from "framer-motion";
 
 import { GearMaskIllustration } from "@/components/brand/gear-mask-illustration";
-import { EQUIPMENT_ITEMS } from "@/features/home/equipment-items";
+import { EQUIPMENT_ITEMS } from "@/features/equipment/equipment-items";
 import { useFinePointer } from "@/lib/use-fine-pointer";
 
 const MASK_ITEM = EQUIPMENT_ITEMS.find((item) => item.title === "Маска")!;
