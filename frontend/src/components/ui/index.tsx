@@ -284,6 +284,7 @@ export function EmptyState({
   description,
   action,
   icon,
+  headingLevel: HeadingTag = "h2",
 }: {
   title: string;
   description?: string;
@@ -293,6 +294,11 @@ export function EmptyState({
    *  participants", etc.) so empty states stop looking identical everywhere.
    *  It is framed by the shared seal so it reads as part of the mark system. */
   icon?: ReactNode;
+  /** Defaults to h2 — every current call site sits under a page that
+   *  already has its own h1, so h2 is correct without a caller having to
+   *  think about it. Override only if a future page ever uses EmptyState
+   *  as its sole content directly under a bare h1. */
+  headingLevel?: "h2" | "h3";
 }) {
   return (
     <div className="ledger-lines rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-[var(--surface)] px-6 py-10 text-center">
@@ -301,7 +307,7 @@ export function EmptyState({
           {icon ?? <span aria-hidden="true" className="font-record leading-none">—</span>}
         </Seal>
       </div>
-      <p className="font-display text-lg font-semibold">{title}</p>
+      <HeadingTag className="font-display text-lg font-semibold">{title}</HeadingTag>
       {description ? (
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-[var(--muted)]">
           {description}
