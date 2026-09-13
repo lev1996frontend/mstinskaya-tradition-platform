@@ -85,8 +85,17 @@ function useClashStage() {
  *  triggers it. */
 export function HeroIllustration({ mask }: { mask: ReactNode }) {
   const { clash, mode } = useClashStage();
-  if (clash) return <ClashCard a={clash.a} b={clash.b} nonce={clash.nonce} result={clash.result} />;
-  return mode === "equipment" ? <EquipmentPlate /> : <>{mask}</>;
+  return (
+    <div aria-live="polite" aria-atomic="true">
+      {clash ? (
+        <ClashCard a={clash.a} b={clash.b} nonce={clash.nonce} result={clash.result} />
+      ) : mode === "equipment" ? (
+        <EquipmentPlate />
+      ) : (
+        mask
+      )}
+    </div>
+  );
 }
 
 /** The switch between `mode`'s two illustration states — the mask's own
