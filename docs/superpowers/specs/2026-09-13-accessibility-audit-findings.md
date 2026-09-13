@@ -136,3 +136,27 @@ Task 4's static code review actively checked the following and found no defects 
 ## Handoff
 
 This report is the input for a future `writing-plans` pass to build the Phase 1 (shared-primitive fixes: the four color-token issues — `--accent`/`--accent-strong`/`--accent-soft`, `--surface-paper-label`/`--surface-paper`, `--text-4` on a dark surface, and `--gold` at 6% opacity (the last two dominated by, but separate from, the first two) — the skip-to-content link, the lot-dice ARIA pattern, the `EmptyState` heading) / Phase 2 (per-page polish: live-region on the hero toggle, `aria-label` on the weapon-class icon buttons, focus-ring consistency, gear-slider UX) fix plan. That plan is intentionally not part of this task, since its task list depends entirely on the findings above.
+
+## Fix status
+
+All findings above except `gear-slider-no-direct-jump-control` (explicitly
+out of scope — the report itself calls it "not a compliance gap") have been
+addressed:
+
+- **Color-contrast (26 axe nodes, all four token pairs):** fixed by
+  adjusting `--accent`, `--text-4`, and `--surface-paper-label` in
+  `globals.css`; the `--gold` watermark's technical failure is a
+  documented, zero-real-world-impact accepted risk (it is `aria-hidden`)
+  rather than a token change, since reaching 3.0:1 would require ~72%
+  opacity and defeat the decorative design.
+- **`skip-to-content-link-missing`:** fixed — added to `app/layout.tsx`.
+- **`lot-dice-radiogroup-not-roving-tabindex`:** fixed — roving tabindex +
+  arrow-key navigation added; could not be live-browser-verified (same
+  fixture-data limitation the original audit hit).
+- **`emptystate-title-not-a-heading`:** fixed — `EmptyState` now renders an
+  `<h2>` by default.
+- **`toggle-swap-no-live-region`:** fixed — `HeroIllustration` wrapped in
+  `aria-live="polite"`.
+- **`weapon-toggle-title-only-label`:** fixed — `aria-label` added
+  alongside the existing `title` on all three icon-only filter buttons.
+- **`focus-ring-weight-inconsistency`:** already resolved by an unrelated redesign (the ruleset UI was rewritten after the original audit ran); verified during this fix pass — both interactive elements in `tournament-ruleset-picker.tsx` already use a 2px inset shadow matching the sitewide convention, so no change was needed.
