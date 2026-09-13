@@ -92,9 +92,20 @@
      carried by one identical hue. --live stays its own register too:
      "something is happening right now" must never be confusable with "this
      is the brand colour". */
-  --accent: #b02a20;
+  --accent: #df584e; /* was #b02a20 — lightened (hue-preserved) to clear 4.5:1
+                       against both --background and --surface; see
+                       docs/superpowers/specs/2026-09-13-accessibility-audit-findings.md
+                       "color-contrast — accent-family tokens" */
   --accent-strong: color-mix(in srgb, var(--accent) 78%, white);
-  --accent-soft: color-mix(in srgb, var(--accent) 20%, var(--background) 80%);
+  /* mix was 20%/80%; with the lighter --accent above, that diluted the soft
+     chip fill too close in lightness to --accent itself, dropping the
+     step-indicator chip on /tournaments/new (--accent text on
+     --accent-soft fill) to 3.98:1 — verified live via getComputedStyle
+     since color-mix() can't be hand-computed. 8% keeps the fill dark
+     enough to clear 4.5:1 (measured 4.65:1) while --accent-strong on
+     --accent-soft (the /tournaments/[id] status badge) stays comfortably
+     ahead at 6.2:1. */
+  --accent-soft: color-mix(in srgb, var(--accent) 8%, var(--background) 92%);
   --accent-deep: #8e241d;
   --gold: #b07a35;
   --gold-strong: color-mix(in srgb, var(--gold) 80%, white);
