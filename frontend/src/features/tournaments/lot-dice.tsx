@@ -163,6 +163,25 @@ export function LotDice({
     };
   }, []);
 
+  /* Roving tabindex for the radiogroup below: arrow-key navigation sets this
+     flag right before calling setMode, and the effect keyed on `mode` moves
+     focus to the newly-checked radio once React has actually committed the
+     re-render. Doing the focus() call inline in the key handler would race
+     React 18's automatic batching — `aria-checked` on the DOM node isn't
+     guaranteed to have flipped yet when the handler's own querySelector runs
+     synchronously after setMode. A mode-keyed effect only runs after commit,
+     so it always finds the correct node. The flag keeps a plain onClick (or
+     any other future setMode call) from stealing focus it didn't ask for. */
+  const shouldFocusRadio = useRef(false);
+  const radiogroupRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!shouldFocusRadio.current) return;
+    shouldFocusRadio.current = false;
+    (radiogroupRef.current?.querySelector(
+      `[role="radio"][aria-checked="true"]`,
+    ) as HTMLElement | null)?.focus();
+  }, [mode]);
+
   async function submit() {
     setBusy(true);
     setError(null);
@@ -250,7 +269,12 @@ export function LotDice({
 
       {settled && !isOverride ? null : (
         <>
-          <div role="radiogroup" aria-label="Способ жеребьёвки" className="grid grid-cols-2 gap-2">
+          <div
+            ref={radiogroupRef}
+            role="radiogroup"
+            aria-label="Способ жеребьёвки"
+            className="grid grid-cols-2 gap-2"
+          >
             {(["ONLINE_DICE", "PHYSICAL_DICE"] as LotMethod[]).map((option) => {
               const active = mode === option;
               const Icon = option === "ONLINE_DICE" ? Dices : Hand;
@@ -260,10 +284,24 @@ export function LotDice({
                   type="button"
                   role="radio"
                   aria-checked={active}
+                  tabIndex={active ? 0 : -1}
                   disabled={busy || disabled}
                   whileTap={reduceMotion ? undefined : IMPULSE_TAP}
                   transition={IMPULSE_SPRING}
                   onClick={() => setMode(option)}
+                  onKeyDown={(e) => {
+                    if (
+                      e.key !== "ArrowLeft" &&
+                      e.key !== "ArrowRight" &&
+                      e.key !== "ArrowUp" &&
+                      e.key !== "ArrowDown"
+                    )
+                      return;
+                    e.preventDefault();
+                    const other: LotMethod = option === "ONLINE_DICE" ? "PHYSICAL_DICE" : "ONLINE_DICE";
+                    shouldFocusRadio.current = true;
+                    setMode(other);
+                  }}
                   className={cn(
                     "flex items-center justify-center gap-1.5 rounded-[var(--radius-sm)] border px-2 py-2 text-xs transition-colors disabled:opacity-55",
                     active
