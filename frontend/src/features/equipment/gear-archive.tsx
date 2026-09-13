@@ -189,6 +189,15 @@ export function GearArchive({ initialIndex }: { initialIndex?: number } = {}) {
                     reads as a watermark behind the content, never competing
                     with it. Desktop-only: at phone widths a 300px digit would
                     dominate the narrow column instead of receding into it. */}
+                {/* This decorative watermark is `aria-hidden` (never reached by screen
+                    readers) and rendered at 6% opacity by design — reaching WCAG 2.1
+                    AA's 3.0:1 large-text contrast threshold here would require ~72%
+                    opacity, which would turn a subtle background mark into a dominant
+                    graphic element and defeat its purpose. Accepted as a documented,
+                    zero-real-world-impact technical AA gap rather than "fixed" by
+                    destroying the design — see
+                    docs/superpowers/specs/2026-09-13-accessibility-audit-findings.md,
+                    "color-contrast — --gold at 6% opacity, decorative watermark". */}
                 <span
                   aria-hidden="true"
                   className="pointer-events-none absolute left-0 top-1/2 hidden -translate-y-1/2 select-none font-display text-[300px] font-bold leading-none text-[var(--gold)] opacity-[0.06] sm:block"
