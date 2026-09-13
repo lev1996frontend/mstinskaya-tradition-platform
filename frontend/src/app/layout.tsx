@@ -60,6 +60,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${commissioner.variable} ${alegreya.variable} ${plexMono.variable}`}
     >
       <body className="flex min-h-dvh flex-col">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-[var(--radius-sm)] focus:bg-[var(--accent)] focus:px-4 focus:py-2 focus:text-[var(--background)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--accent-strong)]"
+        >
+          Перейти к содержимому
+        </a>
         {/* Smooth scroll is a sibling, not a wrapper: it drives
             `document.documentElement` in Lenis's `root` mode, so it has no
             need to enclose the page — and not enclosing it is what lets the
@@ -70,7 +76,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <BuzaProvider>
             <RiverSpine />
             <SiteHeader />
-            <main className="flex-1">{children}</main>
+            <main id="main-content" tabIndex={-1} className="flex-1">{children}</main>
             <SiteFooter />
             <ScrollToTop />
           </BuzaProvider>
