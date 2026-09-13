@@ -7,8 +7,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.identity_access import get_user_or_404
 from app.modules.athletes.models import Athlete
-from app.modules.identity.models import User
 from app.modules.media.service import MediaService
 from app.modules.rules.models import RuleSet
 from app.modules.tournaments.models import (
@@ -43,9 +43,7 @@ class TournamentService:
         except (ValueError, TypeError):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid organizer id") from None
 
-        organizer = await session.get(User, parsed_organizer_id)
-        if organizer is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organizer not found")
+        await get_user_or_404(session, parsed_organizer_id, detail="Organizer not found")
 
         try:
             parsed_ruleset_id = UUID(str(ruleset_id))
@@ -304,9 +302,7 @@ class TournamentService:
         except (ValueError, TypeError):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid judge id") from None
 
-        judge = await session.get(User, parsed_judge_id)
-        if judge is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Judge not found")
+        judge = await get_user_or_404(session, parsed_judge_id, detail="Judge not found")
 
         normalized_role = str(role).upper()
         valid_roles = {"MAIN", "SIDE"}

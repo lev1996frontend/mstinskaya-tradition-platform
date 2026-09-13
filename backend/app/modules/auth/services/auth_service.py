@@ -7,9 +7,10 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.identity_access import User, get_user
+from app.core.identity_access import has_permission as identity_has_permission
 from app.modules.auth.models import AuditLog, RefreshToken
 from app.modules.auth.security import create_access_token, create_refresh_token, decode_token, hash_token
-from app.modules.identity.models import Permission, Role, RolePermission, User, UserRole
 from app.modules.identity.services.auth_service import AuthService as IdentityAuthService
 
 
@@ -57,7 +58,7 @@ class AuthService:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token subject")
 
         record.revoked = True
-        user = await session.get(User, record.user_id)
+        user = await get_user(session, record.user_id)
         if user is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
         _, access_token, refresh_token = await AuthService._issue_token_pair(session, user)
@@ -74,14 +75,7 @@ class AuthService:
 
     @staticmethod
     async def has_permission(session: AsyncSession, user_id: UUID, permission_code: str) -> bool:
-        result = await session.scalar(
-            select(Permission.id)
-            .join(RolePermission, RolePermission.permission_id == Permission.id)
-            .join(Role, Role.id == RolePermission.role_id)
-            .join(UserRole, UserRole.role_id == Role.id)
-            .where(UserRole.user_id == user_id, Permission.code == permission_code)
-        )
-        return result is not None
+        return await identity_has_permission(session, user_id, permission_code)
 
     @staticmethod
     async def audit(

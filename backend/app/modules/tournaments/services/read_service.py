@@ -16,8 +16,8 @@ from sqlalchemy.orm import selectinload
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.identity_access import User, get_users_by_ids
 from app.modules.athletes.models import Athlete
-from app.modules.identity.models import User
 from app.modules.tournaments.domain import eligibility
 from app.modules.tournaments.models import (
     Bracket,
@@ -172,9 +172,7 @@ class TournamentReadService:
             rows = await session.scalars(select(Athlete).where(Athlete.id.in_(athlete_ids)))
             athletes = {a.id: a for a in rows}
             user_ids = {a.user_id for a in athletes.values() if a.user_id is not None}
-            if user_ids:
-                user_rows = await session.scalars(select(User).where(User.id.in_(user_ids)))
-                users = {u.id: u for u in user_rows}
+            users = await get_users_by_ids(session, user_ids)
 
         teams: dict[UUID, Team] = {}
         if team_ids:
@@ -294,9 +292,7 @@ class TournamentReadService:
             rows = await session.scalars(select(Athlete).where(Athlete.id.in_(member_athlete_ids)))
             athletes = {a.id: a for a in rows}
             user_ids = {a.user_id for a in athletes.values() if a.user_id is not None}
-            if user_ids:
-                user_rows = await session.scalars(select(User).where(User.id.in_(user_ids)))
-                users = {u.id: u for u in user_rows}
+            users = await get_users_by_ids(session, user_ids)
 
         result: list[TeamView] = []
         for team in teams:

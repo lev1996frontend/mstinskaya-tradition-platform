@@ -7,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.identity_access import get_user_or_404
 from app.modules.athletes.models import Athlete
-from app.modules.identity.models import User
 
 
 class AthleteService:
@@ -62,9 +62,7 @@ class AthleteService:
         except (ValueError, TypeError):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user id") from None
 
-        user = await session.get(User, parsed_user_id)
-        if user is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        user = await get_user_or_404(session, parsed_user_id)
 
         existing = await session.scalar(select(Athlete).where(Athlete.user_id == parsed_user_id))
         if existing is not None:

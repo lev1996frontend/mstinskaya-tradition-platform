@@ -7,9 +7,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.identity_access import User, get_user
 from app.modules.auth.security import decode_token
 from app.modules.auth.services.auth_service import AuthService
-from app.modules.identity.models import User
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -25,7 +25,7 @@ async def get_current_user(
         user_id = UUID(str(payload["sub"]))
     except (ValueError, TypeError, KeyError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload") from None
-    user = await session.get(User, user_id)
+    user = await get_user(session, user_id)
     if user is None or user.status.lower() != "active":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
     return user

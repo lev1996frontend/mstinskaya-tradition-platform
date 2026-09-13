@@ -6,8 +6,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.identity_access import get_user_or_404
 from app.modules.clubs.models import Club, ClubMember
-from app.modules.identity.models import User
 
 
 class ClubService:
@@ -66,9 +66,7 @@ class ClubService:
         if normalized_role not in valid_roles:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role")
 
-        user = await session.get(User, parsed_user_id)
-        if user is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        await get_user_or_404(session, parsed_user_id)
 
         existing = await session.execute(
             select(ClubMember).where(ClubMember.club_id == club.id, ClubMember.user_id == parsed_user_id)

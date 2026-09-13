@@ -6,8 +6,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.identity_access import get_user_or_404
 from app.modules.education.models import Course, Enrollment, Lesson, LessonProgress, Module
-from app.modules.identity.models import User
 
 
 class EducationService:
@@ -160,9 +160,7 @@ class EducationService:
         except (ValueError, TypeError):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid course id") from None
 
-        user = await session.get(User, parsed_user_id)
-        if user is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        await get_user_or_404(session, parsed_user_id)
 
         course = await session.get(Course, parsed_course_id)
         if course is None:
@@ -226,9 +224,7 @@ class EducationService:
         except (ValueError, TypeError):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid lesson id") from None
 
-        user = await session.get(User, parsed_user_id)
-        if user is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        await get_user_or_404(session, parsed_user_id)
 
         lesson = await session.get(Lesson, parsed_lesson_id)
         if lesson is None:

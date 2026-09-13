@@ -33,11 +33,10 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.modules.identity.models import Role, User, UserRole
+from app.core.identity_access import User, get_role_codes
 from app.modules.identity.security.depends import get_current_user
 from app.modules.tournaments.models import Competition, Match, Participant, Tournament
 
@@ -63,11 +62,12 @@ class TournamentManager:
 
 
 async def user_role_codes(session: AsyncSession, user_id: UUID) -> frozenset[str]:
-    """Read-only lookup of a user's role codes. Never writes to identity."""
-    codes = await session.scalars(
-        select(Role.code).join(UserRole, Role.id == UserRole.role_id).where(UserRole.user_id == user_id)
-    )
-    return frozenset(code.upper() for code in codes if code)
+    """Read-only lookup of a user's role codes. Never writes to identity.
+
+    Thin re-export of :func:`app.core.identity_access.get_role_codes` — kept as
+    its own name here since other modules already import it from this module.
+    """
+    return await get_role_codes(session, user_id)
 
 
 async def get_current_manager(

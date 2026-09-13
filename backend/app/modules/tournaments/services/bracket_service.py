@@ -20,8 +20,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.identity_access import User, get_users_by_ids
 from app.modules.athletes.models import Athlete
-from app.modules.identity.models import User
 from app.modules.tournaments.domain import bracket as bracket_domain
 from app.modules.tournaments.domain import eligibility
 from app.modules.tournaments.models import (
@@ -124,9 +124,7 @@ class BracketService:
             rows = await session.scalars(select(Athlete).where(Athlete.id.in_(athlete_ids)))
             athletes = {a.id: a for a in rows}
             user_ids = {a.user_id for a in athletes.values() if a.user_id}
-            if user_ids:
-                user_rows = await session.scalars(select(User).where(User.id.in_(user_ids)))
-                users = {u.id: u for u in user_rows}
+            users = await get_users_by_ids(session, user_ids)
 
         result: list[bracket_domain.Entrant] = []
         for participant in active:

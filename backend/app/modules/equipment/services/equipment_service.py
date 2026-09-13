@@ -6,8 +6,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.identity_access import get_user_or_404
 from app.modules.equipment.models import EquipmentCategory, EquipmentProduct, EquipmentRequest, ProductMedia, Supplier
-from app.modules.identity.models import User
 from app.modules.media.models import MediaFile
 
 
@@ -140,9 +140,7 @@ class EquipmentService:
         except (ValueError, TypeError):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user id") from None
 
-        user = await session.get(User, parsed_user_id)
-        if user is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        user = await get_user_or_404(session, parsed_user_id)
 
         try:
             parsed_product_id = UUID(str(product_id))
