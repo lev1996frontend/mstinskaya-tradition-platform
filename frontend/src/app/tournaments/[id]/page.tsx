@@ -29,6 +29,7 @@ import { TournamentIntake } from "@/features/tournaments/tournament-intake";
 import { DirectionalTransition } from "@/features/transitions/directional-transition";
 import { formatDateRange, formatPlace, plural } from "@/lib/format";
 import { competitionFormat, competitionType, labelOf } from "@/lib/labels";
+import { routes } from "@/lib/routes";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -58,7 +59,7 @@ export default async function TournamentPage({ params }: PageProps) {
       <Container wide className="space-y-10 pt-10 pb-5">
         <PageHeader
           eyebrow={
-            <BackLink href="/tournaments" transitionTypes={["nav-back"]}>
+            <BackLink href={routes.tournaments()} transitionTypes={["nav-back"]}>
               Все турниры
             </BackLink>
           }
@@ -127,7 +128,7 @@ export default async function TournamentPage({ params }: PageProps) {
                       which read as two different things moving in two
                       different directions at once. */}
                   <Link
-                    href={`/tournaments/${tournament.id}/competitions/${competition.id}`}
+                    href={routes.competition(tournament.id, competition.id)}
                     /* One row on a wide card, not a column: a full-width card
                        with everything stacked left three lines tall reads as
                        broken layout — a wall of empty space to the right of

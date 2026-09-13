@@ -8,6 +8,7 @@ import { Badge, Container, PageHeader } from "@/components/ui";
 import { Avatar } from "@/components/ui/avatar";
 import { athleteName } from "@/lib/athlete-name";
 import { athleteLevel, athleteLevelTone, labelOf } from "@/lib/labels";
+import { routes } from "@/lib/routes";
 
 export const metadata: Metadata = {
   title: "Спортсмены",
@@ -80,7 +81,7 @@ export default async function AthletesPage() {
                   className="border-b border-[var(--border)] transition-colors hover:border-[var(--accent)]"
                 >
                   <Link
-                    href={`/athletes/${athlete.id}`}
+                    href={routes.athlete(athlete.id)}
                     className="ledger-row group grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-x-5 gap-y-3 py-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_9rem_5rem_5rem_1rem] sm:gap-6 sm:pr-1"
                   >
                     <span className="ledger-row-edge row-span-2 self-start sm:row-span-1 sm:self-center">

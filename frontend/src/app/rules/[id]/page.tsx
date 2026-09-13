@@ -8,6 +8,7 @@ import { BackLink } from "@/components/brand/back-link";
 import { Badge, Container, EmptyState, PageHeader, Section } from "@/components/ui";
 import { RuleSetDocumentsPanel } from "@/features/documents/document-upload";
 import { labelOf, ruleType } from "@/lib/labels";
+import { routes } from "@/lib/routes";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -44,7 +45,7 @@ export default async function RuleSetPage({ params }: PageProps) {
     <Container className="max-w-3xl space-y-8 pt-10 pb-5">
       <PageHeader
         eyebrow={
-          <BackLink href="/rules">Все регламенты</BackLink>
+          <BackLink href={routes.rules()}>Все регламенты</BackLink>
         }
         title={ruleSet.title}
         description={ruleSet.description ?? undefined}

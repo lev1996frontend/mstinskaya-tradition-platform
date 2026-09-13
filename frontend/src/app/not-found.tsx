@@ -1,5 +1,6 @@
 import { Seal } from "@/components/brand/seal";
 import { ButtonLink, Container } from "@/components/ui";
+import { routes } from "@/lib/routes";
 
 export default function NotFound() {
   return (
@@ -16,7 +17,7 @@ export default function NotFound() {
         Возможно, ссылка устарела или запись была удалена из реестра.
       </p>
       <div className="mt-6 flex justify-center">
-        <ButtonLink href="/">На главную</ButtonLink>
+        <ButtonLink href={routes.home()}>На главную</ButtonLink>
       </div>
     </Container>
   );

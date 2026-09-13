@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { routes } from "@/lib/routes";
+
 /**
  * Ported verbatim from the design handoff — these 4 statements were already
  * checked against the confirmed real ruleset (buza.su primary source, see
@@ -129,7 +131,7 @@ export function RulesQuiz() {
               Судейская аттестация идёт по той же логике, но по полной редакции правил и с разбором видео.
             </p>
             <Link
-              href="/rules"
+              href={routes.rules()}
               className="record-label label-link label-link-fwd mt-auto pt-4 text-[var(--accent)]"
             >
               Полный регламент

@@ -2,6 +2,7 @@ import { InterlacePattern } from "@/components/brand/interlace-pattern";
 import { ButtonLink, Container } from "@/components/ui";
 import { HelmetReveal } from "@/features/home/helmet-reveal";
 import { HeroClashProvider, HeroIllustration, HeroIllustrationToggle, HeroTraditionSeals } from "@/features/home/hero-clash";
+import { routes } from "@/lib/routes";
 
 /**
  * The masthead of the archive — the front page of a ledger, not a centred
@@ -69,10 +70,10 @@ export function Hero() {
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3 sm:pl-7">
-                <ButtonLink href="/tournaments" size="lg">
+                <ButtonLink href={routes.tournaments()} size="lg">
                   Смотреть турниры
                 </ButtonLink>
-                <ButtonLink href="/rules" variant="secondary" size="lg">
+                <ButtonLink href={routes.rules()} variant="secondary" size="lg">
                   Правила и регламенты
                 </ButtonLink>
               </div>

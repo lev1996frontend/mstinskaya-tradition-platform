@@ -6,6 +6,7 @@ import { listRuleSetsWithStatus } from "@/api/catalog";
 import { CatalogEmptyState } from "@/components/api-status";
 import { Badge, Container, PageHeader } from "@/components/ui";
 import { formatDate } from "@/lib/format";
+import { routes } from "@/lib/routes";
 import type { RuleSet } from "@/types";
 
 export const metadata: Metadata = {
@@ -53,7 +54,7 @@ export default async function RulesPage() {
                 className="border-b border-[var(--border)] transition-colors hover:border-[var(--accent)]"
               >
                 <Link
-                  href={`/rules/${ruleSet.id}`}
+                  href={routes.ruleSet(ruleSet.id)}
                   className="ledger-row group flex gap-5 py-5 sm:gap-8"
                 >
                   <span className="ledger-row-edge w-16 shrink-0 border-r border-[var(--border)] pr-4 text-right sm:w-24">

@@ -9,6 +9,7 @@ import { SiteLogo } from "@/components/brand/site-logo";
 import { SashIcon } from "@/components/brand/sash-icon";
 import { UstavIcon } from "@/components/brand/ustav-icon";
 import { Container } from "@/components/ui";
+import { routes } from "@/lib/routes";
 import { FooterSeals } from "./footer-seals";
 
 /**
@@ -34,20 +35,20 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
   {
     title: "Соревнования",
     links: [
-      { href: "/tournaments", label: "Турниры", Icon: BracketIcon },
-      { href: "/rules", label: "Правила и регламенты", Icon: UstavIcon },
+      { href: routes.tournaments(), label: "Турниры", Icon: BracketIcon },
+      { href: routes.rules(), label: "Правила и регламенты", Icon: UstavIcon },
     ],
   },
   {
     title: "Сообщество",
     links: [
-      { href: "/athletes", label: "Спортсмены", Icon: MaskMark },
-      { href: "/clubs", label: "Клубы", Icon: SashIcon },
+      { href: routes.athletes(), label: "Спортсмены", Icon: MaskMark },
+      { href: routes.clubs(), label: "Клубы", Icon: SashIcon },
     ],
   },
   {
     title: "Развитие",
-    links: [{ href: "/education", label: "Обучение", Icon: AnnalIcon }],
+    links: [{ href: routes.education(), label: "Обучение", Icon: AnnalIcon }],
   },
 ];
 

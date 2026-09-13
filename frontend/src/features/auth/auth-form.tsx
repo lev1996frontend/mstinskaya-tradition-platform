@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, Button, Card, Container } from "@/components/ui";
 import { Field, Input } from "@/components/ui/form";
 import { ApiError, ApiUnreachableError } from "@/lib/api";
+import { routes } from "@/lib/routes";
 
 import { useAuth } from "./auth-context";
 
@@ -69,7 +70,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           last_name: lastName.trim(),
         });
       }
-      router.push("/profile");
+      router.push(routes.profile());
       router.refresh();
       // `busy` deliberately stays true here, through the redirect — success
       // navigates this component away, so there's nothing left to re-enable.
@@ -181,14 +182,14 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         {mode === "login" ? (
           <>
             Нет аккаунта?{" "}
-            <Link href="/register" className="text-[var(--accent)] hover:underline">
+            <Link href={routes.register()} className="text-[var(--accent)] hover:underline">
               Зарегистрироваться
             </Link>
           </>
         ) : (
           <>
             Уже есть аккаунт?{" "}
-            <Link href="/login" className="text-[var(--accent)] hover:underline">
+            <Link href={routes.login()} className="text-[var(--accent)] hover:underline">
               Войти
             </Link>
           </>

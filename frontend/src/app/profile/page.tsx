@@ -6,13 +6,14 @@ import { useEffect } from "react";
 
 import { Badge, Button, Card, Container, DefinitionList, PageHeader } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
+import { routes } from "@/lib/routes";
 
 export default function ProfilePage() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/login");
+    if (!loading && !user) router.replace(routes.login());
   }, [loading, user, router]);
 
   if (loading || !user) {
@@ -63,7 +64,7 @@ export default function ProfilePage() {
           журнале дисциплины — предыдущие решения сохраняются.
         </p>
         <Link
-          href="/tournaments"
+          href={routes.tournaments()}
           className="record-label label-link label-link-fwd text-[var(--accent)]"
         >
           Перейти к турнирам

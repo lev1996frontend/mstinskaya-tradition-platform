@@ -13,6 +13,7 @@ import { useAuth } from "@/features/auth/auth-context";
 import { athleteMatches, athleteName } from "@/lib/athlete-name";
 import { ApiError, ApiUnreachableError } from "@/lib/api";
 import { competitionFormat, competitionType } from "@/lib/labels";
+import { routes } from "@/lib/routes";
 import type { Athlete, CompetitionFormat, CompetitionType } from "@/types";
 
 import { ParticipantImportPanel } from "./participant-import-panel";
@@ -1027,7 +1028,7 @@ export function TournamentWizard() {
               {created.map((competition) => (
                 <li key={competition.id}>
                   <Link
-                    href={`/tournaments/${tournamentId}/competitions/${competition.id}`}
+                    href={routes.competition(tournamentId, competition.id)}
                     className="flex items-center gap-3 rounded-[var(--radius-sm)] border border-[var(--border-strong)] px-3 py-2.5 transition-colors hover:bg-[var(--surface-muted)]"
                   >
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">
@@ -1043,7 +1044,7 @@ export function TournamentWizard() {
             </ul>
 
             <div className="border-t border-[var(--border)] pt-3">
-              <ButtonLink href={`/tournaments/${tournamentId}`} variant="secondary">
+              <ButtonLink href={routes.tournament(tournamentId)} variant="secondary">
                 Открыть турнир целиком
               </ButtonLink>
             </div>

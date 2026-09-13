@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { BackLink } from "@/components/brand/back-link";
 import { Container, PageHeader } from "@/components/ui";
 import { TournamentWizard } from "@/features/tournaments/tournament-wizard";
+import { routes } from "@/lib/routes";
 
 export const metadata: Metadata = {
   title: "Новый турнир",
@@ -14,7 +15,7 @@ export default function NewTournamentPage() {
     <Container className="space-y-8 pt-10 pb-5">
       <PageHeader
         eyebrow={
-          <BackLink href="/tournaments">Турниры</BackLink>
+          <BackLink href={routes.tournaments()}>Турниры</BackLink>
         }
         title="Новый турнир"
         description="Заведите турнир, внесите участников и постройте сетку. Существующие профили спортсменов привязываются, а не дублируются."

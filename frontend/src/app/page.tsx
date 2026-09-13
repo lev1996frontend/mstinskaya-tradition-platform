@@ -8,6 +8,7 @@ import { Hero } from "@/features/home/hero";
 import { Paintings } from "@/features/home/paintings";
 import { StenkaKrug } from "@/features/home/stenka-krug";
 import { TournamentGrid } from "@/features/home/tournament-grid";
+import { routes } from "@/lib/routes";
 
 /**
  * Front page of the archive — the "Живой архив" v3 redesign
@@ -55,7 +56,7 @@ export default async function HomePage() {
               </h2>
               <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-[var(--rule)] opacity-70" />
               <Link
-                href="/tournaments"
+                href={routes.tournaments()}
                 className="record-label label-link label-link-fwd shrink-0 text-[var(--accent)]"
               >
                 Все турниры

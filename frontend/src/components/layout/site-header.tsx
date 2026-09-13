@@ -11,16 +11,17 @@ import { WEAPON_MOTIFS, type WeaponMotifKey } from "@/components/brand/weapon-gl
 import { ButtonLink, Container, cn } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
 import { IMPULSE_TAP, TURN_EASE, stepIn } from "@/lib/motion";
+import { routes } from "@/lib/routes";
 import { useFocusTrap } from "@/lib/use-focus-trap";
 import type { CurrentUser } from "@/types";
 
 const NAV = [
-  { href: "/tournaments", label: "Турниры" },
-  { href: "/athletes", label: "Спортсмены" },
-  { href: "/clubs", label: "Клубы" },
-  { href: "/rules", label: "Правила" },
-  { href: "/equipment", label: "Снаряжение" },
-  { href: "/education", label: "Обучение" },
+  { href: routes.tournaments(), label: "Турниры" },
+  { href: routes.athletes(), label: "Спортсмены" },
+  { href: routes.clubs(), label: "Клубы" },
+  { href: routes.rules(), label: "Правила" },
+  { href: routes.equipment(), label: "Снаряжение" },
+  { href: routes.education(), label: "Обучение" },
 ];
 
 /**
@@ -31,12 +32,12 @@ const NAV = [
  * it would overhang past the logo or off the header entirely.
  */
 const NAV_WEAPON: Record<string, WeaponMotifKey> = {
-  "/tournaments": "kisten",
-  "/athletes": "hands",
-  "/clubs": "nozh",
-  "/rules": "palka",
-  "/equipment": "hands",
-  "/education": "kisten",
+  [routes.tournaments()]: "kisten",
+  [routes.athletes()]: "hands",
+  [routes.clubs()]: "nozh",
+  [routes.rules()]: "palka",
+  [routes.equipment()]: "hands",
+  [routes.education()]: "kisten",
 };
 
 /**
@@ -132,7 +133,7 @@ function AccountAction({
     // a state at header size.
     return (
       <Link
-        href="/profile"
+        href={routes.profile()}
         onClick={onNavigate}
         className={cn(
           "account-chip truncate rounded-[var(--radius-sm)] px-2.5 py-2 text-sm font-medium",
@@ -144,14 +145,14 @@ function AccountAction({
     );
   }
   return compact ? (
-    <ButtonLink href="/login" size="lg" onClick={onNavigate} className="w-full justify-center">
+    <ButtonLink href={routes.login()} size="lg" onClick={onNavigate} className="w-full justify-center">
       Войти
     </ButtonLink>
   ) : (
     // `md`, not `sm`. At `sm` this was 55×30 inside a 66px header — the only
     // action in the bar, and the smallest thing in it, sitting beside 33px-
     // tall nav items it was supposed to outrank.
-    <ButtonLink href="/login">Войти</ButtonLink>
+    <ButtonLink href={routes.login()}>Войти</ButtonLink>
   );
 }
 

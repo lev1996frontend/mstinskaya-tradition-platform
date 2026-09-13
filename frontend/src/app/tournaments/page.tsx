@@ -12,6 +12,7 @@ import { Poedinok } from "@/features/tournaments/tournament-path/poedinok";
 import { RulesQuiz } from "@/features/tournaments/tournament-path/rules-quiz";
 import { TournamentPathProvider } from "@/features/tournaments/tournament-path/tournament-path-context";
 import { plural } from "@/lib/format";
+import { routes } from "@/lib/routes";
 import type { Tournament, TournamentStatus } from "@/types";
 
 export const metadata: Metadata = {
@@ -59,7 +60,7 @@ export default async function TournamentsPage() {
           title="Турниры"
           description="Полный список событий: от регистрации до итоговых результатов. Внутри каждого турнира — дисциплины с участниками, командами, сеткой и таблицей."
           actions={
-            <ButtonLink href="/tournaments/new" icon={<Plus className="size-4" strokeWidth={2.5} />}>
+            <ButtonLink href={routes.tournamentNew()} icon={<Plus className="size-4" strokeWidth={2.5} />}>
               Создать турнир
             </ButtonLink>
           }

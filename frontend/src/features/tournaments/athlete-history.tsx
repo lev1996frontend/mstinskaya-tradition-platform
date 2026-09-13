@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { EmptyState } from "@/components/ui";
 import { competitionFormat, labelOf, matchStage } from "@/lib/labels";
+import { routes } from "@/lib/routes";
 import type { AthleteParticipationView } from "@/types";
 
 import { AthleteOutcomeBadge } from "./badges";
@@ -32,7 +33,7 @@ export function AthleteHistory({ history }: { history: AthleteParticipationView[
       {history.map((entry) => (
         <li key={entry.participant_id}>
           <Link
-            href={`/tournaments/${entry.tournament_id}/competitions/${entry.competition_id}`}
+            href={routes.competition(entry.tournament_id, entry.competition_id)}
             className="flex flex-col gap-2 border-b border-[var(--border)] py-4 transition-[border-color,transform] hover:translate-x-0.5 hover:border-b-[var(--accent)] sm:flex-row sm:items-center sm:justify-between"
           >
             <div className="min-w-0">

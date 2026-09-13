@@ -4,7 +4,7 @@ import { getBoutRules } from "@/api/tournaments";
 import { Container, PageHeader } from "@/components/ui";
 import { Equipment } from "@/features/equipment/equipment";
 import { GearArchive } from "@/features/equipment/gear-archive";
-import { EQUIPMENT_ITEMS } from "@/features/home/equipment-items";
+import { EQUIPMENT_ITEMS } from "@/features/equipment/equipment-items";
 
 export const metadata: Metadata = {
   title: "Снаряжение",

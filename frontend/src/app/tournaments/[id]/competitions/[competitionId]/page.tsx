@@ -22,6 +22,7 @@ import { Badge, Container, PageHeader } from "@/components/ui";
 import { CompetitionStatusBadge } from "@/features/tournaments/badges";
 import { CompetitionWorkspace } from "@/features/tournaments/competition-workspace";
 import { competitionFormat, competitionType, drawType, labelOf } from "@/lib/labels";
+import { routes } from "@/lib/routes";
 
 type PageProps = { params: Promise<{ id: string; competitionId: string }> };
 
@@ -72,7 +73,7 @@ export default async function CompetitionPage({ params }: PageProps) {
     <Container wide className="space-y-8 pt-10 pb-5">
       <PageHeader
         eyebrow={
-          <BackLink href={`/tournaments/${id}`}>{tournament?.title ?? "Турнир"}</BackLink>
+          <BackLink href={routes.tournament(id)}>{tournament?.title ?? "Турнир"}</BackLink>
         }
         title={competition.name}
         description={competition.description ?? undefined}

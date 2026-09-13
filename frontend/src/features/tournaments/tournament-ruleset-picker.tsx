@@ -10,6 +10,7 @@ import { Alert, Button } from "@/components/ui";
 import { Field, Select } from "@/components/ui/form";
 import { useAuth } from "@/features/auth/auth-context";
 import { ApiError, ApiUnreachableError } from "@/lib/api";
+import { routes } from "@/lib/routes";
 import type { RuleSet } from "@/types";
 
 /**
@@ -76,7 +77,7 @@ export function TournamentRulesetPicker({
   // broken link rather than a picker to offer.
   const viewCard = current ? (
     <Link
-      href={`/rules/${current.id}`}
+      href={routes.ruleSet(current.id)}
       className="record-card group flex items-center justify-between gap-3 self-stretch rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 focus-visible:shadow-[inset_0_0_0_2px_var(--gold)]"
     >
       {/* Two stacked lines, not one — a single line of text left the right
@@ -155,7 +156,7 @@ export function TournamentRulesetPicker({
             sections, its Word file) still only happens on its own page; this
             card only ever opens it to read. */}
         <Link
-          href={`/rules/${selected}`}
+          href={routes.ruleSet(selected)}
           className="record-card group flex items-center gap-2 self-stretch rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3.5 text-sm font-medium focus-visible:shadow-[inset_0_0_0_2px_var(--gold)]"
         >
           {selectedRuleSet ? `${selectedRuleSet.title}, версия ${selectedRuleSet.version}` : "Открыть редакцию"}

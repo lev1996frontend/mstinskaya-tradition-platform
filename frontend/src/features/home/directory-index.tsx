@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { routes } from "@/lib/routes";
+
 /**
  * The archive's index of sections.
  *
@@ -13,7 +15,7 @@ import Link from "next/link";
  * Content is the same five real routes as before; nothing is invented.
  */
 const LEAD = {
-  href: "/tournaments",
+  href: routes.tournaments(),
   index: "01",
   title: "Турниры",
   text: "Составы, жеребьёвка, сетки плей-офф, турнирные таблицы и результаты боёв — с полной историей изменений по каждому соступу.",
@@ -21,25 +23,25 @@ const LEAD = {
 
 const ENTRIES = [
   {
-    href: "/rules",
+    href: routes.rules(),
     index: "02",
     title: "Правила",
     text: "Версионированные регламенты и разделы правил с сохранением истории редакций.",
   },
   {
-    href: "/education",
+    href: routes.education(),
     index: "03",
     title: "Обучение",
     text: "Курсы, модули и уроки для спортсменов, инструкторов и судей.",
   },
   {
-    href: "/athletes",
+    href: routes.athletes(),
     index: "04",
     title: "Спортсмены",
     text: "Профили участников сообщества, уровень подготовки и опыт.",
   },
   {
-    href: "/clubs",
+    href: routes.clubs(),
     index: "05",
     title: "Клубы",
     text: "Клубы традиции, их география и состав участников.",

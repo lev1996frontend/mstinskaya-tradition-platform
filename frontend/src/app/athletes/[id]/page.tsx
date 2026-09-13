@@ -10,6 +10,7 @@ import { AthleteHistory } from "@/features/tournaments/athlete-history";
 import { athleteName } from "@/lib/athlete-name";
 import { plural } from "@/lib/format";
 import { athleteLevel, labelOf } from "@/lib/labels";
+import { routes } from "@/lib/routes";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -26,7 +27,7 @@ export default async function AthletePage({ params }: PageProps) {
 
   return (
     <Container className="max-w-3xl space-y-8 pt-10 pb-5">
-      <BackLink href="/athletes">Все спортсмены</BackLink>
+      <BackLink href={routes.athletes()}>Все спортсмены</BackLink>
 
       {/* Dossier masthead: the photo mounted on paper like an ID card, name
           and stamped facts issued as one record rather than a title over a
