@@ -124,7 +124,13 @@
   --gold: #b07a35;
   --gold-strong: color-mix(in srgb, var(--gold) 80%, white);
   --gold-soft: color-mix(in srgb, var(--gold) 16%, var(--background) 84%);
-  --live: #ff5c4d;
+  --live: #ff974d; /* was #ff5c4d — with the lightened --accent above (#df584e),
+                     the old hue (H≈5°) sat only 1.22:1 from --accent and read
+                     as the same red; hue shifted +20° (H≈25°, S/L held) to a
+                     genuine orange register, restoring separation (ratio
+                     1.73:1 against --accent). See docs/superpowers/sdd/
+                     2026-09-13-accessibility-fixes/final-review.md, Important
+                     finding 2. */
   --live-soft: #2c1917;
 
   /* Медь — the drinking vessel's own metal (the братина on the margin river).
