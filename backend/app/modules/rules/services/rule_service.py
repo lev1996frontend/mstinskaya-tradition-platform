@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import get_args
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -11,6 +12,16 @@ from app.core.identity_access import get_user_or_404
 from app.modules.media.models import MediaFile
 from app.modules.media.service import MediaService
 from app.modules.rules.models import JudgeCertification, JudgingScenario, Rule, RuleSection, RuleSet, RuleSetDocument
+from app.modules.rules.schemas.judge_certification import JudgeLevel, JudgeStatus
+from app.modules.rules.schemas.judging_scenario import JudgingScenarioCategory
+from app.modules.rules.schemas.rule import RuleType
+from app.modules.rules.schemas.rule_set import RuleSetStatus
+
+_VALID_RULE_SET_STATUSES = frozenset(get_args(RuleSetStatus))
+_VALID_RULE_TYPES = frozenset(get_args(RuleType))
+_VALID_SCENARIO_CATEGORIES = frozenset(get_args(JudgingScenarioCategory))
+_VALID_JUDGE_LEVELS = frozenset(get_args(JudgeLevel))
+_VALID_JUDGE_STATUSES = frozenset(get_args(JudgeStatus))
 
 #: A регламент is edited and versioned; a spreadsheet is not that. Judged from
 #: the already-stored file's mime_type, not from the filename it was uploaded
@@ -35,8 +46,7 @@ class RuleService:
         published_at: datetime | None,
     ) -> RuleSet:
         normalized_status = str(status).upper()
-        valid_statuses = {"DRAFT", "ACTIVE", "ARCHIVED"}
-        if normalized_status not in valid_statuses:
+        if normalized_status not in _VALID_RULE_SET_STATUSES:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ruleset status")
 
         rule_set = RuleSet(
@@ -114,8 +124,7 @@ class RuleService:
         section = await RuleService.get_section(session, section_id)
 
         normalized_rule_type = str(rule_type).upper()
-        valid_types = {"GENERAL", "SAFETY", "COMBAT", "JUDGING", "VIOLATION"}
-        if normalized_rule_type not in valid_types:
+        if normalized_rule_type not in _VALID_RULE_TYPES:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid rule type")
 
         rule = Rule(
@@ -161,8 +170,7 @@ class RuleService:
         category: str,
     ) -> JudgingScenario:
         normalized_category = str(category).upper()
-        valid_categories = {"STRIKE", "WEAPON", "VIOLATION", "SAFETY"}
-        if normalized_category not in valid_categories:
+        if normalized_category not in _VALID_SCENARIO_CATEGORIES:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid scenario category")
 
         scenario = JudgingScenario(
@@ -211,13 +219,11 @@ class RuleService:
         await get_user_or_404(session, parsed_user_id)
 
         normalized_level = str(level).upper()
-        valid_levels = {"LOCAL", "REGIONAL", "MAIN"}
-        if normalized_level not in valid_levels:
+        if normalized_level not in _VALID_JUDGE_LEVELS:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid judge level")
 
         normalized_status = str(status).upper()
-        valid_statuses = {"ACTIVE", "EXPIRED", "REVOKED"}
-        if normalized_status not in valid_statuses:
+        if normalized_status not in _VALID_JUDGE_STATUSES:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid certification status")
 
         certification = JudgeCertification(

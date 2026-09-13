@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import get_args
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -8,6 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.identity_access import get_user_or_404
 from app.modules.clubs.models import Club, ClubMember
+from app.modules.clubs.schemas.club import ClubMemberRole
+
+_VALID_ROLES = frozenset(get_args(ClubMemberRole))
 
 
 class ClubService:
@@ -61,9 +65,8 @@ class ClubService:
         except (ValueError, TypeError):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user id") from None
 
-        valid_roles = {"OWNER", "INSTRUCTOR", "MEMBER", "JUDGE"}
         normalized_role = str(role).upper()
-        if normalized_role not in valid_roles:
+        if normalized_role not in _VALID_ROLES:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role")
 
         await get_user_or_404(session, parsed_user_id)

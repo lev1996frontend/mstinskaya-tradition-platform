@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import get_args
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -9,6 +10,12 @@ from sqlalchemy.orm import selectinload
 
 from app.core.identity_access import get_user_or_404
 from app.modules.athletes.models import Athlete
+from app.modules.athletes.schemas.athlete import AthleteLevel
+
+#: Single source of truth is the ``AthleteLevel`` Literal in the request
+#: schema; re-typing the same four strings here would just be this set
+#: drifting from that one, the way it had, twice, before.
+_VALID_LEVELS = frozenset(get_args(AthleteLevel))
 
 
 class AthleteService:
@@ -69,8 +76,7 @@ class AthleteService:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Athlete profile already exists for this user")
 
         normalized_level = str(level).upper()
-        valid_levels = {"BEGINNER", "PRACTITIONER", "INSTRUCTOR", "MASTER"}
-        if normalized_level not in valid_levels:
+        if normalized_level not in _VALID_LEVELS:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid athlete level")
 
         athlete = Athlete(
@@ -148,8 +154,7 @@ class AthleteService:
             athlete.experience_years = experience_years
         if level is not None:
             normalized_level = str(level).upper()
-            valid_levels = {"BEGINNER", "PRACTITIONER", "INSTRUCTOR", "MASTER"}
-            if normalized_level not in valid_levels:
+            if normalized_level not in _VALID_LEVELS:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid athlete level")
             athlete.level = normalized_level
         if bio is not None:

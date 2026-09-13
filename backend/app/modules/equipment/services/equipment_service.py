@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import get_args
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -8,7 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.identity_access import get_user_or_404
 from app.modules.equipment.models import EquipmentCategory, EquipmentProduct, EquipmentRequest, ProductMedia, Supplier
+from app.modules.equipment.schemas.product import ProductStatus
+from app.modules.equipment.schemas.request import RequestStatus
 from app.modules.media.models import MediaFile
+
+_VALID_PRODUCT_STATUSES = frozenset(get_args(ProductStatus))
+_VALID_REQUEST_STATUSES = frozenset(get_args(RequestStatus))
 
 
 class EquipmentService:
@@ -75,9 +81,8 @@ class EquipmentService:
             if supplier is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found")
 
-        valid_statuses = {"ACTIVE", "INACTIVE", "DRAFT"}
         normalized_status = str(status).upper()
-        if normalized_status not in valid_statuses:
+        if normalized_status not in _VALID_PRODUCT_STATUSES:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid product status")
 
         product = EquipmentProduct(
@@ -151,9 +156,8 @@ class EquipmentService:
         if product is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
 
-        valid_statuses = {"NEW", "REVIEW", "APPROVED", "REJECTED"}
         normalized_status = str(status).upper()
-        if normalized_status not in valid_statuses:
+        if normalized_status not in _VALID_REQUEST_STATUSES:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request status")
 
         request = EquipmentRequest(

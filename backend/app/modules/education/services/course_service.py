@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import get_args
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -8,6 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.identity_access import get_user_or_404
 from app.modules.education.models import Course, Enrollment, Lesson, LessonProgress, Module
+from app.modules.education.schemas.course import CourseLevel, CourseType
+from app.modules.education.schemas.lesson import LessonContentType
+
+_VALID_COURSE_TYPES = frozenset(get_args(CourseType))
+_VALID_COURSE_LEVELS = frozenset(get_args(CourseLevel))
+_VALID_LESSON_CONTENT_TYPES = frozenset(get_args(LessonContentType))
 
 
 class EducationService:
@@ -23,13 +30,11 @@ class EducationService:
         is_published: bool,
     ) -> Course:
         normalized_type = str(type).upper()
-        valid_types = {"GENERAL", "ATHLETE", "INSTRUCTOR", "JUDGE"}
-        if normalized_type not in valid_types:
+        if normalized_type not in _VALID_COURSE_TYPES:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid course type")
 
         normalized_level = str(level).upper()
-        valid_levels = {"BEGINNER", "INTERMEDIATE", "ADVANCED"}
-        if normalized_level not in valid_levels:
+        if normalized_level not in _VALID_COURSE_LEVELS:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid course level")
 
         course = Course(
@@ -110,8 +115,7 @@ class EducationService:
     ) -> Lesson:
         module = await EducationService.get_module(session, module_id)
         normalized_content_type = str(content_type).upper()
-        valid_types = {"VIDEO", "TEXT", "DOCUMENT"}
-        if normalized_content_type not in valid_types:
+        if normalized_content_type not in _VALID_LESSON_CONTENT_TYPES:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid lesson content type")
 
         lesson = Lesson(

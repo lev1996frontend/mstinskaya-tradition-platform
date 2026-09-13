@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+ClubMemberRole = Literal["OWNER", "INSTRUCTOR", "MEMBER", "JUDGE"]
+
 
 class ClubCreateRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
@@ -31,11 +33,11 @@ class ClubMemberCreateRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     user_id: str
-    role: Literal["OWNER", "INSTRUCTOR", "MEMBER", "JUDGE"] = "MEMBER"
+    role: ClubMemberRole = "MEMBER"
 
 
 class ClubMemberResponse(BaseModel):
     id: str
     club_id: str
     user_id: str
-    role: Literal["OWNER", "INSTRUCTOR", "MEMBER", "JUDGE"]
+    role: ClubMemberRole
