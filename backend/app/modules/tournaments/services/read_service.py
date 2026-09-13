@@ -1,8 +1,25 @@
-"""Read side of the tournament engine.
+"""Read side of the tournament engine: entity lookups, name resolution, and
+the competition/participant/team/match projections built from them.
 
 Kept separate from :mod:`engine_service` so the write logic stays untouched:
 everything here is query-only and safe to call from public pages. Names are
 resolved in batch (one query per related table) rather than per row.
+
+Three read concerns that used to live in this same 818-line file now have
+their own modules instead, because each is a self-contained projection built
+*on top of* what stays here rather than mixed in with it:
+
+* :mod:`standings_service` — win/loss tallies for round-robin/group formats.
+* :mod:`bracket_tree_service` — matches grouped into playoff rounds.
+* :mod:`athlete_history_service` — one athlete's competitions, newest first
+  (itself built on top of ``standings_service``).
+
+:class:`TournamentReadService` keeps thin facade methods for all three
+(``standings``, ``bracket_tree``, ``athlete_history``) so the many external
+call sites (``routers/read.py`` foremost) needed no changes; the imports
+inside those facades are function-local because the three modules above
+import ``TournamentReadService`` from here, and an eager import back would
+be a cycle.
 """
 
 from __future__ import annotations
@@ -11,7 +28,7 @@ from typing import Iterable
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,13 +48,9 @@ from app.modules.tournaments.models import (
     Participant,
     ParticipantStatusHistory,
     Team,
-    TeamMember,
     Tournament,
 )
 from app.modules.tournaments.schemas.views import (
-    AthleteParticipationView,
-    BracketRoundView,
-    BracketTreeView,
     BracketView,
     CompetitionEventView,
     CompetitionView,
@@ -46,74 +59,17 @@ from app.modules.tournaments.schemas.views import (
     MatchView,
     ParticipantStatusHistoryView,
     ParticipantView,
-    StandingsRow,
-    StandingsView,
     TeamMemberView,
     TeamView,
 )
+from app.modules.tournaments.services.read_common import athlete_display_name, parse_id
 
-#: Formats read from a round-robin-style standings table rather than a
-#: playoff bracket — mirrors the tab logic in the competition workspace UI.
-STANDINGS_FORMATS = {"ROUND_ROBIN", "GROUP_PLAYOFF"}
+# Re-exported so the handful of existing call sites that import these two
+# names from *this* module (rather than read_common, where they now live)
+# keep working unchanged.
+_athlete_display_name = athlete_display_name
 
-#: Position of a round inside the playoff column layout. Numeric rounds keep
-#: their own number; named stages always come after them, in bout order. The
-#: ROUND_OF_* entries are what a generated bracket wider than eight fighters
-#: produces; without them those columns would sort *after* the final.
-STAGE_ORDER = {
-    "QUALIFICATION": -1,
-    "GROUP": 0,
-    "TEAM_BOUT": 500,
-    "ROUND_OF_128": 980,
-    "ROUND_OF_64": 985,
-    "ROUND_OF_32": 990,
-    "ROUND_OF_16": 995,
-    "QUARTERFINAL": 1000,
-    "SEMIFINAL": 1001,
-    "FINAL": 1002,
-}
-
-STAGE_LABELS = {
-    "QUALIFICATION": "Qualification",
-    "GROUP": "Group stage",
-    "TEAM_BOUT": "Team bout",
-    "ROUND_OF_128": "Round of 128",
-    "ROUND_OF_64": "Round of 64",
-    "ROUND_OF_32": "Round of 32",
-    "ROUND_OF_16": "Round of 16",
-    "QUARTERFINAL": "Quarterfinal",
-    "SEMIFINAL": "Semifinal",
-    "FINAL": "Final",
-}
-
-
-def parse_id(value: str, label: str) -> UUID:
-    try:
-        return UUID(str(value))
-    except (ValueError, TypeError):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid {label} id") from None
-
-
-def _athlete_display_name(
-    athlete: Athlete | None, user: User | None, fallback: str | None = None
-) -> str:
-    """Name for a competitor.
-
-    A linked athlete profile always wins, so selecting an existing athlete in
-    the wizard can never produce a second, divergent identity for that person.
-    ``fallback`` is the tournament-local name of an entrant who has no platform
-    profile at all — the only case where a name is stored on the entry itself.
-    """
-    if athlete is not None and athlete.nickname:
-        return athlete.nickname
-    if user is not None:
-        full_name = " ".join(part for part in (user.first_name, user.last_name) if part).strip()
-        if full_name:
-            return full_name
-        return user.email
-    if fallback:
-        return fallback
-    return "Unknown participant"
+__all__ = ["TournamentReadService", "parse_id", "_athlete_display_name"]
 
 
 class TournamentReadService:
@@ -188,7 +144,7 @@ class TournamentReadService:
             else:
                 athlete = athletes.get(participant.athlete_id) if participant.athlete_id else None
                 user = users.get(athlete.user_id) if athlete is not None else None
-                display_name = _athlete_display_name(athlete, user, participant.display_name)
+                display_name = athlete_display_name(athlete, user, participant.display_name)
                 club_id = None
 
             views[participant.id] = ParticipantView(
@@ -309,7 +265,7 @@ class TournamentReadService:
                         TeamMemberView(
                             id=str(member.id),
                             athlete_id=str(member.athlete_id),
-                            display_name=_athlete_display_name(
+                            display_name=athlete_display_name(
                                 athletes.get(member.athlete_id),
                                 users.get(athletes[member.athlete_id].user_id)
                                 if member.athlete_id in athletes
@@ -459,153 +415,19 @@ class TournamentReadService:
         views = await TournamentReadService._match_views(session, [match])
         return views[0]
 
-    # ------------------------------------------------------------------ #
-    # standings
-    # ------------------------------------------------------------------ #
-
     @staticmethod
-    async def standings(session: AsyncSession, competition_id: str) -> StandingsView:
-        competition = await TournamentReadService.get_competition(session, competition_id)
-        participants = list(
-            await session.scalars(
-                select(Participant)
-                .where(Participant.competition_id == competition.id)
-                .order_by(Participant.seed.asc().nulls_last(), Participant.created_at.asc())
-            )
-        )
-        participant_views = await TournamentReadService.build_participant_views(session, participants)
-
-        matches = list(await session.scalars(select(Match).where(Match.competition_id == competition.id)))
-        results_by_match: dict[UUID, MatchResult] = {}
-        if matches:
-            rows = await session.scalars(
-                select(MatchResult).where(MatchResult.match_id.in_([m.id for m in matches]))
-            )
-            results_by_match = {r.match_id: r for r in rows}
-
-        tally: dict[UUID, dict[str, int]] = {
-            p.id: {"played": 0, "wins": 0, "losses": 0, "draws": 0, "no_results": 0} for p in participants
-        }
-
-        for match in matches:
-            # A bye was never fought, so it counts as neither a win nor a
-            # played bout — it only moves someone forward in the tree.
-            if match.status == "CANCELLED" or match.is_bye:
-                continue
-            sides = [pid for pid in (match.participant_red_id, match.participant_blue_id) if pid in tally]
-            result = results_by_match.get(match.id)
-            if result is None:
-                for pid in sides:
-                    tally[pid]["no_results"] += 1
-                continue
-            winner_id = result.winner_participant_id
-            for pid in sides:
-                tally[pid]["played"] += 1
-                if winner_id is None:
-                    # A recorded result with no winner. Deliberately not
-                    # interpreted further — victory conditions are unconfirmed.
-                    tally[pid]["draws"] += 1
-                elif pid == winner_id:
-                    tally[pid]["wins"] += 1
-                else:
-                    tally[pid]["losses"] += 1
-
-        ordered = sorted(
-            participants,
-            key=lambda p: (
-                -tally[p.id]["wins"],
-                tally[p.id]["losses"],
-                participant_views[p.id].display_name.lower(),
-            ),
-        )
-
-        rows: list[StandingsRow] = []
-        previous_key: tuple[int, int, int] | None = None
-        for index, participant in enumerate(ordered, start=1):
-            counts = tally[participant.id]
-            key = (counts["wins"], counts["losses"], counts["draws"])
-            rows.append(
-                StandingsRow(
-                    position=index,
-                    participant=participant_views[participant.id],
-                    played=counts["played"],
-                    wins=counts["wins"],
-                    losses=counts["losses"],
-                    draws=counts["draws"],
-                    no_results=counts["no_results"],
-                    tied_with_previous=previous_key == key,
-                )
-            )
-            previous_key = key
-
-        countable = [m for m in matches if m.status != "CANCELLED" and not m.is_bye]
-        finished = sum(1 for m in countable if m.id in results_by_match)
-        return StandingsView(
-            competition_id=str(competition.id),
-            format=competition.format,
-            rows=rows,
-            matches_total=len(countable),
-            matches_finished=finished,
-            provisional=finished < len(countable),
-        )
-
-    # ------------------------------------------------------------------ #
-    # bracket
-    # ------------------------------------------------------------------ #
-
-    @staticmethod
-    async def bracket_tree(session: AsyncSession, competition_id: str) -> BracketTreeView:
-        competition = await TournamentReadService.get_competition(session, competition_id)
-        brackets = list(await session.scalars(select(Bracket).where(Bracket.competition_id == competition.id)))
-        brackets_by_id = {b.id: b for b in brackets}
-
-        matches = list(
-            await session.scalars(
-                select(Match).where(Match.competition_id == competition.id).order_by(Match.created_at.asc())
-            )
-        )
-        views = await TournamentReadService._match_views(session, matches)
-        views_by_id = {v.id: v for v in views}
-
-        buckets: dict[str, list[tuple[int, MatchView]]] = {}
-        unassigned: list[MatchView] = []
-
-        for match in matches:
-            view = views_by_id[str(match.id)]
-            bracket = brackets_by_id.get(match.bracket_id) if match.bracket_id else None
-            key = None
-            if bracket is not None and bracket.round:
-                key = str(bracket.round).upper()
-            elif match.stage_name:
-                key = match.stage_name.upper()
-            elif match.round_number is not None:
-                key = str(match.round_number)
-
-            if key is None:
-                unassigned.append(view)
-                continue
-
-            slot = (bracket.position if bracket is not None and bracket.position is not None else match.position) or 0
-            buckets.setdefault(key, []).append((slot, view))
-
-        rounds: list[BracketRoundView] = []
-        for key, entries in buckets.items():
-            entries.sort(key=lambda pair: (pair[0], pair[1].id))
-            rounds.append(
-                BracketRoundView(
-                    key=key,
-                    label=STAGE_LABELS.get(key, f"Round {key}" if key.isdigit() else key.title()),
-                    order=STAGE_ORDER.get(key, int(key) if key.isdigit() else 999),
-                    matches=[view for _, view in entries],
-                )
-            )
-        rounds.sort(key=lambda r: (r.order, r.key))
-
-        return BracketTreeView(
-            competition_id=str(competition.id),
-            format=competition.format,
-            rounds=rounds,
-            unassigned=unassigned,
+    async def match_result(session: AsyncSession, match_id: str) -> MatchResultView:
+        match = await TournamentReadService.get_match(session, match_id)
+        result = await session.scalar(select(MatchResult).where(MatchResult.match_id == match.id))
+        if result is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match has no result yet")
+        return MatchResultView(
+            id=str(result.id),
+            match_id=str(result.match_id),
+            winner_id=str(result.winner_participant_id) if result.winner_participant_id else None,
+            method=result.result_type,
+            comment=result.notes,
+            recorded_at=result.recorded_at,
         )
 
     # ------------------------------------------------------------------ #
@@ -704,114 +526,28 @@ class TournamentReadService:
         ]
 
     # ------------------------------------------------------------------ #
-    # athlete history
+    # facade: standings / bracket tree / athlete history
     # ------------------------------------------------------------------ #
+    #
+    # These three do nothing but forward to the module that now owns the
+    # logic (see the module docstring). Their imports are function-local
+    # because standings_service/bracket_tree_service/athlete_history_service
+    # all import TournamentReadService from here.
 
     @staticmethod
-    async def athlete_history(session: AsyncSession, athlete_id: str) -> list[AthleteParticipationView]:
-        """Every competition an athlete entered, newest first.
+    async def standings(session: AsyncSession, competition_id: str):
+        from app.modules.tournaments.services.standings_service import StandingsService
 
-        Read-only projection over existing rows — nothing new is stored, and
-        no placement is invented (see ``AthleteParticipationView``).
-        """
-        aid = parse_id(athlete_id, "athlete")
-        participants = list(
-            await session.scalars(
-                select(Participant)
-                .where(Participant.athlete_id == aid)
-                .order_by(Participant.created_at.desc())
-            )
-        )
-        if not participants:
-            return []
-
-        competition_ids = {p.competition_id for p in participants if p.competition_id is not None}
-        competitions: dict[UUID, Competition] = {}
-        if competition_ids:
-            rows = await session.scalars(select(Competition).where(Competition.id.in_(competition_ids)))
-            competitions = {c.id: c for c in rows}
-
-        tournament_ids = {c.tournament_id for c in competitions.values()}
-        tournaments: dict[UUID, Tournament] = {}
-        if tournament_ids:
-            rows = await session.scalars(select(Tournament).where(Tournament.id.in_(tournament_ids)))
-            tournaments = {t.id: t for t in rows}
-
-        results: list[AthleteParticipationView] = []
-        for participant in participants:
-            competition = competitions.get(participant.competition_id) if participant.competition_id else None
-            if competition is None:
-                continue
-            tournament = tournaments.get(competition.tournament_id)
-
-            view = AthleteParticipationView(
-                participant_id=str(participant.id),
-                tournament_id=str(competition.tournament_id),
-                tournament_title=tournament.title if tournament else "—",
-                competition_id=str(competition.id),
-                competition_name=competition.name,
-                format=competition.format,
-                competition_status=competition.status,
-                participant_status=participant.status,
-                city=participant.city,
-                seed=participant.seed,
-            )
-
-            if participant.status == "WITHDRAWN":
-                view.outcome = "WITHDRAWN"
-            elif participant.status == "DISQUALIFIED":
-                view.outcome = "DISQUALIFIED"
-            elif competition.format in STANDINGS_FORMATS:
-                standings = await TournamentReadService.standings(session, str(competition.id))
-                row = next((r for r in standings.rows if r.participant.id == str(participant.id)), None)
-                if row is not None:
-                    view.outcome = "STANDINGS"
-                    view.standings_wins = row.wins
-                    view.standings_losses = row.losses
-                    view.standings_position = row.position
-                    view.standings_tied = row.tied_with_previous
-                    view.standings_provisional = standings.provisional
-            else:
-                matches = list(
-                    await session.scalars(
-                        select(Match)
-                        .where(
-                            Match.competition_id == competition.id,
-                            or_(
-                                Match.participant_red_id == participant.id,
-                                Match.participant_blue_id == participant.id,
-                            ),
-                        )
-                        .order_by(Match.round_number.asc().nulls_last(), Match.created_at.asc())
-                    )
-                )
-                final = next((m for m in matches if (m.stage_name or "").upper() == "FINAL"), None)
-                if final is not None and final.status == "FINISHED" and final.winner_id is not None:
-                    view.outcome = "CHAMPION" if final.winner_id == participant.id else "FINALIST"
-                else:
-                    finished = [m for m in matches if m.status == "FINISHED" and not m.is_bye]
-                    if finished:
-                        last = finished[-1]
-                        if last.winner_id == participant.id:
-                            view.outcome = "IN_PROGRESS"
-                        else:
-                            view.outcome = "ELIMINATED"
-                            view.eliminated_at_stage = last.stage_name
-
-            results.append(view)
-        return results
+        return await StandingsService.standings(session, competition_id)
 
     @staticmethod
-    async def match_result(session: AsyncSession, match_id: str) -> MatchResultView:
-        match = await TournamentReadService.get_match(session, match_id)
-        result = await session.scalar(select(MatchResult).where(MatchResult.match_id == match.id))
-        if result is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match has no result yet")
-        return MatchResultView(
-            id=str(result.id),
-            match_id=str(result.match_id),
-            winner_id=str(result.winner_participant_id) if result.winner_participant_id else None,
-            method=result.result_type,
-            comment=result.notes,
-            recorded_at=result.recorded_at,
-        )
+    async def bracket_tree(session: AsyncSession, competition_id: str):
+        from app.modules.tournaments.services.bracket_tree_service import BracketTreeService
+
+        return await BracketTreeService.bracket_tree(session, competition_id)
+
+    @staticmethod
+    async def athlete_history(session: AsyncSession, athlete_id: str):
+        from app.modules.tournaments.services.athlete_history_service import AthleteHistoryService
+
+        return await AthleteHistoryService.athlete_history(session, athlete_id)

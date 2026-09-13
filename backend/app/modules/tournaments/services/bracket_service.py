@@ -52,6 +52,7 @@ from app.modules.tournaments.services.bracket_common import (
     parse_id,
     ready_status,
 )
+from app.modules.tournaments.services.read_common import athlete_display_name
 
 __all__ = ["BracketService", "parse_id", "ready_status"]
 
@@ -111,11 +112,9 @@ class BracketService:
         participant: Participant, athletes: dict[UUID, Athlete], users: dict[UUID, User]
     ) -> str:
         """Same resolution as the read side, so a preview and the bracket agree."""
-        from app.modules.tournaments.services.read_service import _athlete_display_name
-
         athlete = athletes.get(participant.athlete_id) if participant.athlete_id else None
         user = users.get(athlete.user_id) if athlete is not None and athlete.user_id else None
-        return _athlete_display_name(athlete, user, participant.display_name)
+        return athlete_display_name(athlete, user, participant.display_name)
 
     # ------------------------------------------------------------------ #
     # planning
