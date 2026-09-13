@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
+from fastapi import status as http_status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,23 +42,23 @@ class TournamentService:
         try:
             parsed_organizer_id = UUID(str(organizer_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid organizer id") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid organizer id") from None
 
         await get_user_or_404(session, parsed_organizer_id, detail="Organizer not found")
 
         try:
             parsed_ruleset_id = UUID(str(ruleset_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ruleset id") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid ruleset id") from None
 
         ruleset = await session.get(RuleSet, parsed_ruleset_id)
         if ruleset is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ruleset not found")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Ruleset not found")
 
         normalized_status = str(status).upper()
         valid_statuses = {"DRAFT", "REGISTRATION", "RUNNING", "ACTIVE", "FINISHED", "ARCHIVED"}
         if normalized_status not in valid_statuses:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid tournament status")
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid tournament status")
 
         tournament = Tournament(
             title=title,
@@ -80,11 +81,11 @@ class TournamentService:
         try:
             parsed_id = UUID(str(tournament_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid tournament id") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid tournament id") from None
 
         tournament = await session.get(Tournament, parsed_id)
         if tournament is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tournament not found")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Tournament not found")
         return tournament
 
     @staticmethod
@@ -102,11 +103,11 @@ class TournamentService:
         try:
             parsed_ruleset_id = UUID(str(ruleset_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ruleset id") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid ruleset id") from None
 
         ruleset = await session.get(RuleSet, parsed_ruleset_id)
         if ruleset is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ruleset not found")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Ruleset not found")
 
         tournament.ruleset_id = parsed_ruleset_id
         await session.flush()
@@ -157,25 +158,25 @@ class TournamentService:
         try:
             parsed_category_id = UUID(str(category_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid category id") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid category id") from None
 
         category = await session.get(TournamentCategory, parsed_category_id)
         if category is None or category.tournament_id != tournament.id:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Category not found")
 
         try:
             parsed_athlete_id = UUID(str(athlete_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid athlete id") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid athlete id") from None
 
         athlete = await session.get(Athlete, parsed_athlete_id)
         if athlete is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Athlete not found")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Athlete not found")
 
         normalized_status = str(status).upper()
         valid_statuses = {"REGISTERED", "APPROVED", "DISQUALIFIED"}
         if normalized_status not in valid_statuses:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid participant status")
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid participant status")
 
         participant = Participant(
             tournament_id=tournament.id,
@@ -224,11 +225,11 @@ class TournamentService:
         try:
             parsed_category_id = UUID(str(category_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid category id") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid category id") from None
 
         category = await session.get(TournamentCategory, parsed_category_id)
         if category is None or category.tournament_id != tournament.id:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Category not found")
 
         participant_red = None
         participant_blue = None
@@ -237,24 +238,24 @@ class TournamentService:
             try:
                 parsed_red_id = UUID(str(participant_red_id))
             except (ValueError, TypeError):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid participant red id") from None
+                raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid participant red id") from None
             participant_red = await session.get(Participant, parsed_red_id)
             if participant_red is None or participant_red.tournament_id != tournament.id:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Participant red not found")
+                raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Participant red not found")
 
         if participant_blue_id is not None:
             try:
                 parsed_blue_id = UUID(str(participant_blue_id))
             except (ValueError, TypeError):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid participant blue id") from None
+                raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid participant blue id") from None
             participant_blue = await session.get(Participant, parsed_blue_id)
             if participant_blue is None or participant_blue.tournament_id != tournament.id:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Participant blue not found")
+                raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Participant blue not found")
 
         normalized_status = str(status).upper()
         valid_statuses = {"SCHEDULED", "IN_PROGRESS", "FINISHED"}
         if normalized_status not in valid_statuses:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid match status")
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid match status")
 
         match = Match(
             tournament_id=tournament.id,
@@ -272,11 +273,11 @@ class TournamentService:
         try:
             parsed_id = UUID(str(match_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid match id") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid match id") from None
 
         match = await session.get(Match, parsed_id)
         if match is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Match not found")
         return match
 
     @staticmethod
@@ -300,14 +301,14 @@ class TournamentService:
         try:
             parsed_judge_id = UUID(str(judge_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid judge id") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid judge id") from None
 
         judge = await get_user_or_404(session, parsed_judge_id, detail="Judge not found")
 
         normalized_role = str(role).upper()
         valid_roles = {"MAIN", "SIDE"}
         if normalized_role not in valid_roles:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid judge role")
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid judge role")
 
         assignment = JudgeAssignment(
             match_id=match.id,
@@ -340,17 +341,17 @@ class TournamentService:
         normalized_decision_type = str(decision_type).upper()
         valid_decision_types = {"VICTORY", "DRAW", "DISQUALIFICATION"}
         if normalized_decision_type not in valid_decision_types:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid decision type")
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid decision type")
 
         winner = None
         if winner_id is not None:
             try:
                 parsed_winner_id = UUID(str(winner_id))
             except (ValueError, TypeError):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid winner id") from None
+                raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid winner id") from None
             winner = await session.get(Participant, parsed_winner_id)
             if winner is None or winner.tournament_id != match.tournament_id:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Winner participant not found")
+                raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Winner participant not found")
 
         decision = MatchDecision(
             match_id=match.id,
@@ -385,7 +386,7 @@ class TournamentService:
         normalized_type = str(type).upper()
         valid_types = {"RULES", "POSITION", "RESULTS"}
         if normalized_type not in valid_types:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid document type")
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid document type")
 
         resolved_media_file_id: UUID | None = None
         resolved_file_url = file_url
@@ -395,11 +396,11 @@ class TournamentService:
             try:
                 parsed_media_file_id = UUID(str(media_file_id))
             except (ValueError, TypeError):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid media file id") from None
+                raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid media file id") from None
 
             media_file = await MediaService(session).get_media_file(parsed_media_file_id)
             if media_file is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
+                raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Файл не найден")
             resolved_media_file_id = media_file.id
             resolved_file_url = media_file.url
 
@@ -414,7 +415,7 @@ class TournamentService:
             )
             if existing is not None:
                 raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
+                    status_code=http_status.HTTP_409_CONFLICT,
                     detail=f"Этот файл уже приложен как «{existing.title}».",
                 )
 
@@ -447,11 +448,11 @@ class TournamentService:
         try:
             parsed_document_id = UUID(str(document_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid document id") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid document id") from None
 
         document = await session.get(TournamentDocument, parsed_document_id)
         if document is None or document.tournament_id != tournament.id:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Документ не найден")
 
         # Off the page, not gone: the bytes and the download link stay live
         # because an old положение may already be cited or handed out.

@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 from typing import get_args
 from uuid import UUID
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
+from fastapi import status as http_status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -47,7 +48,7 @@ class RuleService:
     ) -> RuleSet:
         normalized_status = str(status).upper()
         if normalized_status not in _VALID_RULE_SET_STATUSES:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ruleset status")
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid ruleset status")
 
         rule_set = RuleSet(
             title=title,
@@ -65,11 +66,11 @@ class RuleService:
         try:
             parsed_id = UUID(str(rule_set_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid rule set id") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid rule set id") from None
 
         rule_set = await session.get(RuleSet, parsed_id)
         if rule_set is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rule set not found")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Rule set not found")
         return rule_set
 
     @staticmethod
@@ -96,11 +97,11 @@ class RuleService:
         try:
             parsed_id = UUID(str(section_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid rule section id") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid rule section id") from None
 
         section = await session.get(RuleSection, parsed_id)
         if section is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rule section not found")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Rule section not found")
         return section
 
     @staticmethod
@@ -125,7 +126,7 @@ class RuleService:
 
         normalized_rule_type = str(rule_type).upper()
         if normalized_rule_type not in _VALID_RULE_TYPES:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid rule type")
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid rule type")
 
         rule = Rule(
             section_id=section.id,
@@ -143,11 +144,11 @@ class RuleService:
         try:
             parsed_id = UUID(str(rule_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid rule id") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid rule id") from None
 
         rule = await session.get(Rule, parsed_id)
         if rule is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rule not found")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Rule not found")
         return rule
 
     @staticmethod
@@ -171,7 +172,7 @@ class RuleService:
     ) -> JudgingScenario:
         normalized_category = str(category).upper()
         if normalized_category not in _VALID_SCENARIO_CATEGORIES:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid scenario category")
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid scenario category")
 
         scenario = JudgingScenario(
             title=title,
@@ -190,11 +191,11 @@ class RuleService:
         try:
             parsed_id = UUID(str(scenario_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid judging scenario id") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid judging scenario id") from None
 
         scenario = await session.get(JudgingScenario, parsed_id)
         if scenario is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Judging scenario not found")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Judging scenario not found")
         return scenario
 
     @staticmethod
@@ -214,17 +215,17 @@ class RuleService:
         try:
             parsed_user_id = UUID(str(user_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user id") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid user id") from None
 
         await get_user_or_404(session, parsed_user_id)
 
         normalized_level = str(level).upper()
         if normalized_level not in _VALID_JUDGE_LEVELS:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid judge level")
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid judge level")
 
         normalized_status = str(status).upper()
         if normalized_status not in _VALID_JUDGE_STATUSES:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid certification status")
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid certification status")
 
         certification = JudgeCertification(
             user_id=parsed_user_id,
@@ -242,11 +243,11 @@ class RuleService:
         try:
             parsed_id = UUID(str(certification_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid judge certification id") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid judge certification id") from None
 
         certification = await session.get(JudgeCertification, parsed_id)
         if certification is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Judge certification not found")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Judge certification not found")
         return certification
 
     @staticmethod
@@ -256,7 +257,7 @@ class RuleService:
             try:
                 parsed_user_id = UUID(str(user_id))
             except (ValueError, TypeError):
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user id") from None
+                raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid user id") from None
             query = query.where(JudgeCertification.user_id == parsed_user_id)
         result = await session.execute(query.order_by(JudgeCertification.issued_at.asc()))
         return list(result.scalars().all())
@@ -274,15 +275,15 @@ class RuleService:
         try:
             parsed_media_file_id = UUID(str(media_file_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Некорректный идентификатор файла") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Некорректный идентификатор файла") from None
 
         media_file = await MediaService(session).get_media_file(parsed_media_file_id)
         if media_file is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл не найден")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Файл не найден")
 
         if media_file.mime_type not in _WORD_MIME_TYPES:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=http_status.HTTP_400_BAD_REQUEST,
                 detail="Файл правил принимается только в формате Word (.docx).",
             )
 
@@ -314,11 +315,11 @@ class RuleService:
         try:
             parsed_document_id = UUID(str(document_id))
         except (ValueError, TypeError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Некорректный идентификатор документа") from None
+            raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Некорректный идентификатор документа") from None
 
         document = await session.get(RuleSetDocument, parsed_document_id)
         if document is None or document.rule_set_id != rule_set.id:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Документ не найден")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Документ не найден")
 
         # Off the page, not gone: the bytes and the download link stay live
         # because an old edition may already be cited or handed out.
