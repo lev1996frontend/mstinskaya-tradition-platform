@@ -84,7 +84,7 @@ function SlotRow({
     <div
       className={cn(
         "flex items-center gap-2.5 px-3 py-2",
-        isWinner && "bg-[var(--accent-soft)]",
+        isWinner && "bg-[var(--accent-highlight)]",
       )}
     >
       {name ? (

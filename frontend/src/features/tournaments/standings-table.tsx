@@ -59,7 +59,7 @@ export function StandingsTable({ standings }: { standings: StandingsView }) {
               return (
                 <tr
                   key={row.participant.id}
-                  className={cn(isLeader && "bg-[var(--accent-soft)]/50")}
+                  className={cn(isLeader && "bg-[var(--accent-highlight)]/50")}
                 >
                   <Td align="center" className="p-0">
                     <div className="flex h-full items-center justify-center py-3">

@@ -183,7 +183,7 @@ function GroupTable({
           {group.rows.map((row) => (
             <tr
               key={row.participant?.id ?? row.rank}
-              className={cn(row.qualifies && "bg-[var(--accent-soft)]/40")}
+              className={cn(row.qualifies && "bg-[var(--accent-highlight)]/40")}
             >
               <Td align="center" className="font-record text-[var(--muted)]">
                 {row.rank ?? "—"}

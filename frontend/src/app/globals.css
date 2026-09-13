@@ -108,6 +108,18 @@
      --accent-soft (the /tournaments/[id] status badge) stays comfortably
      ahead at 6.2:1. */
   --accent-soft: color-mix(in srgb, var(--accent) 8%, var(--background) 92%);
+  /* --accent-highlight: a separate lever from --accent-soft. Task 1 tuned
+     --accent-soft's mix down to 8% so accent-colored TEXT sitting on top of
+     the fill (chip labels, status badges) still clears 4.5:1 now that
+     --accent itself is lighter — but that same 8% mix also starves the
+     handful of sites that use the fill alone, with no text or border riding
+     on it, as their only visual signal (qualifying/leader/winner row
+     tints). Text-safe-fill and highlight-visible-fill are conflicting
+     requirements at one value, so this token restores the ORIGINAL ~20%
+     mix (the formula --accent-soft used before Task 1) for those
+     fill-only sites. See docs/superpowers/sdd/2026-09-13-accessibility-fixes/
+     final-review.md, Important finding 1. */
+  --accent-highlight: color-mix(in srgb, var(--accent) 20%, var(--background) 80%);
   --accent-deep: #8e241d;
   --gold: #b07a35;
   --gold-strong: color-mix(in srgb, var(--gold) 80%, white);
@@ -144,7 +156,7 @@
   --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.5);
   --shadow-md: 0 1px 0 rgba(0, 0, 0, 0.55), 0 10px 22px -18px rgba(0, 0, 0, 0.8);
   --shadow-lg: 0 2px 0 rgba(0, 0, 0, 0.6), 0 26px 56px -28px rgba(0, 0, 0, 0.85);
-  --shadow-glow-accent: 0 0 0 3px var(--accent-soft), 0 2px 0 rgba(217, 72, 77, 0.35);
+  --shadow-glow-accent: 0 0 0 3px var(--accent-highlight), 0 2px 0 rgba(217, 72, 77, 0.35);
 
   --duration-fast: 120ms;
   --duration-base: 200ms;
@@ -192,6 +204,7 @@
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-accent-soft: var(--accent-soft);
+  --color-accent-highlight: var(--accent-highlight);
   --color-accent-deep: var(--accent-deep);
   --color-gold: var(--gold);
   --color-gold-strong: var(--gold-strong);
