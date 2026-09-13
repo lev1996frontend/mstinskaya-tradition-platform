@@ -147,6 +147,7 @@ export function Dossiers() {
                       key={key}
                       type="button"
                       title={label}
+                      aria-label={label}
                       onClick={() => declare(d.name, i)}
                       /* `shrink-0`, or the flex row squeezes these 32px squares
                          to 24px on a narrow card — the "Разряд" label beside

@@ -323,6 +323,7 @@ export function BracketGrid() {
                       key={key}
                       type="button"
                       title={label}
+                      aria-label={label}
                       onClick={() => state.picked && declare(state.picked, i)}
                       className="grid size-9 cursor-pointer place-items-center border transition-colors"
                       style={{

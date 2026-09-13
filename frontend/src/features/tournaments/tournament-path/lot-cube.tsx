@@ -205,6 +205,7 @@ export function LotCube() {
                   key={key}
                   type="button"
                   title={label}
+                  aria-label={label}
                   onClick={() => declareMine(i)}
                   className="grid cursor-pointer place-items-center border transition-colors"
                   style={{
