@@ -8,27 +8,46 @@ import { useScrollToTop } from "@/lib/use-scroll-to-top";
 
 const SHOW_AFTER_PX = 480;
 
+// Same values as `Button`'s own `liftVariants`/`iconHoverVariants` (see
+// `components/ui/button.tsx`) — a hair of lift plus a slightly bolder icon,
+// not the two independent `scale` jumps this used before, which read as the
+// button and the arrow disagreeing about how much bigger to get.
+const liftVariants = { hover: { y: -1, scale: 1.012, transition: STOP_SPRING } };
+const iconHoverVariants = { hover: { scale: 1.15, transition: IMPULSE_SPRING } };
+
 /**
- * Floating "back to top" control, for the length of the page above the
- * colophon.
+ * Floating "back to top" control — stays on screen the whole way down,
+ * including over the colophon, rather than the footer growing its own
+ * separate control to hand off to. One control for the one act, everywhere.
  *
- * It steps aside when the footer arrives. The colophon carries its own
- * «Наверх» — labelled, in the register of the record — and two controls for the
- * same act, one of them sitting on top of the seals, is one too many.
+ * An earlier version stood this button down once the footer scrolled into
+ * view (an `IntersectionObserver` on `<footer>`), specifically because
+ * at 640–767px the colophon's bottom row has already gone horizontal (`sm`)
+ * and puts the seals in this same bottom-right corner while the link columns
+ * have not yet stacked away (`md`), leaving the two visually on top of each
+ * other. Kept on screen everywhere now instead: `site-footer.tsx` reserves
+ * clearance (`sm:pr-24` on the bottom row) so the seals sit clear of this
+ * corner rather than this button stepping aside for them.
  *
- * That handover replaced an attempt to keep this button on screen throughout by
- * mooring it above the footer's top edge, and the reason it was dropped is
- * worth keeping: at 640–767px the colophon's bottom row has already gone
- * horizontal (`sm`) and put the seals under this corner, while the link columns
- * have not yet (`md`), leaving a footer 635px tall on a 720px viewport — more
- * than there was room to rise past. The band where the button most needed to
- * move was exactly the band where it could not, and no amount of arithmetic
- * fixes that. Standing down where the footer's own control takes over needs no
- * room at all, and behaves the same at every width.
+ * `bottom-4` at every width, not a larger offset from `sm` up: the seal
+ * row's own icons sit at a fixed height above the true page bottom (the
+ * container's `py-6` plus half the icon's own size, ~38px, since this footer
+ * row is the last thing on the page), and `bottom-4` happens to centre this
+ * button on that same line. A bigger offset at `sm` and up — tried first —
+ * raised the button clear of that line and put it visibly off-centre next to
+ * the seals once both were on screen together at the page's true bottom.
  *
- * `IntersectionObserver`, not a scroll measurement: "is the footer on screen"
- * is precisely the question, and the browser answers it without this reading
- * layout on every tick.
+ * Filled in the site's own primary-button colour rather than a muted outline
+ * at rest — sitting over page content on every scroll position now, not just
+ * appearing in the empty margin above the old footer hand-off, it needs to
+ * read as a control at a glance rather than blend into whatever is behind it.
+ * The hover now borrows `Button`'s own primary recipe outright (`.btn-stamp-ring`
+ * in gold, a 1px lift, not a scale) rather than the fixed accent-coloured
+ * `.scroll-top-ring` this used before: that ring stamped in `--accent`, same
+ * as this button's own fill, so once the fill changed from the old muted
+ * outline to solid `--accent` the ring stopped reading against it at all —
+ * gold is what every other filled button on the site stamps with for exactly
+ * that reason.
  *
  * Scroll position is tracked off the native `scroll` event rather than Lenis's
  * own callback — Lenis keeps `window.scrollY` in sync every frame regardless of
@@ -38,7 +57,6 @@ const SHOW_AFTER_PX = 480;
  */
 export function ScrollToTop() {
   const [scrolled, setScrolled] = useState(false);
-  const [footerInView, setFooterInView] = useState(false);
   const reduceMotion = useReducedMotion();
   const scrollToTop = useScrollToTop();
 
@@ -49,17 +67,9 @@ export function ScrollToTop() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => {
-    const footer = document.querySelector("footer");
-    if (!footer) return;
-    const observer = new IntersectionObserver(([entry]) => setFooterInView(entry.isIntersecting));
-    observer.observe(footer);
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <AnimatePresence>
-      {scrolled && !footerInView ? (
+      {scrolled ? (
         <motion.button
           type="button"
           onClick={scrollToTop}
@@ -68,19 +78,19 @@ export function ScrollToTop() {
           animate={{ opacity: 1, y: 0 }}
           exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
           transition={{ duration: reduceMotion ? 0 : 0.2 }}
-          whileHover={reduceMotion ? undefined : { scale: 1.08, transition: STOP_SPRING }}
+          whileHover={reduceMotion ? undefined : "hover"}
           whileTap={reduceMotion ? undefined : { scale: IMPULSE_TAP.scale, transition: STOP_SPRING }}
-          className="scroll-top-btn fixed right-4 bottom-4 z-30 flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--chrome-line)] bg-[var(--background)] p-2.5 text-[var(--chrome-muted)] transition-[color,border-color,box-shadow] hover:border-[var(--accent)] hover:text-[var(--accent)] hover:shadow-[0_10px_24px_-8px_rgba(0,0,0,0.55)] sm:right-6 sm:bottom-6"
+          variants={reduceMotion ? undefined : liftVariants}
+          className="scroll-top-btn fixed right-4 bottom-4 z-30 flex items-center justify-center rounded-[var(--radius-sm)] border-b-2 border-[var(--accent-strong)] bg-[var(--accent)] p-2.5 text-white shadow-[0_10px_20px_-12px_rgba(176,42,32,0.45)] transition-[background-color,box-shadow] hover:bg-[var(--accent-strong)] hover:shadow-[0_10px_24px_-8px_rgba(0,0,0,0.55)] sm:right-6"
         >
-          {!reduceMotion ? <span aria-hidden="true" className="scroll-top-ring" /> : null}
+          {!reduceMotion ? <span aria-hidden="true" className="btn-stamp-ring" /> : null}
           <motion.svg
             width={20}
             height={20}
             viewBox="0 0 24 24"
             fill="none"
             aria-hidden="true"
-            whileHover={reduceMotion ? undefined : { scale: 1.2 }}
-            transition={IMPULSE_SPRING}
+            variants={reduceMotion ? undefined : iconHoverVariants}
           >
             <path
               d="M6 14.5 L12 8.5 L18 14.5"

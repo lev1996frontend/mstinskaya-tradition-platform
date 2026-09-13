@@ -24,7 +24,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <Container className="max-w-2xl space-y-8 py-10">
+    <Container className="max-w-2xl space-y-8 pt-10 pb-5">
       <PageHeader
         eyebrow="Личный кабинет"
         title={user.name || user.email}

@@ -3,8 +3,8 @@ import { BookOpen } from "lucide-react";
 import Link from "next/link";
 
 import { listRuleSetsWithStatus } from "@/api/catalog";
-import { ApiOfflineNotice } from "@/components/api-status";
-import { Badge, Container, EmptyState, PageHeader } from "@/components/ui";
+import { CatalogEmptyState } from "@/components/api-status";
+import { Badge, Container, PageHeader } from "@/components/ui";
 import { formatDate } from "@/lib/format";
 import type { RuleSet } from "@/types";
 
@@ -29,7 +29,7 @@ export default async function RulesPage() {
   const { items: ruleSets, offline } = await listRuleSetsWithStatus();
 
   return (
-    <Container className="space-y-8 py-10">
+    <Container className="space-y-8 pt-10 pb-5">
       <PageHeader
         eyebrow="Регламенты"
         title="Правила"
@@ -37,14 +37,12 @@ export default async function RulesPage() {
       />
 
       {ruleSets.length === 0 ? (
-        <div className="space-y-4">
-          {offline ? <ApiOfflineNotice /> : null}
-          <EmptyState
-            title="Регламентов пока нет"
-            description="Здесь появятся действующие и архивные редакции правил."
-            icon={<BookOpen className="size-5" strokeWidth={1.75} />}
-          />
-        </div>
+        <CatalogEmptyState
+          offline={offline}
+          title="Регламентов пока нет"
+          description="Здесь появятся действующие и архивные редакции правил."
+          icon={<BookOpen className="size-5" strokeWidth={1.75} />}
+        />
       ) : (
         <ul className="border-t-2 border-[var(--rule)]">
           {ruleSets.map((ruleSet) => {

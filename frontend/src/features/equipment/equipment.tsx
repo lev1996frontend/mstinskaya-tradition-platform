@@ -135,7 +135,13 @@ function ArchivalCrop() {
 
 function EquipmentList({ rules }: { rules: WeaponRulesView }) {
   return (
-    <div className="flex flex-col gap-px border border-[var(--border)] bg-[var(--border)]">
+    /* `self-start`: the grid row's default `align-items: stretch` used to
+       pull this box down to match `ArchivalCrop`'s height (image + caption),
+       and the leftover space below the last row rendered as a flat
+       `bg-[var(--border)]` slab with nothing in it — read as unloaded
+       content rather than intentional whitespace. This box now sizes to its
+       own four rows and stops there. */
+    <div className="flex flex-col gap-px self-start border border-[var(--border)] bg-[var(--border)]">
       {rules.weapons.map((weapon) => {
         const actionCount = rules.actions.filter((action) => action.weapon === weapon.code).length;
         return (

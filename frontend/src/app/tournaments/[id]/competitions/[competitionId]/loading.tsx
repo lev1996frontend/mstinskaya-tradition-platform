@@ -2,7 +2,7 @@ import { Card, Container, Skeleton } from "@/components/ui";
 
 export default function CompetitionLoading() {
   return (
-    <Container wide className="space-y-8 py-10">
+    <Container wide className="space-y-8 pt-10 pb-5">
       <div className="space-y-4 border-b border-[var(--border)] pb-6">
         <Skeleton className="h-3 w-32" />
         <Skeleton className="h-9 w-80 max-w-full" />

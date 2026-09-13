@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
@@ -18,6 +17,7 @@ import {
   listTeamBouts,
   listTeams,
 } from "@/api/tournaments";
+import { BackLink } from "@/components/brand/back-link";
 import { Badge, Container, PageHeader } from "@/components/ui";
 import { CompetitionStatusBadge } from "@/features/tournaments/badges";
 import { CompetitionWorkspace } from "@/features/tournaments/competition-workspace";
@@ -69,12 +69,10 @@ export default async function CompetitionPage({ params }: PageProps) {
   ]);
 
   return (
-    <Container wide className="space-y-8 py-10">
+    <Container wide className="space-y-8 pt-10 pb-5">
       <PageHeader
         eyebrow={
-          <Link href={`/tournaments/${id}`} className="label-link label-link-back">
-            {tournament?.title ?? "Турнир"}
-          </Link>
+          <BackLink href={`/tournaments/${id}`}>{tournament?.title ?? "Турнир"}</BackLink>
         }
         title={competition.name}
         description={competition.description ?? undefined}

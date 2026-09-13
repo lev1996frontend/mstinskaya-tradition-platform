@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getAthlete } from "@/api/catalog";
 import { listAthleteTournamentHistory } from "@/api/tournaments";
+import { BackLink } from "@/components/brand/back-link";
 import { Container, Section } from "@/components/ui";
 import { Avatar } from "@/components/ui/avatar";
 import { AthleteHistory } from "@/features/tournaments/athlete-history";
@@ -25,10 +25,8 @@ export default async function AthletePage({ params }: PageProps) {
   if (!athlete) notFound();
 
   return (
-    <Container className="max-w-3xl space-y-8 py-10">
-      <Link href="/athletes" className="record-label label-link label-link-back text-[var(--accent)]">
-        Все спортсмены
-      </Link>
+    <Container className="max-w-3xl space-y-8 pt-10 pb-5">
+      <BackLink href="/athletes">Все спортсмены</BackLink>
 
       {/* Dossier masthead: the photo mounted on paper like an ID card, name
           and stamped facts issued as one record rather than a title over a

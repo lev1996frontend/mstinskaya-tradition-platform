@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { attachRuleSetDocument, listRuleSetDocuments, removeRuleSetDocument } from "@/api/rules";
-import { attachTournamentDocument, removeTournamentDocument } from "@/api/tournaments";
+import { removeTournamentDocument } from "@/api/tournaments";
 import { uploadDocument } from "@/api/media";
 import { Alert, Badge, Button } from "@/components/ui";
 import { Field, Input, Select } from "@/components/ui/form";
-import { SheetMark } from "@/components/brand/sheet-marks";
+import { SHEET_TONE, SheetMark, formatOf } from "@/components/brand/sheet-marks";
 import { useAuth } from "@/features/auth/auth-context";
 import { ApiError, ApiUnreachableError } from "@/lib/api";
 import { documentType } from "@/lib/labels";
@@ -156,9 +156,11 @@ function UploadForm<TCreated>({
               </Field>
             </div>
           ) : null}
+          {/* Default (md) size, not `sm`: `sm`'s padding is shorter than the
+              Input/Select next to it, so the button read as visibly smaller
+              than its own row instead of sitting level with it. */}
           <Button
             type="button"
-            size="sm"
             disabled={busy || title.trim().length < 2}
             onClick={() => void attach()}
           >
@@ -203,12 +205,20 @@ function DocumentRow({
         href={href}
         target="_blank"
         rel="noreferrer noopener"
-        className="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm transition-colors hover:border-[var(--accent)]"
+        // `--tone` is the format's own colour, same as the entry-list blanks
+        // (`BlankLink` in `participant-import-panel.tsx`) — a hover cue the
+        // icon answers with via `group-hover`, not a permanent tint.
+        style={{ "--tone": SHEET_TONE[formatOf(href)] } as React.CSSProperties}
+        className="group flex min-w-0 flex-1 items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm transition-colors hover:border-[var(--accent)]"
       >
         {/* The mark says what will open when this is clicked — a spreadsheet
             or a document — which the title alone leaves unsaid. */}
         <span className="flex min-w-0 items-center gap-2.5">
-          <SheetMark name={href} size={18} className="shrink-0 text-[var(--muted)]" />
+          <SheetMark
+            name={href}
+            size={18}
+            className="shrink-0 text-[var(--muted)] transition-colors group-hover:text-[var(--tone)]"
+          />
           <span className="truncate font-medium">{title}</span>
         </span>
         {badge}
@@ -228,26 +238,38 @@ function DocumentRow({
   );
 }
 
-const TOURNAMENT_TYPE_OPTIONS = (Object.keys(documentType) as (keyof typeof documentType)[]).map((value) => ({
-  value,
-  label: documentType[value],
-}));
-
 /**
- * The tournament page's own "Документы" panel: the existing list — public,
- * exactly as it was before this — plus a remove cross and the upload form
- * for whoever is signed in. Reading the list stays open to anyone; the
- * server, not this component, is what actually gates attaching and removing.
+ * The tournament page's own "Документы" panel: the existing public list,
+ * plus a remove cross for whoever is signed in.
+ *
+ * There is deliberately no upload form here any more — every tournament
+ * already points at exactly one ruleset edition (`tournament.ruleset_id`),
+ * and that edition's own Word file lives and is edited only on its own
+ * `/rules/{id}` page. A tournament document (положение and the like) used to
+ * be attachable right here too, but the product decision this session was to
+ * remove that entirely rather than let two different upload affordances sit
+ * under one "Документы" heading. That leaves a real, known gap: there is
+ * currently no attach point anywhere for a tournament document after the
+ * tournament is created (the creation wizard has no documents step either) —
+ * flagged here rather than silently left findable only by reading the git
+ * history. Reading the list stays open to anyone; the server, not this
+ * component, is what actually gates removing.
  */
 export function TournamentDocumentsPanel({
   tournamentId,
   initialDocuments,
+  label,
 }: {
   tournamentId: string;
   initialDocuments: TournamentDocument[];
+  /** The section caption ("Документы турнира"), rendered by this component
+   *  rather than a sibling `<p>` in the page above it, so it can sit directly
+   *  above whichever content actually renders (the list, or the empty-state
+   *  sentence) — same "caption above content" shape as the "Регламент" block
+   *  beside it. */
+  label?: string;
 }) {
   const { user } = useAuth();
-  const router = useRouter();
   const [documents, setDocuments] = useState(initialDocuments);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -267,7 +289,15 @@ export function TournamentDocumentsPanel({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
+      {/* Always its own line above the content, never inline with the empty-
+         state sentence — that inline version (an earlier pass at this,
+         trying to save vertical space) read as a stray fragment of text
+         bolted onto the wrong line rather than a caption, once the row above
+         this block ("Регламент") became compact too. Consistency with that
+         row's own caption-above-content shape matters more here than saving
+         a few px. */}
+      {label ? <p className="record-label text-[var(--chrome-muted)]">{label}</p> : null}
       {documents.length > 0 ? (
         <ul className="space-y-2">
           {documents.map((document) => (
@@ -281,28 +311,10 @@ export function TournamentDocumentsPanel({
             />
           ))}
         </ul>
-      ) : null}
+      ) : (
+        <p className="text-sm text-[var(--muted)]">Документы к этому турниру ещё не приложены.</p>
+      )}
       {error ? <Alert tone="danger">{error}</Alert> : null}
-      {canManage ? (
-        <UploadForm
-          accept=".docx,.xlsx"
-          typeOptions={TOURNAMENT_TYPE_OPTIONS}
-          onAttach={({ title, media_file_id, type }) =>
-            attachTournamentDocument(tournamentId, {
-              title,
-              media_file_id,
-              type: (type ?? "POSITION") as TournamentDocument["type"],
-            })
-          }
-          onAttached={(created) => {
-            setDocuments((current) => [...current, created]);
-            // The competitions/participants counts on the server-rendered part
-            // of this page don't change here, but the next navigation should
-            // see this document too rather than only this client's own state.
-            router.refresh();
-          }}
-        />
-      ) : null}
     </div>
   );
 }

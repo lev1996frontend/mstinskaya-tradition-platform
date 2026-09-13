@@ -5,13 +5,14 @@ import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import { MonogramFlip } from "@/components/brand/monogram-flip";
 import { MenuToggleGlyph } from "@/components/brand/menu-glyph";
-import { WEAPON_MOTIFS, randomWeaponMotif, type WeaponMotifKey } from "@/components/brand/weapon-glyphs";
+import { SiteLogo } from "@/components/brand/site-logo";
+import { WEAPON_MOTIFS, type WeaponMotifKey } from "@/components/brand/weapon-glyphs";
 import { ButtonLink, Container, cn } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
 import { IMPULSE_TAP, TURN_EASE, stepIn } from "@/lib/motion";
 import { useFocusTrap } from "@/lib/use-focus-trap";
+import type { CurrentUser } from "@/types";
 
 const NAV = [
   { href: "/tournaments", label: "Турниры" },
@@ -58,9 +59,9 @@ const navItemBase =
  * label's own reverse face (which carries its own fixed `rotateX(180deg)`, so
  * the weapon glyph reads right-way-up) comes fully square to the viewer at
  * the 180 hold, then the spin completes back to the label — same face as the
- * start, not a re-render, so it never "jumps". State-driven (mirrors
- * `logoActive` above) rather than `whileHover`, so keyboard focus drives the
- * identical animation via the same `animate` prop.
+ * start, not a re-render, so it never "jumps". State-driven (mirrors the
+ * logo's own hover-state flip in `SiteLogo`) rather than `whileHover`, so
+ * keyboard focus drives the identical animation via the same `animate` prop.
  *
  * A brief импульс (compress, `IMPULSE_TAP.scale`) is inserted right at the
  * edge-on hold, between the existing grow-in and grow-out, so the toss reads
@@ -103,16 +104,65 @@ function NavPendingRule() {
   );
 }
 
+/**
+ * The one signed-in-state action, shared between the desktop bar and the
+ * slide-out menu — those two used to carry their own copy of this same
+ * loading/name/login branch, differing only in sizing and whether picking
+ * "Войти" or the profile link should also close the menu.
+ */
+function AccountAction({
+  user,
+  loading,
+  compact,
+  onNavigate,
+}: {
+  user: CurrentUser | null;
+  loading: boolean;
+  compact: boolean;
+  onNavigate?: () => void;
+}) {
+  if (loading) {
+    return <span className="font-record text-xs text-[var(--muted)]">…</span>;
+  }
+  if (user) {
+    // Name only — "Выйти" lives on the profile page this leads to, and
+    // having it here as well put two identical actions a few pixels apart.
+    // `account-chip` (globals.css) carries the fill-from-left hover and the
+    // врез press; the plain `hover:bg-*` it replaced was too soft to read as
+    // a state at header size.
+    return (
+      <Link
+        href="/profile"
+        onClick={onNavigate}
+        className={cn(
+          "account-chip truncate rounded-[var(--radius-sm)] px-2.5 py-2 text-sm font-medium",
+          compact ? "max-w-full" : "max-w-[12rem]",
+        )}
+      >
+        {user.name || user.email}
+      </Link>
+    );
+  }
+  return compact ? (
+    <ButtonLink href="/login" size="lg" onClick={onNavigate} className="w-full justify-center">
+      Войти
+    </ButtonLink>
+  ) : (
+    // `md`, not `sm`. At `sm` this was 55×30 inside a 66px header — the only
+    // action in the bar, and the smallest thing in it, sitting beside 33px-
+    // tall nav items it was supposed to outrank.
+    <ButtonLink href="/login">Войти</ButtonLink>
+  );
+}
+
 export function SiteHeader() {
   const pathname = usePathname();
   const { user, loading } = useAuth();
   const [open, setOpen] = useState(false);
-  const [logoActive, setLogoActive] = useState(false);
-  const [logoStruck, setLogoStruck] = useState(false);
-  const [logoOpponent, setLogoOpponent] = useState<WeaponMotifKey>("kisten");
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const reduceMotion = useReducedMotion();
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuToggleRef = useRef<HTMLButtonElement>(null);
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
@@ -125,6 +175,10 @@ export function SiteHeader() {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     menuRef.current?.querySelector<HTMLElement>('button[aria-label="Закрыть меню"]')?.focus();
+    // Captured now, not read from the ref inside the cleanup: React may have
+    // already cleared `menuToggleRef.current` (unmount) by the time cleanup
+    // runs, which is exactly the case — closing the menu — this exists for.
+    const toggleButton = menuToggleRef.current;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
@@ -132,6 +186,11 @@ export function SiteHeader() {
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
+      // Otherwise closing (Escape, the panel's own close button, or picking
+      // a nav item) drops focus to <body> — the menu unmounts taking
+      // whatever had focus with it, and a keyboard user has to Tab in from
+      // the top of the page again to get back to where they were.
+      toggleButton?.focus();
     };
   }, [open]);
 
@@ -143,36 +202,7 @@ export function SiteHeader() {
       style={{ viewTransitionName: "site-header" }}
     >
       <Container className="flex h-16 items-center gap-6">
-        <Link
-          href="/"
-          className="flex shrink-0 items-center gap-2.5"
-          onMouseEnter={() => setLogoActive(true)}
-          onMouseLeave={() => setLogoActive(false)}
-          onFocus={() => setLogoActive(true)}
-          onBlur={() => setLogoActive(false)}
-          onClick={() => {
-            setLogoOpponent(randomWeaponMotif());
-            setLogoStruck(true);
-          }}
-        >
-          <MonogramFlip
-            flipped={logoActive}
-            struck={logoStruck}
-            opponent={logoOpponent}
-            onStrikeEnd={() => setLogoStruck(false)}
-            size={20}
-          />
-          {/* The wordmark states the three type roles in miniature: display
-              serif name over a stamped record caption. */}
-          <span className="leading-tight">
-            <span className="font-display block text-[0.9375rem] font-semibold tracking-tight">
-              Мстинская
-            </span>
-            <span className="font-record block text-[0.6rem] uppercase tracking-[0.22em] text-[var(--muted)]">
-              традиция
-            </span>
-          </span>
-        </Link>
+        <SiteLogo size={20} />
 
         <nav aria-label="Основная навигация" className="hidden flex-1 items-center lg:flex">
           {NAV.map((item) => {
@@ -227,33 +257,16 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto hidden items-center gap-3 lg:flex">
-          {loading ? (
-            <span className="font-record text-xs text-[var(--muted)]">…</span>
-          ) : user ? (
-            // Name only — "Выйти" lives on the profile page this leads to, and
-            // having it here as well put two identical actions a few pixels
-            // apart. `account-chip` (globals.css) carries the fill-from-left
-            // hover and the врез press; the plain `hover:bg-*` it replaced was
-            // too soft to read as a state at header size.
-            <Link
-              href="/profile"
-              className="account-chip max-w-[12rem] truncate rounded-[var(--radius-sm)] px-2.5 py-2 text-sm font-medium"
-            >
-              {user.name || user.email}
-            </Link>
-          ) : (
-            /* `md`, not `sm`. At `sm` this was 55×30 inside a 66px header —
-               the only action in the bar, and the smallest thing in it, sitting
-               beside 33px-tall nav items it was supposed to outrank. */
-            <ButtonLink href="/login">Войти</ButtonLink>
-          )}
+          <AccountAction user={user} loading={loading} compact={false} />
         </div>
 
         <div className="ml-auto flex items-center gap-1.5 lg:hidden">
           <button
+            ref={menuToggleRef}
             type="button"
             onClick={() => setOpen((value) => !value)}
             aria-expanded={open}
+            aria-controls="mobile-menu-panel"
             aria-label="Меню"
             className="flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--chrome-line)] p-2 text-[var(--chrome-muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
           >
@@ -281,6 +294,7 @@ export function SiteHeader() {
         {open ? (
           <motion.div
             key="mobile-menu"
+            id="mobile-menu-panel"
             ref={menuRef}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -294,17 +308,7 @@ export function SiteHeader() {
             className="fixed inset-x-0 top-0 z-40 flex h-dvh flex-col overflow-y-auto bg-[var(--background)] lg:hidden"
           >
             <div className="flex h-16 shrink-0 items-center justify-between border-b-2 border-[var(--rule)] px-4 sm:px-6">
-              <Link href="/" onClick={() => setOpen(false)} className="flex items-center gap-2.5">
-                <MonogramFlip flipped={false} size={20} />
-                <span className="leading-tight">
-                  <span className="font-display block text-[0.9375rem] font-semibold tracking-tight">
-                    Мстинская
-                  </span>
-                  <span className="font-record block text-[0.6rem] uppercase tracking-[0.22em] text-[var(--muted)]">
-                    традиция
-                  </span>
-                </span>
-              </Link>
+              <SiteLogo size={20} onNavigate={() => setOpen(false)} />
               {/* Same square as the collapsed header's own toggle button
                   (`p-2.5`, 18px glyph) — it used to be a bigger `p-3`/24px
                   `CloseGlyph`, so the button visibly changed size between
@@ -363,28 +367,7 @@ export function SiteHeader() {
             </nav>
 
             <div className="shrink-0 border-t-2 border-[var(--rule)] px-4 py-5 sm:px-6">
-              {loading ? (
-                <span className="font-record text-xs text-[var(--muted)]">…</span>
-              ) : user ? (
-                // Same single action as the desktop row above: the name, and
-                // the logout button on the page it opens.
-                <Link
-                  href="/profile"
-                  onClick={() => setOpen(false)}
-                  className="account-chip max-w-full truncate rounded-[var(--radius-sm)] px-2.5 py-2 text-sm font-medium"
-                >
-                  {user.name || user.email}
-                </Link>
-              ) : (
-                <ButtonLink
-                  href="/login"
-                  size="lg"
-                  onClick={() => setOpen(false)}
-                  className="w-full justify-center"
-                >
-                  Войти
-                </ButtonLink>
-              )}
+              <AccountAction user={user} loading={loading} compact onNavigate={() => setOpen(false)} />
             </div>
           </motion.div>
         ) : null}

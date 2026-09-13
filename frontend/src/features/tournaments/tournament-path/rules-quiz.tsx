@@ -111,7 +111,11 @@ export function RulesQuiz() {
             )}
           </div>
 
-          <aside className="flex flex-col border border-[var(--border)] bg-[var(--surface-muted)] p-6 sm:p-[42px]">
+          {/* A plain div, not `<aside>`: this scoreboard is tightly coupled
+              to the quiz right next to it, not page-level complementary
+              content, so `<aside>` here only mis-exposed a nested
+              "complementary" landmark (axe: landmark-complementary-is-top-level). */}
+          <div className="flex flex-col border border-[var(--border)] bg-[var(--surface-muted)] p-6 sm:p-[42px]">
             <span className="record-label text-[var(--text-4)]">Ваш счёт</span>
             <p className="font-record mt-3.5 text-[2.75rem] leading-none text-[var(--foreground)]">
               {String(score).padStart(2, "0")}
@@ -130,7 +134,7 @@ export function RulesQuiz() {
             >
               Полный регламент
             </Link>
-          </aside>
+          </div>
         </div>
       </div>
     </section>

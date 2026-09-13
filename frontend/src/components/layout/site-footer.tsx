@@ -1,15 +1,15 @@
 import Link from "next/link";
-import { Fragment, type CSSProperties, type ComponentType } from "react";
+import { type CSSProperties, type ComponentType } from "react";
 
 import { AnnalIcon } from "@/components/brand/annal-icon";
 import { BracketIcon } from "@/components/brand/bracket-icon";
 import { MaskMark } from "@/components/brand/mask-mark";
-import { Monogram } from "@/components/brand/monogram";
+import { RippleLabel } from "@/components/brand/ripple-label";
+import { SiteLogo } from "@/components/brand/site-logo";
 import { SashIcon } from "@/components/brand/sash-icon";
 import { UstavIcon } from "@/components/brand/ustav-icon";
 import { Container } from "@/components/ui";
 import { FooterSeals } from "./footer-seals";
-import { FooterToTop } from "./footer-to-top";
 
 /**
  * Each link carries the mark that already stands for that place on the margin
@@ -51,56 +51,9 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
   },
 ];
 
-/**
- * The label, cut into letters so a ripple can run along it.
- *
- * Split by words first and each word set `inline-block`, with the spaces left
- * as plain text between them: letters on their own would let a line break fall
- * anywhere, and «Правила и регламенты» is long enough to wrap in its column.
- * This way it still breaks at spaces and nowhere else.
- *
- * The lettered copy is `aria-hidden` with the whole label repeated in an
- * `sr-only` span beside it. A link's accessible name would technically still
- * come out right from the spans alone, but several screen readers spell out
- * text broken into one element per character, and this is navigation — it has
- * to be read as words.
- */
-function RippleLabel({ text }: { text: string }) {
-  const words = text.split(" ");
-  /* Each word's index into the whole label, so the ripple's delays carry on
-     across the spaces instead of restarting at every word. Counted from the
-     words before it rather than a running total: a binding reassigned during
-     render is what `react-hooks/immutability` is there to catch, and no label
-     here is more than three words long. */
-  const parts = words.map((word, index) => ({
-    word,
-    start: words.slice(0, index).reduce((sum, previous) => sum + previous.length + 1, 0),
-  }));
-
-  return (
-    <>
-      <span aria-hidden="true">
-        {parts.map(({ word, start }, index) => (
-          <Fragment key={`${word}-${start}`}>
-            {index > 0 ? " " : null}
-            <span className="footer-link-word">
-              {[...word].map((char, offset) => (
-                <span
-                  key={`${start}-${offset}`}
-                  className="footer-link-letter"
-                  style={{ "--i": start + offset } as CSSProperties}
-                >
-                  {char}
-                </span>
-              ))}
-            </span>
-          </Fragment>
-        ))}
-      </span>
-      <span className="sr-only">{text}</span>
-    </>
-  );
-}
+/* `RippleLabel` moved to `components/brand/ripple-label.tsx` so the same
+   "как в подвале" hover — letter ripple + rule drawn in step — can be reused
+   outside the footer (see `BackLink` in `components/brand/back-link.tsx`). */
 
 /**
  * Colophon rather than a sitemap footer: a cold double rule closes the
@@ -111,22 +64,37 @@ function RippleLabel({ text }: { text: string }) {
  */
 export function SiteFooter() {
   return (
-    <footer className="mt-14 bg-[var(--background-deep)]">
+    // `mt-6`, not the `mt-10` this used to be (itself trimmed down from
+    // `mt-14`): every page already ends with its own `py-10` bottom padding
+    // (from `Container`), so the two stacked together kept reading as
+    // noticeably more dead space before the footer than after the header, on
+    // every page site-wide — most visible on a page whose last section is
+    // short (a single empty-state line, say). Trimmed here (the footer's own
+    // margin) rather than on `Container`, which also sets the gap *under*
+    // the header — that one wasn't the complaint.
+    <footer className="mt-6 bg-[var(--background-deep)]">
       <Container>
-        <div className="rule-double pt-8" />
+        {/* `pt-3`, not the `pt-8` this used to be: the line itself is ~3px
+            tall (see `.rule-double` in globals.css), so the rest of that
+            padding was pure dead space before the columns below even start
+            their own `py-10` top padding — the two stacked read as too much
+            gap right under the rule specifically (not the gap under the
+            header, which nobody flagged). */}
+        <div className="rule-double pt-3" />
       </Container>
 
       <Container className="grid gap-10 py-10 md:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
         <div className="space-y-4">
-          <div className="flex items-center gap-2.5">
-            <Monogram size={20} className="text-[var(--accent)]" />
-            <span className="leading-tight">
-              <span className="font-display block text-[0.9375rem] font-semibold">Мстинская</span>
-              <span className="font-record block text-[0.6rem] uppercase tracking-[0.22em] text-[var(--muted)]">
-                традиция
-              </span>
-            </span>
-          </div>
+          {/* `SiteLogo` — the actual logo (link home, hover reveal, tap
+              reveal, the click-triggered сшибка), not a static lookalike
+              built from the same pieces: this used to be a bare `Monogram`
+              glyph with no badge plate and no behaviour at all, which read
+              as a different, lighter-weight mark than the header's own.
+              `variant="slide"` answers the hover with a page leafing past
+              rather than a plate flipping over — the same cycling-to-a-
+              weapon gesture, a visibly different one, so the footer's copy
+              doesn't read as a literal duplicate of the header's motion. */}
+          <SiteLogo size={20} variant="slide" />
           <p className="max-w-xs text-sm leading-relaxed text-[var(--muted)]">
             Цифровая платформа сообщества: обучение, правила, турниры, клубы и снаряжение.
           </p>
@@ -171,18 +139,24 @@ export function SiteFooter() {
         ))}
       </Container>
 
-      <Container className="flex flex-col gap-5 border-t border-[var(--border-strong)] py-6 sm:flex-row sm:items-center sm:justify-between">
+      {/* `sm:pr-24`: at `sm` and up this row goes horizontal and the seals
+          land flush against the container's own right edge (`justify-between`
+          below) — exactly where `scroll-to-top.tsx`'s fixed button now also
+          sits (`right-6`, ~42px wide), since that button no longer stands
+          down once the footer is on screen. `pr-16` (the first value tried
+          here) only cancelled out the button's own footprint almost exactly,
+          leaving the seals touching it with no visible gap; `pr-24` leaves a
+          real ~30px of air. Reserving room here shifts the seals clear of
+          that corner instead of the button moving for them, which is what
+          this space used to do (see that file's own comment for why it
+          doesn't any more). Not needed below `sm`: stacked, the seals sit at
+          their own natural width against the left edge, nowhere near the
+          button. */}
+      <Container className="flex flex-col gap-5 border-t border-[var(--border-strong)] py-6 sm:flex-row sm:items-center sm:justify-between sm:pr-24">
         <p className="font-record text-[0.7rem] uppercase tracking-[0.14em] text-[var(--muted)]">
           © {new Date().getFullYear()} · Мстинская традиция
         </p>
-        {/* Seals and «Наверх» travel together, so the row needs no breakpoint of
-            its own: stacked (below `sm`) they take the line the copyright left
-            behind, the marks at one end and the way up at the other; in a row
-            they close ranks at the right end beside it. */}
-        <div className="flex items-center justify-between gap-6 sm:justify-end">
-          <FooterSeals />
-          <FooterToTop />
-        </div>
+        <FooterSeals />
       </Container>
     </footer>
   );

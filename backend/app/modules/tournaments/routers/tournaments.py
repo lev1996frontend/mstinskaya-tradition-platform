@@ -8,7 +8,11 @@ from app.modules.tournaments.schemas.judge_assignment import JudgeAssignmentCrea
 from app.modules.tournaments.schemas.match import MatchCreateRequest, MatchResponse
 from app.modules.tournaments.schemas.match_decision import MatchDecisionCreateRequest, MatchDecisionResponse
 from app.modules.tournaments.schemas.participant import ParticipantCreateRequest, ParticipantResponse
-from app.modules.tournaments.schemas.tournament import TournamentCreateRequest, TournamentResponse
+from app.modules.tournaments.schemas.tournament import (
+    TournamentCreateRequest,
+    TournamentResponse,
+    TournamentRulesetUpdateRequest,
+)
 from app.modules.tournaments.schemas.tournament_category import TournamentCategoryCreateRequest, TournamentCategoryResponse
 from app.modules.tournaments.schemas.tournament_document import TournamentDocumentCreateRequest, TournamentDocumentResponse
 from app.modules.tournaments.security.deps import TournamentManager, ensure_can_manage_tournament, get_current_manager
@@ -72,6 +76,39 @@ async def list_tournaments(session: AsyncSession = Depends(get_db)) -> list[Tour
 @router.get("/{tournament_id}", response_model=TournamentResponse)
 async def get_tournament(tournament_id: str, session: AsyncSession = Depends(get_db)) -> TournamentResponse:
     tournament = await TournamentService.get_tournament(session, tournament_id)
+    return TournamentResponse(
+        id=str(tournament.id),
+        title=tournament.title,
+        description=tournament.description,
+        status=tournament.status,
+        start_date=tournament.start_date,
+        end_date=tournament.end_date,
+        location=tournament.location,
+        city=tournament.city,
+        country=tournament.country,
+        organizer_id=str(tournament.organizer_id),
+        ruleset_id=str(tournament.ruleset_id),
+    )
+
+
+@router.patch("/{tournament_id}/ruleset", response_model=TournamentResponse)
+async def update_tournament_ruleset(
+    tournament_id: str,
+    payload: TournamentRulesetUpdateRequest,
+    manager: TournamentManager = Depends(get_current_manager),
+    session: AsyncSession = Depends(get_db),
+) -> TournamentResponse:
+    """Re-point the tournament at a different edition of the rules.
+
+    Its own narrow route rather than a general `PATCH /{id}` — no other field
+    on a tournament has an update path yet, and this one exists because
+    picking the ruleset is otherwise a one-shot choice made at creation.
+    """
+    tournament = await TournamentService.get_tournament(session, tournament_id)
+    await ensure_can_manage_tournament(session, manager, tournament)
+
+    tournament = await TournamentService.update_ruleset(session, tournament_id, payload.ruleset_id)
+    await session.commit()
     return TournamentResponse(
         id=str(tournament.id),
         title=tournament.title,

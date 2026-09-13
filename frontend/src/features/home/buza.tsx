@@ -298,12 +298,14 @@ export function Buza() {
           </div>
         </div>
 
-        {/* The region the emblem's `aria-controls` names. Unmounted rather than
-            hidden while closed, as it always was — the id travels with it, and
-            `aria-expanded` on the button is what a screen reader reads either
-            way. */}
-        {open ? (
-          <div id="buza-story">
+        {/* The region the emblem's `aria-controls` names. The id must resolve
+            to a real element even while closed — `aria-controls` pointing at
+            nothing is an invalid ARIA reference (axe: aria-valid-attr-value)
+            — so the wrapper stays mounted with `hidden` and only its content
+            unmounts, which is what the pop-in animation needs anyway. */}
+        <div id="buza-story" hidden={!open}>
+          {open ? (
+            <>
             <p className="pop-in mt-4 max-w-2xl text-[0.9375rem] leading-[1.75] text-[var(--muted)]">
               Буза — обрядовое рукопашное состязание Тверской земли, выросшее из уклада артелей на
               Вышневолоцкой водной системе. Бурлаки, портовые грузчики и судовые экипажи, нанимавшиеся артелями,
@@ -413,8 +415,9 @@ export function Buza() {
               Турниры этого сайта носят то же имя — <strong className="text-[var(--accent)]">«Мстинская традиция»</strong> —
               потому что продолжают ту самую линию: обряд, перенесённый в зал, с судьями, разрядами и жребием.
             </p>
-          </div>
-        ) : null}
+            </>
+          ) : null}
+        </div>
       </Container>
     </section>
   );

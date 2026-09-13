@@ -29,10 +29,10 @@ export function TournamentCard({
       <Link
         href={href}
         transitionTypes={["nav-forward"]}
-        className={cn(
-          "flex h-full flex-col gap-3 p-5 transition-transform duration-300 group-hover:translate-x-1.5 group-focus-within:translate-x-1.5",
-          featured && "sm:p-7",
-        )}
+        // The card itself carries the hover now (`.record-card`'s own lift) —
+        // this used to also nudge its own contents 6px right, which read as
+        // two different things moving in two different directions at once.
+        className={cn("flex h-full flex-col gap-3 p-5", featured && "sm:p-7")}
       >
         <div className="flex items-start justify-between gap-3">
           <ViewTransition name={`tournament-title-${tournament.id}`} share="text-morph" default="none">

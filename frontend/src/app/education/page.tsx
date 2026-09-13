@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { GraduationCap } from "lucide-react";
 
 import { listCoursesWithStatus } from "@/api/catalog";
-import { ApiOfflineNotice } from "@/components/api-status";
-import { Badge, Card, Container, EmptyState, PageHeader } from "@/components/ui";
+import { CatalogEmptyState } from "@/components/api-status";
+import { Badge, Card, Container, PageHeader } from "@/components/ui";
 import { courseLevel, courseType, labelOf } from "@/lib/labels";
 
 export const metadata: Metadata = {
@@ -23,7 +23,7 @@ export default async function EducationPage() {
   const published = courses.filter((course) => course.is_published);
 
   return (
-    <Container className="space-y-8 py-10">
+    <Container className="space-y-8 pt-10 pb-5">
       <PageHeader
         eyebrow="Развитие"
         title="Обучение"
@@ -38,18 +38,16 @@ export default async function EducationPage() {
       />
 
       {published.length === 0 ? (
-        <div className="space-y-4">
-          {offline ? <ApiOfflineNotice /> : null}
-          <EmptyState
-            title="Опубликованных курсов пока нет"
-            description={
-              courses.length > 0
-                ? "Есть черновики курсов — они станут видны после публикации."
-                : "Здесь появятся курсы для спортсменов, инструкторов и судей."
-            }
-            icon={<GraduationCap className="size-5" strokeWidth={1.75} />}
-          />
-        </div>
+        <CatalogEmptyState
+          offline={offline}
+          title="Опубликованных курсов пока нет"
+          description={
+            courses.length > 0
+              ? "Есть черновики курсов — они станут видны после публикации."
+              : "Здесь появятся курсы для спортсменов, инструкторов и судей."
+          }
+          icon={<GraduationCap className="size-5" strokeWidth={1.75} />}
+        />
       ) : (
         <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {published.map((course, index) => (

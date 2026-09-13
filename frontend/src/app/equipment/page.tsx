@@ -39,7 +39,7 @@ export default async function EquipmentPage({
           this page off `main section[id]`, and without one here its first
           berth would be «Разряды», a third of the way down. */}
       <section id="opis">
-        <Container className="py-10">
+        <Container className="pt-10 pb-5">
           <PageHeader
             eyebrow="Экипировка"
             title="Снаряжение"

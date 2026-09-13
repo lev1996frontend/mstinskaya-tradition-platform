@@ -53,7 +53,7 @@ export default async function TournamentsPage() {
           place on this page — without it the rail's first mark would be the
           walkthrough, halfway down. */}
       <section id="turniry">
-      <Container className="space-y-8 py-10">
+      <Container className="space-y-8 pt-10 pb-5">
         <PageHeader
           eyebrow="Соревнования"
           title="Турниры"
@@ -76,6 +76,12 @@ export default async function TournamentsPage() {
           </div>
         ) : (
           <>
+            {/* sr-only: keeps the heading order sane (h1 above skipped
+                straight to the cards' h3 otherwise — axe: heading-order).
+                No visible h2 here by design, unlike the homepage's
+                "Ближайшие турниры" — the page's own h1 already says
+                "Турниры". */}
+            <h2 className="sr-only">Список турниров</h2>
             <p className="text-sm text-[var(--muted)]">
               {plural(sorted.length, "турнир", "турнира", "турниров")}
             </p>

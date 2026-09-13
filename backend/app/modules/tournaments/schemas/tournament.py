@@ -37,6 +37,16 @@ class TournamentCreateRequest(BaseModel):
     ruleset_id: str
 
 
+class TournamentRulesetUpdateRequest(BaseModel):
+    """Named for the one field it changes, not a general tournament PATCH.
+
+    No update endpoint exists for anything else about a tournament; this is
+    deliberately narrow rather than a first cut of one.
+    """
+
+    ruleset_id: str
+
+
 class TournamentResponse(BaseModel):
     id: str
     title: str

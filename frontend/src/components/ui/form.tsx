@@ -12,11 +12,17 @@ const controlClasses =
 
 export function Field({
   label,
+  hideLabel = false,
   hint,
   error,
   children,
 }: {
   label: string;
+  /** For the rare field directly under a section heading that already names
+   *  the one thing in it — a second identical-looking `record-label` caption
+   *  right underneath read as duplicated information, not a field label.
+   *  Keeps the label in the DOM for screen readers, just not painted. */
+  hideLabel?: boolean;
   hint?: ReactNode;
   error?: ReactNode;
   children: (props: { id: string; "aria-describedby": string | undefined }) => ReactNode;
@@ -27,7 +33,7 @@ export function Field({
   return (
     <div className="space-y-1.5">
       {/* the same stamped caption used above every other value in the system */}
-      <label htmlFor={id} className="record-label block text-[var(--chrome-muted)]">
+      <label htmlFor={id} className={cn("record-label block text-[var(--chrome-muted)]", hideLabel && "sr-only")}>
         {label}
       </label>
       {children({ id, "aria-describedby": describedBy })}
@@ -50,7 +56,10 @@ export function Input({ className, ...props }: ComponentProps<"input">) {
 }
 
 export function Select({ className, ...props }: ComponentProps<"select">) {
-  return <select className={cn(controlClasses, className)} {...props} />;
+  // Input/Textarea are text-entry, so they keep the caret cursor; a select is
+  // click-to-open like a button, and native selects don't get a pointer
+  // cursor by default in every browser.
+  return <select className={cn(controlClasses, "cursor-pointer", className)} {...props} />;
 }
 
 export function Textarea({ className, ...props }: ComponentProps<"textarea">) {

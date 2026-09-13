@@ -33,7 +33,11 @@ export function TournamentIntake({ tournamentId }: { tournamentId: string }) {
         <p className="font-record text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">
           Бланк заявки
         </p>
-        <div className="flex flex-wrap gap-2">
+        {/* Same auto-fitting grid `ParticipantImportPanel` uses for this
+            shelf plus its own upload action — kept in sync so the two
+            blanks aren't sized one way for a signed-in organizer and
+            another way for the anonymous coach who usually fills this in. */}
+        <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr))]">
           <BlankShelf tournamentId={tournamentId} />
         </div>
       </div>

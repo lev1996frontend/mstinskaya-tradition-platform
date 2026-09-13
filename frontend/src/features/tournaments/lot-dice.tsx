@@ -318,11 +318,15 @@ export function LotDice({
           )}
 
           {isOverride ? (
+            // A placeholder is not a label: it vanishes the moment there is a
+            // value to read back, and a screen reader never announced it as
+            // this field's name in the first place.
             <input
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               disabled={busy}
               placeholder="Причина изменения жребия (обязательно)"
+              aria-label="Причина изменения жребия"
               className="w-full rounded-[var(--radius-sm)] border border-[var(--chrome-line)] bg-[var(--surface)] px-3 py-2 text-sm placeholder:text-[var(--muted)]"
             />
           ) : null}

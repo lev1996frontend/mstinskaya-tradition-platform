@@ -33,12 +33,19 @@ import { IMPULSE_TAP, TURN_EASE } from "@/lib/motion";
  * duel; swapping avoids both that and any fight between the duel's plain-CSS
  * transforms and the flip's framer-motion-driven ones on the same element.
  */
+/** The badge's own fixed box — Tailwind's `size-9` (9 × 4px), independent of
+ *  the `size` prop below (which only sizes the glyph *inside* the box). The
+ *  "slide" variant needs this as a real number, not a Tailwind class, to
+ *  move its two-item row by exactly one box width. */
+const BADGE_BOX = 36;
+
 export function MonogramFlip({
   flipped,
   struck = false,
   opponent = "kisten",
   onStrikeEnd,
   size = 20,
+  variant = "flip",
 }: {
   flipped: boolean;
   struck?: boolean;
@@ -46,6 +53,15 @@ export function MonogramFlip({
   opponent?: WeaponMotifKey;
   onStrikeEnd?: () => void;
   size?: number;
+  /** "flip" (default, the header's own mark) turns the plate over in 3D.
+   *  "slide" answers the same hover — cycling to the next weapon and back —
+   *  with a page turning past rather than a plate flipping over: the column
+   *  of the two faces scrolls up to reveal the weapon underneath instead of
+   *  rotating. Same state machine, same weapon cycling, a different gesture
+   *  for a place that wants to read as "the same mark, not the same
+   *  moment" (the footer's own copy of the logo) rather than a literal
+   *  duplicate of the header's motion. */
+  variant?: "flip" | "slide";
 }) {
   const reduceMotion = useReducedMotion();
   const [rotation, setRotation] = useState(0);
@@ -69,7 +85,13 @@ export function MonogramFlip({
   return (
     <span
       className="relative grid size-9 shrink-0 place-items-center"
-      style={{ perspective: 400 }}
+      // `viewTransitionName: "none"`: the header itself carries one
+      // (`site-header.tsx`), and a same-tick navigation snapshots the DOM for
+      // that transition mid-frame — which can freeze this flip/сшибка
+      // instead of letting it play through. Excluding just this badge from
+      // the snapshot keeps the header's own cross-page continuity intact
+      // while leaving its animation free to finish on its own clock.
+      style={{ perspective: 400, viewTransitionName: "none" }}
       // `.lunge-a-sm`/`.lunge-b-sm` (760ms) outlast `.strike-ring` (650ms)
       // and `.flash` (600ms), all three of which bubble `animationend` here;
       // wait for the lunge specifically so clearing `struck` doesn't unmount
@@ -97,6 +119,37 @@ export function MonogramFlip({
             </Seal>
           </span>
         </div>
+      ) : variant === "slide" ? (
+        // Пролистывание: the same two faces as "flip", but a row that
+        // scrolls past sideways rather than a plate that turns over — a page
+        // leafing left-to-right instead of a coin flipping (and distinct
+        // from a vertical scroll too, which read too close to the flip's own
+        // up/down-feeling motion at this size). `overflow-hidden` on the
+        // mask is what makes the row read as scrolling *behind* a fixed
+        // window rather than the badge itself moving.
+        <span className="relative size-9 shrink-0 overflow-hidden rounded-[var(--radius-sm)] bg-[var(--accent)] text-white">
+          {/* `width` set explicitly (not left to shrink-to-fit): a
+              `display:flex` row is still a block box, and a block box with
+              no declared width fills its *parent* (36px) rather than sizing
+              to its two 36px children (72px) — which silently turned
+              `x: "-50%"` into half the travel actually needed to reveal the
+              second face, leaving both half-visible at once instead of
+              swapping cleanly. Pixel `x` values (not a percentage) sidestep
+              the same ambiguity for the transform itself. */}
+          <motion.span
+            className="flex flex-row"
+            style={{ width: BADGE_BOX * 2 }}
+            animate={{ x: flipped ? -BADGE_BOX : 0 }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.34, ease: TURN_EASE }}
+          >
+            <span className="grid size-9 shrink-0 place-items-center">
+              <Monogram size={size} />
+            </span>
+            <span className="grid size-9 shrink-0 place-items-center">
+              <Icon size={size} />
+            </span>
+          </motion.span>
+        </span>
       ) : (
         <motion.span
           className="grid size-9 place-items-center rounded-[var(--radius-sm)] bg-[var(--accent)] text-white"

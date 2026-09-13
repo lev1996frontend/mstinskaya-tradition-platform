@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 import { listClubsWithStatus } from "@/api/catalog";
-import { ApiOfflineNotice } from "@/components/api-status";
+import { CatalogEmptyState } from "@/components/api-status";
 import { CrestRoundel } from "@/components/brand/crest-roundel";
-import { Badge, Card, Container, EmptyState, PageHeader } from "@/components/ui";
+import { Badge, Card, Container, PageHeader } from "@/components/ui";
 import { formatPlace } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -22,7 +22,7 @@ export default async function ClubsPage() {
   const { items: clubs, offline } = await listClubsWithStatus();
 
   return (
-    <Container className="space-y-8 py-10">
+    <Container className="space-y-8 pt-10 pb-5">
       <PageHeader
         eyebrow="Сообщество"
         title="Клубы"
@@ -37,14 +37,12 @@ export default async function ClubsPage() {
       />
 
       {clubs.length === 0 ? (
-        <div className="space-y-4">
-          {offline ? <ApiOfflineNotice /> : null}
-          <EmptyState
-            title="Клубов пока нет"
-            description="Реестр клубов заполнится, как только появятся первые записи."
-            icon={<CrestRoundel size={22} />}
-          />
-        </div>
+        <CatalogEmptyState
+          offline={offline}
+          title="Клубов пока нет"
+          description="Реестр клубов заполнится, как только появятся первые записи."
+          icon={<CrestRoundel size={22} />}
+        />
       ) : (
         <ul className="grid gap-4 lg:grid-cols-2">
           {clubs.map((club) => (

@@ -273,3 +273,79 @@ def test_attaching_a_document_requires_a_manager(tmp_path):
         headers=stranger,
     )
     assert refused.status_code == 403, refused.text
+
+
+# ---------------------------------------------------------- смена регламента
+# A tournament names exactly one ruleset edition at creation and, until now,
+# never again — there was no way back from a wrong pick or a later revision.
+
+
+def test_the_organizer_can_repoint_the_tournament_at_another_edition():
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+    second_ruleset = client.post(
+        "/api/v1/rulesets", json={"title": "Base", "version": "2.0", "status": "ACTIVE"}
+    )
+    assert second_ruleset.status_code == 201, second_ruleset.text
+
+    updated = client.patch(
+        f"/api/v1/tournaments/{tournament_id}/ruleset",
+        json={"ruleset_id": second_ruleset.json()["id"]},
+        headers=headers,
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["ruleset_id"] == second_ruleset.json()["id"]
+
+    # The change is real, not just echoed back — a fresh read shows it too.
+    fetched = client.get(f"/api/v1/tournaments/{tournament_id}")
+    assert fetched.json()["ruleset_id"] == second_ruleset.json()["id"]
+
+
+def test_repointing_at_a_nonexistent_edition_is_refused():
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+
+    refused = client.patch(
+        f"/api/v1/tournaments/{tournament_id}/ruleset",
+        json={"ruleset_id": "00000000-0000-0000-0000-000000000000"},
+        headers=headers,
+    )
+    assert refused.status_code == 404, refused.text
+
+
+def test_repointing_with_a_malformed_id_is_a_bad_request_not_a_crash():
+    client = setup_app_for_tests()
+    tournament_id, headers = bootstrap(client)
+
+    refused = client.patch(
+        f"/api/v1/tournaments/{tournament_id}/ruleset",
+        json={"ruleset_id": "not-a-uuid"},
+        headers=headers,
+    )
+    assert refused.status_code == 400, refused.text
+
+
+def test_repointing_requires_a_manager():
+    client = setup_app_for_tests()
+    tournament_id, _ = bootstrap(client)
+    _, stranger = register(client, "stranger-ruleset@example.com")
+    ruleset = client.post("/api/v1/rulesets", json={"title": "Base", "version": "3.0", "status": "ACTIVE"})
+
+    refused = client.patch(
+        f"/api/v1/tournaments/{tournament_id}/ruleset",
+        json={"ruleset_id": ruleset.json()["id"]},
+        headers=stranger,
+    )
+    assert refused.status_code == 403, refused.text
+
+
+def test_repointing_without_a_login_is_refused():
+    client = setup_app_for_tests()
+    tournament_id, _ = bootstrap(client)
+    ruleset = client.post("/api/v1/rulesets", json={"title": "Base", "version": "4.0", "status": "ACTIVE"})
+
+    refused = client.patch(
+        f"/api/v1/tournaments/{tournament_id}/ruleset",
+        json={"ruleset_id": ruleset.json()["id"]},
+    )
+    assert refused.status_code == 401, refused.text

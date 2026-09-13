@@ -3,8 +3,8 @@ import { Users } from "lucide-react";
 import Link from "next/link";
 
 import { listAthletesWithStatus } from "@/api/catalog";
-import { ApiOfflineNotice } from "@/components/api-status";
-import { Badge, Container, EmptyState, PageHeader } from "@/components/ui";
+import { CatalogEmptyState } from "@/components/api-status";
+import { Badge, Container, PageHeader } from "@/components/ui";
 import { Avatar } from "@/components/ui/avatar";
 import { athleteName } from "@/lib/athlete-name";
 import { athleteLevel, athleteLevelTone, labelOf } from "@/lib/labels";
@@ -32,7 +32,7 @@ export default async function AthletesPage() {
   const { items: athletes, offline } = await listAthletesWithStatus();
 
   return (
-    <Container className="space-y-8 py-10">
+    <Container className="space-y-8 pt-10 pb-5">
       <PageHeader
         eyebrow="Сообщество"
         title="Спортсмены"
@@ -47,14 +47,12 @@ export default async function AthletesPage() {
       />
 
       {athletes.length === 0 ? (
-        <div className="space-y-4">
-          {offline ? <ApiOfflineNotice /> : null}
-          <EmptyState
-            title="Профилей пока нет"
-            description="Реестр спортсменов заполнится, как только появятся первые записи."
-            icon={<Users className="size-5" strokeWidth={1.75} />}
-          />
-        </div>
+        <CatalogEmptyState
+          offline={offline}
+          title="Профилей пока нет"
+          description="Реестр спортсменов заполнится, как только появятся первые записи."
+          icon={<Users className="size-5" strokeWidth={1.75} />}
+        />
       ) : (
         <div>
           {/* The column heads are a row of the same grid, not a <thead>: they
@@ -68,8 +66,8 @@ export default async function AthletesPage() {
                 for many rows it is the ФИО standing here. */}
             <span>Имя</span>
             <span>Уровень</span>
-            <span className="text-right">Опыт, лет</span>
-            <span className="text-right">Год рожд.</span>
+            <span className="text-center">Опыт, лет</span>
+            <span className="text-center">Год рожд.</span>
             <span />
           </div>
 
@@ -83,7 +81,7 @@ export default async function AthletesPage() {
                 >
                   <Link
                     href={`/athletes/${athlete.id}`}
-                    className="ledger-row group grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-x-5 gap-y-3 py-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_9rem_5rem_5rem_1rem] sm:gap-6"
+                    className="ledger-row group grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-x-5 gap-y-3 py-4 sm:grid-cols-[2.5rem_minmax(0,1fr)_9rem_5rem_5rem_1rem] sm:gap-6 sm:pr-1"
                   >
                     <span className="ledger-row-edge row-span-2 self-start sm:row-span-1 sm:self-center">
                       <Avatar name={name} photoUrl={athlete.photo_url} size="sm" />
@@ -113,10 +111,10 @@ export default async function AthletesPage() {
                       </span>
                     </span>
 
-                    <span className="font-record hidden text-right tabular-nums sm:block">
+                    <span className="font-record hidden text-center tabular-nums sm:block">
                       {athlete.experience_years}
                     </span>
-                    <span className="font-record hidden text-right tabular-nums text-[var(--muted)] sm:block">
+                    <span className="font-record hidden text-center tabular-nums text-[var(--muted)] sm:block">
                       {athlete.birth_year ?? "—"}
                     </span>
 

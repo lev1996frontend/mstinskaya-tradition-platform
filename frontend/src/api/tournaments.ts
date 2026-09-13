@@ -93,6 +93,20 @@ export const removeTournamentDocument = (tournamentId: string, documentId: strin
   });
 
 /**
+ * Re-point the tournament at a different edition of the rules.
+ *
+ * The only field a tournament can be changed after creation — a narrow route
+ * on the backend, not a general update, because picking the ruleset was
+ * otherwise a one-shot choice with no way back from a wrong pick or a later
+ * revision arriving.
+ */
+export const updateTournamentRuleset = (tournamentId: string, rulesetId: string) =>
+  apiRequest<Tournament>(`/api/v1/tournaments/${tournamentId}/ruleset`, {
+    method: "PATCH",
+    body: { ruleset_id: rulesetId },
+  });
+
+/**
  * The tournament's own entry list — who has been entered, and in which category,
  * before any discipline is drawn.
  *

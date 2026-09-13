@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type CSSProperties } from "react";
 import { AnimatePresence, motion, useReducedMotion, type PanInfo, type Variants } from "framer-motion";
 
 import { Container, cn } from "@/components/ui";
@@ -14,6 +14,24 @@ const SWIPE_VELOCITY_THRESHOLD = 400;
 
 function pad(index: number) {
   return String(index + 1).padStart(2, "0");
+}
+
+/** Letter-by-letter gold fill for the "← Назад"/"Следующий →" nav buttons —
+ *  see `.exhibit-nav-letter` in globals.css for why this is a per-letter
+ *  staggered *colour* transition rather than the gradient-wipe `.footer-link`
+ *  tried and dropped. `aria-hidden`: the button already carries its own
+ *  `aria-label`, so the lettered spans add nothing to its accessible name and
+ *  must not be read as loose characters. */
+function FillLabel({ text }: { text: string }) {
+  return (
+    <span aria-hidden="true">
+      {[...text].map((char, index) => (
+        <span key={index} className="exhibit-nav-letter" style={{ "--i": index } as CSSProperties}>
+          {char === " " ? " " : char}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 /** Archival-ledger spec rows (Тип/Назначение/Конструкция/Фиксация) shared by
@@ -302,17 +320,17 @@ export function GearArchive({ initialIndex }: { initialIndex?: number } = {}) {
                     type="button"
                     onClick={() => step(-1)}
                     aria-label="Предыдущий экспонат"
-                    className="record-label border border-[var(--border-strong)] px-4 py-2.5 text-[var(--muted)] transition-colors hover:border-[var(--gold)] hover:text-[var(--gold)]"
+                    className="exhibit-nav-button record-label border border-[var(--border-strong)] px-4 py-2.5 text-[var(--muted)] hover:border-[var(--gold)] hover:text-[var(--gold)] focus-visible:border-[var(--gold)] focus-visible:text-[var(--gold)]"
                   >
-                    ← Назад
+                    <FillLabel text="← Назад" />
                   </button>
                   <button
                     type="button"
                     onClick={() => step(1)}
                     aria-label="Следующий экспонат"
-                    className="record-label border border-[var(--border-strong)] px-4 py-2.5 text-[var(--muted)] transition-colors hover:border-[var(--gold)] hover:text-[var(--gold)]"
+                    className="exhibit-nav-button record-label border border-[var(--border-strong)] px-4 py-2.5 text-[var(--muted)] hover:border-[var(--gold)] hover:text-[var(--gold)] focus-visible:border-[var(--gold)] focus-visible:text-[var(--gold)]"
                   >
-                    Следующий →
+                    <FillLabel text="Следующий →" />
                   </button>
                 </div>
               </motion.div>

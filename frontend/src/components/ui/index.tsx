@@ -187,14 +187,21 @@ export function Card({
       className={cn(
         "relative rounded-[var(--radius-md)] border bg-[var(--surface)] shadow-[var(--shadow-sm)] transition-colors",
         variant === "featured"
-          ? "overflow-hidden border-[var(--border-strong)] shadow-[var(--shadow-md)]"
+          ? "border-[var(--border-strong)] shadow-[var(--shadow-md)]"
           : "border-[var(--border)]",
         className,
       )}
       style={style}
     >
       {variant === "featured" ? (
-        <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-[var(--gold)]" />
+        // Rounded to match the card's own top corners, not clipped into
+        // shape by a parent `overflow-hidden` — `.record-card`'s hover
+        // adds a `filter: drop-shadow` bloom (globals.css) that an
+        // `overflow-hidden` ancestor would truncate at its own edge.
+        <span
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-[3px] rounded-t-[var(--radius-md)] bg-[var(--gold)]"
+        />
       ) : null}
       {children}
     </As>
@@ -325,8 +332,17 @@ export function Alert({
   title?: ReactNode;
   children?: ReactNode;
 }) {
+  // Every caller mounts this the moment there's something to say (a failed
+  // submit, a validation error) — a sighted user sees it appear where the
+  // button they just pressed was; a screen-reader user gets nothing unless
+  // the mount itself is announced. `danger`/`warning` are interruptions
+  // (`role="alert"` — assertive, WCAG 4.1.3 Status Messages); the rest are
+  // incidental status, announced politely rather than cutting in.
+  const isUrgent = tone === "danger" || tone === "warning";
   return (
     <div
+      role={isUrgent ? "alert" : "status"}
+      aria-live={isUrgent ? "assertive" : "polite"}
       className={cn(
         "rounded-[var(--radius-sm)] border border-l-[3px] px-4 py-3 text-sm leading-relaxed",
         toneClasses[tone],

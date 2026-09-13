@@ -90,6 +90,31 @@ class TournamentService:
         return tournament
 
     @staticmethod
+    async def update_ruleset(session: AsyncSession, tournament_id: str, ruleset_id: str) -> Tournament:
+        """Re-point a tournament at a different edition of the rules.
+
+        The only mutable field a tournament has today. Nothing else about the
+        event changes — this exists because an organizer can only pick the
+        ruleset once, at creation, and a later correction (a typo'd edition, a
+        new одобренная redaction arriving after the tournament was set up) had
+        no way back until now.
+        """
+        tournament = await TournamentService.get_tournament(session, tournament_id)
+
+        try:
+            parsed_ruleset_id = UUID(str(ruleset_id))
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ruleset id") from None
+
+        ruleset = await session.get(RuleSet, parsed_ruleset_id)
+        if ruleset is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ruleset not found")
+
+        tournament.ruleset_id = parsed_ruleset_id
+        await session.flush()
+        return tournament
+
+    @staticmethod
     async def list_tournaments(session: AsyncSession) -> list[Tournament]:
         result = await session.execute(select(Tournament).order_by(Tournament.created_at.asc()))
         return list(result.scalars().all())

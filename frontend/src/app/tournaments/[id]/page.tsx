@@ -11,6 +11,7 @@ import {
   listDocuments,
   listRegistrations,
 } from "@/api/tournaments";
+import { listRuleSets } from "@/api/catalog";
 import {
   Badge,
   Card,
@@ -20,7 +21,9 @@ import {
   PageHeader,
   Section,
 } from "@/components/ui";
+import { BackLink } from "@/components/brand/back-link";
 import { TournamentDocumentsPanel } from "@/features/documents/document-upload";
+import { TournamentRulesetPicker } from "@/features/tournaments/tournament-ruleset-picker";
 import { TournamentStatusBadge } from "@/features/tournaments/badges";
 import { TournamentIntake } from "@/features/tournaments/tournament-intake";
 import { DirectionalTransition } from "@/features/transitions/directional-transition";
@@ -40,23 +43,24 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function TournamentPage({ params }: PageProps) {
   const { id } = await params;
-  const [tournament, competitions, categories, documents, registrations] = await Promise.all([
+  const [tournament, competitions, categories, documents, registrations, ruleSets] = await Promise.all([
     getTournament(id),
     listCompetitions(id),
     listCategories(id),
     listDocuments(id),
     listRegistrations(id),
+    listRuleSets(),
   ]);
   if (!tournament) notFound();
 
   return (
     <DirectionalTransition>
-      <Container wide className="space-y-10 py-10">
+      <Container wide className="space-y-10 pt-10 pb-5">
         <PageHeader
           eyebrow={
-            <Link href="/tournaments" className="label-link label-link-back" transitionTypes={["nav-back"]}>
+            <BackLink href="/tournaments" transitionTypes={["nav-back"]}>
               Все турниры
-            </Link>
+            </BackLink>
           }
           title={
             <ViewTransition name={`tournament-title-${tournament.id}`} share="text-morph" default="none">
@@ -118,18 +122,25 @@ export default async function TournamentPage({ params }: PageProps) {
                      along the bottom edge and the ring inside the border. */
                   className="record-card group"
                 >
-                  {/* The whole card's contents move, not the name alone. The
-                      nudge is the mobile menu's own gesture, but applied to one
-                      line inside a card it read as a broken hover — a title
-                      sliding out from under text that stayed put. Either
-                      everything travels or nothing does. */}
+                  {/* The card itself carries the hover (`.record-card`'s own
+                      lift) — this used to also nudge the content 6px right,
+                      which read as two different things moving in two
+                      different directions at once. */}
                   <Link
                     href={`/tournaments/${tournament.id}/competitions/${competition.id}`}
-                    className="flex h-full flex-col gap-3 p-5 transition-transform duration-300 group-hover:translate-x-1.5 group-focus-within:translate-x-1.5"
+                    /* One row on a wide card, not a column: a full-width card
+                       with everything stacked left three lines tall reads as
+                       broken layout — a wall of empty space to the right of
+                       each short line. Splitting name+badges from the meta
+                       and pushing them to opposite ends fills that width
+                       instead of wasting it, and `flex-wrap` folds it back
+                       into a stack once the card narrows below what one row
+                       needs. */
+                    className="flex h-full flex-wrap items-start justify-between gap-x-4 gap-y-2 p-5"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 flex-wrap items-start gap-3">
                       <h3 className="min-w-0 font-semibold leading-snug">{competition.name}</h3>
-                      <span className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                      <span className="flex shrink-0 flex-wrap gap-1.5">
                         {/* An age bound is the difference between «Ветераны» and
                             the open absolute, so it belongs beside the name and
                             not buried inside the discipline. */}
@@ -139,12 +150,16 @@ export default async function TournamentPage({ params }: PageProps) {
                         <Badge>{labelOf(competitionType, competition.type)}</Badge>
                       </span>
                     </div>
-                    <p className="text-sm text-[var(--muted)]">
-                      {labelOf(competitionFormat, competition.format)}
-                    </p>
-                    <p className="mt-auto text-sm text-[var(--muted)]">
-                      {plural(competition.participant_count, "участник", "участника", "участников")} ·{" "}
-                      {competition.finished_match_count} из {competition.match_count} боёв завершено
+                    <p className="flex flex-wrap gap-x-1.5 text-sm text-[var(--muted)]">
+                      <span>{labelOf(competitionFormat, competition.format)}</span>
+                      <span aria-hidden>·</span>
+                      <span>
+                        {plural(competition.participant_count, "участник", "участника", "участников")}
+                      </span>
+                      <span aria-hidden>·</span>
+                      <span>
+                        {competition.finished_match_count} из {competition.match_count} боёв завершено
+                      </span>
                     </p>
                   </Link>
                 </Card>
@@ -176,13 +191,35 @@ export default async function TournamentPage({ params }: PageProps) {
           </Section>
         ) : null}
 
-        {/* Always shown, not just when there is already a document: a manager
-            needs somewhere to attach the first положение too. The panel
-            itself decides what an anonymous visitor sees (the public list
-            only) versus a signed-in one (the list, a remove cross, and the
-            upload form) — the same split `TournamentIntake` makes above. */}
+        {/* Two distinct sub-blocks, not one flat pile: the ruleset is a
+            single edition this tournament points at — picked here, but only
+            ever edited/attached on its own `/rules/{id}` page — while
+            "Документы турнира" is a read-only list of whatever's already
+            attached (положение and the like). Rendering them under one
+            shared label made it look like the tournament's own upload button
+            could replace the регламент itself, which it never could (see
+            `TournamentDocumentsPanel`'s own `RULES`-type exclusion).
+            `TournamentDocumentsPanel` deliberately has no upload form of its
+            own any more — see its own doc comment for why and for the gap
+            that leaves — so only the ruleset picker offers a signed-in
+            manager anything to change here; the document list is public and
+            identical for every visitor. */}
         <Section title="Документы">
-          <TournamentDocumentsPanel tournamentId={tournament.id} initialDocuments={documents} />
+          <div className="space-y-3">
+            <p className="record-label text-[var(--chrome-muted)]">Регламент</p>
+            <TournamentRulesetPicker
+              tournamentId={tournament.id}
+              ruleSets={ruleSets}
+              currentRulesetId={tournament.ruleset_id}
+            />
+          </div>
+          <div className="border-t border-[var(--border)] pt-4">
+            <TournamentDocumentsPanel
+              tournamentId={tournament.id}
+              initialDocuments={documents}
+              label="Документы турнира"
+            />
+          </div>
         </Section>
       </Container>
     </DirectionalTransition>

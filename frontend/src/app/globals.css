@@ -471,6 +471,25 @@ button:not(:disabled),
   translate: -4px 0;
 }
 
+/* Грув только под словом, не под стрелкой. `.label-link`'s hover groove
+   (above) covers the element's whole box, and a back-link's arrow sits
+   *first* inside that box (`::before`) — so the groove used to start under
+   the glyph before the word even began, reading as smeared/crooked rather
+   than a clean underline the way a forward link's trailing arrow does.
+   Anchoring the groove to the box's own right edge and trimming its width by
+   roughly the arrow's own footprint (glyph plus its 0.55em margin) stops the
+   drawn line where the word actually starts. The extra `.label-link` class in
+   the selector is needed only for specificity, to win over the plain
+   `.label-link:hover` rule above regardless of source order. */
+.label-link.label-link-back {
+  background-position: 100% 100%;
+}
+
+.label-link.label-link-back:hover,
+.label-link.label-link-back:focus-visible {
+  background-size: calc(100% - 1.35em) 2px;
+}
+
 /* врез — the label pressed into the plank: down a pixel, its glow gone, a dark
    line above it and a bone-coloured one below, which is the whole trick of a
    cut edge. The groove darkens and gets its lit lip at the same moment, so the
@@ -1031,22 +1050,6 @@ button:not(:disabled),
   }
 }
 
-.scroll-top-ring {
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  width: 26px;
-  height: 26px;
-  border: 2px solid var(--accent);
-  border-radius: 50%;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.scroll-top-btn:hover .scroll-top-ring,
-.scroll-top-btn:focus-visible .scroll-top-ring {
-  animation: stamp-ring 520ms cubic-bezier(0.2, 0.8, 0.3, 1);
-}
 
 /* тиснение (btn-stamp-ring) — same gesture as .scroll-top-ring above, sized
    to the button's own box (inset -3px) instead of a fixed circle, and in
@@ -1064,13 +1067,19 @@ button:not(:disabled),
   pointer-events: none;
 }
 
+/* `.scroll-top-btn` rides the same stamp here as `.btn-primary` — it fills
+   with the same --accent and needed the same gold ring once its own
+   `.scroll-top-ring` (accent-on-accent, invisible against its own fill) was
+   dropped in favour of it. */
 @media (hover: hover) and (pointer: fine) {
-  .btn-primary:hover .btn-stamp-ring {
+  .btn-primary:hover .btn-stamp-ring,
+  .scroll-top-btn:hover .btn-stamp-ring {
     animation: stamp-ring 480ms cubic-bezier(0.2, 0.8, 0.3, 1);
   }
 }
 
-.btn-primary:focus-visible .btn-stamp-ring {
+.btn-primary:focus-visible .btn-stamp-ring,
+.scroll-top-btn:focus-visible .btn-stamp-ring {
   animation: stamp-ring 480ms cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 
@@ -1392,6 +1401,59 @@ button:not(:disabled),
   .footer-link:focus-visible .footer-link-mark {
     transform: none;
   }
+
+  .back-link-arrow {
+    transition-duration: 1ms;
+  }
+
+  .footer-link:hover .back-link-arrow,
+  .footer-link:focus-visible .back-link-arrow {
+    translate: none;
+  }
+}
+
+/* `BackLink` (`components/brand/back-link.tsx`) — a "← Куда-то" eyebrow reuses
+   `.footer-link`'s own class (letter ripple + rule, see above) rather than a
+   parallel copy of the same mechanics under a new name, since the two are
+   meant to be the identical gesture, not merely similar ones. Two things
+   don't carry over from the footer as-is:
+
+   Rest colour — footer links start muted and lift to `--foreground` on
+   hover; a `BackLink` is an eyebrow set in the accent colour from the start
+   (it always was, under the `.label-link` language this replaced), so only
+   the resting colour is overridden here — the hover rule already inherited
+   from `.footer-link:hover` still lifts it further, to `--foreground`.
+   Declared after `.footer-link` on purpose: same specificity (one class),
+   source order decides, and this must win at rest.
+
+   The leading arrow — footer links have no arrow; a back-link's is a plain
+   child span (not a `::before`, unlike the `.label-link-back` this replaces)
+   specifically so it sits outside `.footer-link`'s own background/ripple
+   entirely and can never be swept into either — the exact bug (the groove
+   painting under the arrow glyph) that this whole hover was replaced to
+   avoid in the first place. */
+.back-link {
+  color: var(--accent);
+  /* The footer's own rule sits `bottom: 2px` inside `.footer-link`'s box, and
+     the footer's line box has room for that because the column list around
+     it already gives each row breathing space. This link has no such
+     padding of its own, so the rule sat flush against the letters'
+     descenders — read as touching the text rather than underlining it.
+     Padding-bottom alone (not padding-top too, unlike `.label-link`'s
+     tap-target reasoning): this is a small inline breadcrumb, not a target
+     needing a 24px floor. */
+  padding-bottom: 4px;
+}
+
+.back-link-arrow {
+  display: inline-block;
+  margin-right: 0.5em;
+  transition: translate 200ms var(--ease-out);
+}
+
+.footer-link:hover .back-link-arrow,
+.footer-link:focus-visible .back-link-arrow {
+  translate: -4px 0;
 }
 
 /* блик — light running along the colophon's four seals, over and over, for as
@@ -1500,7 +1562,9 @@ button:not(:disabled),
   position: relative;
   transition:
     border-color 220ms ease,
-    box-shadow 220ms ease;
+    box-shadow 220ms ease,
+    transform 220ms var(--ease-out),
+    filter 220ms ease;
 }
 
 .record-card::after {
@@ -1528,6 +1592,13 @@ button:not(:disabled),
   border-color: var(--border-strong);
   outline: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
   outline-offset: -1px;
+  /* A small lift plus a soft cast shadow, on top of the rule/ring/nudge this
+     already had — `filter: drop-shadow`, not `box-shadow`: the Card already
+     carries its seat shadow as a Tailwind `shadow-[var(--shadow-sm)]`
+     utility, and this file is unlayered, so a `box-shadow` here would win the
+     whole property and replace that shadow rather than adding to it. */
+  transform: translateY(-3px);
+  filter: drop-shadow(0 10px 16px color-mix(in srgb, var(--foreground) 16%, transparent));
 }
 
 /* A featured card already rests on `--border-strong`, so the border move above
@@ -1549,20 +1620,70 @@ button:not(:disabled),
     transition-duration: 1ms;
   }
 
-  /* The card's contents step 6px to the right on hover. With the duration cut
-     to 1ms that stops being a nudge and becomes a teleport, which is exactly
-     what this preference asks us not to do — `.ledger-row` already refuses it
-     the same way. The bottom rule stays: it is the cue that carries the hover
-     here, and it draws rather than moves anything.
+  /* The lift is a real `transform` — reduced motion needs it turned off here,
+     or the card would still visibly jump 3px in 1ms. The bottom rule stays:
+     it is the cue that carries the hover here, and it draws rather than
+     moves anything. (The card's contents used to also step 6px right on
+     hover; that nudge was removed outright — a card lifting *and* its own
+     words sliding a different direction read as two hovers at once — so
+     there is no longer a `translate` utility here to cancel.) */
+  .record-card:hover,
+  .record-card:focus-within {
+    transform: none;
+  }
+}
 
-     `translate` and not `transform`: Tailwind v4 compiles `translate-x-1.5` to
-     the standalone `translate` property, so `.ledger-row`'s spelling — right
-     for motion authored here in plain CSS — would have missed this one
-     entirely. Written alone, without a `transform: none` beside it: Lightning
-     CSS folds the pair into a single `transform: none` for older targets, and
-     that no longer reaches the `translate` property the utility actually sets. */
-  .record-card a {
-    translate: none;
+/* "Назад"/"Следующий" on the equipment archive slider (`gear-archive.tsx`)
+   already answered a pointer with a colour change alone; this adds the
+   site's soft-shadow "lift" language from `.record-card` to a small button,
+   in the button's own dialect rather than a copy-paste of the card's:
+
+   - The glow is `drop-shadow` tinted with `--gold`, not the neutral
+     foreground tint `.record-card` uses — on a border/text that is already
+     turning gold on hover, a neutral shadow reads as nothing next to it.
+   - A `scale`, not `.record-card`'s `translateY` lift: a vertical nudge on
+     a button this small reads as a jitter rather than a lift a card-sized
+     surface can pull off.
+   - Same 220ms/`--ease-out` timing as `.record-card`, so it feels like the
+     same hand even though the gesture differs. */
+.exhibit-nav-button {
+  transition:
+    border-color 220ms ease,
+    color 220ms ease,
+    filter 220ms ease,
+    transform 220ms var(--ease-out);
+}
+
+.exhibit-nav-button:hover,
+.exhibit-nav-button:focus-visible {
+  transform: scale(1.04);
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--gold) 45%, transparent));
+}
+
+/* The gradual gold "fill" the buttons' own label asked for, without
+   `.footer-link`'s rejected version of it (a gradient clipped to the glyphs
+   and slid across — left half of the word gold, right half still muted, for
+   the length of the transition; see the comment above `.footer-link` on why
+   that reads as a seam through a letter rather than a wave crossing the
+   word). Each letter here gets its own whole-letter colour transition and a
+   `--i`-staggered delay; the colour itself is never set here; it inherits
+   `.exhibit-nav-button`'s own `color`/`hover:text-*`/`focus-visible:text-*`,
+   so one inherited value change lands on each letter in turn instead of all
+   at once. */
+.exhibit-nav-letter {
+  display: inline-block;
+  transition: color 200ms ease;
+  transition-delay: calc(var(--i) * 26ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exhibit-nav-button:hover,
+  .exhibit-nav-button:focus-visible {
+    transform: none;
+  }
+
+  .exhibit-nav-letter {
+    transition-delay: 0ms;
   }
 }
 

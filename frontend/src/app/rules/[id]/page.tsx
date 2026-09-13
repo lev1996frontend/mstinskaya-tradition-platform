@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { FileText } from "lucide-react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { listRuleSections, listRuleSets, listRules } from "@/api/catalog";
 import { listRuleSetDocuments } from "@/api/rules";
+import { BackLink } from "@/components/brand/back-link";
 import { Badge, Container, EmptyState, PageHeader, Section } from "@/components/ui";
 import { RuleSetDocumentsPanel } from "@/features/documents/document-upload";
 import { labelOf, ruleType } from "@/lib/labels";
@@ -41,12 +41,10 @@ export default async function RuleSetPage({ params }: PageProps) {
   const documents = await listRuleSetDocuments(id);
 
   return (
-    <Container className="max-w-3xl space-y-8 py-10">
+    <Container className="max-w-3xl space-y-8 pt-10 pb-5">
       <PageHeader
         eyebrow={
-          <Link href="/rules" className="label-link label-link-back">
-            Все регламенты
-          </Link>
+          <BackLink href="/rules">Все регламенты</BackLink>
         }
         title={ruleSet.title}
         description={ruleSet.description ?? undefined}
