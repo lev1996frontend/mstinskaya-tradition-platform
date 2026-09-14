@@ -12,6 +12,7 @@ export const routes = {
 
   login: () => "/login",
   register: () => "/register",
+  verifyEmail: () => "/verify-email",
   profile: () => "/profile",
 
   athletes: () => "/athletes",

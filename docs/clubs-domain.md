@@ -100,7 +100,10 @@ Clubs:
 2. One club can have multiple instructors.
 3. Club owner manages members.
 4. Club deletion should not delete users.
-5. Identity module must not be modified.
+5. Identity module changes should stay rare and deliberate. One documented
+   exception exists: `email_verified_at` on `User`, added for email
+   verification at registration — see
+   `docs/superpowers/specs/2026-09-14-email-verification-design.md`.
 
 ---
 

@@ -19,6 +19,10 @@ type AuthState = {
     last_name: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
+  /** Re-fetches `/users/me` and updates `user` — for anything that changes
+   *  server-side account state without going through `login`/`register`
+   *  (e.g. clicking the email verification link). */
+  refresh: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -73,9 +77,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const refresh = useCallback(async () => {
+    try {
+      setUser(await authApi.getCurrentUser());
+    } catch (error) {
+      if (!(error instanceof ApiError && error.status === 401)) throw error;
+      setUser(null);
+    }
+  }, []);
+
   const value = useMemo<AuthState>(
-    () => ({ user, loading, login, register, logout }),
-    [user, loading, login, register, logout],
+    () => ({ user, loading, login, register, logout, refresh }),
+    [user, loading, login, register, logout, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

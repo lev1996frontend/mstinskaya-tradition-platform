@@ -125,4 +125,5 @@ class AuthService:
                 "bio": profile.bio,
                 "avatar_url": profile.avatar_url,
             } if profile else None,
+            "email_verified": user.email_verified_at is not None,
         }

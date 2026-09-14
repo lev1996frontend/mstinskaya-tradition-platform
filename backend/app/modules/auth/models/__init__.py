@@ -1,3 +1,3 @@
-from .auth_records import AuditLog, RefreshToken
+from .auth_records import AuditLog, EmailVerificationToken, RefreshToken
 
-__all__ = ["RefreshToken", "AuditLog"]
+__all__ = ["RefreshToken", "AuditLog", "EmailVerificationToken"]

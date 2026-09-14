@@ -25,3 +25,5 @@ python-multipart==0.0.9
 httpx==0.28.1
 # Per-IP throttling on /api/v1/auth/* — see app/core/rate_limit.py.
 slowapi==0.1.10
+# Transactional email (verification, later password reset) — see app/core/email.py.
+resend==2.44.0

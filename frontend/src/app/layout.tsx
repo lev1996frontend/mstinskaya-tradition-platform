@@ -6,6 +6,7 @@ import { ScrollToTop } from "@/components/layout/scroll-to-top";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { AuthProvider } from "@/features/auth/auth-context";
+import { EmailVerificationBanner } from "@/features/auth/email-verification-banner";
 import { BuzaProvider } from "@/features/home/buza-context";
 import { SmoothScrollMount } from "@/features/transitions/smooth-scroll-mount";
 
@@ -76,6 +77,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <BuzaProvider>
             <RiverSpine />
             <SiteHeader />
+            <EmailVerificationBanner />
             <main id="main-content" tabIndex={-1} className="flex-1">{children}</main>
             <SiteFooter />
             <ScrollToTop />
