@@ -36,9 +36,14 @@ export function ResendVerificationButton({ className }: { className?: string }) 
   const disabled = cooldown > 0 || status === "sending";
 
   return (
-    <button type="button" onClick={handleClick} disabled={disabled} className={className}>
-      {cooldown > 0 ? `Отправить ещё раз (${cooldown}с)` : "Отправить письмо ещё раз"}
-      {status === "error" ? <span className="ml-2 text-[var(--danger)]">Не удалось отправить</span> : null}
-    </button>
+    <span className="inline-flex items-center gap-2">
+      <button type="button" onClick={handleClick} disabled={disabled} className={className}>
+        {cooldown > 0 ? `Отправить ещё раз (${cooldown}с)` : "Отправить письмо ещё раз"}
+      </button>
+      <span role="status" className="text-xs">
+        {status === "error" ? <span className="text-[var(--danger)]">Не удалось отправить</span> : null}
+        {status === "sent" ? <span className="text-[var(--muted)]">Письмо отправлено</span> : null}
+      </span>
+    </span>
   );
 }

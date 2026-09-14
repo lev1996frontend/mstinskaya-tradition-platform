@@ -543,8 +543,8 @@ button:not(:disabled),
    card or an uppercase nav label: a hairline bar under the text, off at
    rest, growing from the left on hover/focus. `currentColor` so it always
    matches whatever text color the caller set, rather than hardcoding one.
-   Reuse this for prose links instead of a static `underline` or inventing a
-   fourth hover treatment. */
+   Prefer this for new prose links instead of a static `underline` or
+   inventing a fourth hover treatment. */
 .text-rule-link {
   position: relative;
   display: inline-block;
