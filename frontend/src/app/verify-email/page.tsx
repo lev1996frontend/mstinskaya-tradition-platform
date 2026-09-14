@@ -54,7 +54,7 @@ export default function VerifyEmailPage() {
       {status === "success" ? (
         <>
           <h1 className="font-display text-2xl font-semibold">Почта подтверждена</h1>
-          <Link href={routes.home()} className="mt-4 inline-block text-[var(--accent)] hover:underline transition-colors">
+          <Link href={routes.home()} className="mt-4 inline-block text-[var(--accent)] text-rule-link transition-colors">
             На главную
           </Link>
         </>
@@ -65,9 +65,9 @@ export default function VerifyEmailPage() {
           <h1 className="font-display text-2xl font-semibold">Срок ссылки истёк</h1>
           <p className="mt-2 text-[var(--muted)]">Ссылки действуют 24 часа — запросите новую.</p>
           {user ? (
-            <ResendVerificationButton className="mt-4 text-[var(--accent)] hover:underline transition-colors disabled:opacity-50 disabled:hover:no-underline" />
+            <ResendVerificationButton className="mt-4 text-[var(--accent)] text-rule-link transition-colors disabled:opacity-50" />
           ) : (
-            <Link href={routes.login()} className="mt-4 inline-block text-[var(--accent)] hover:underline transition-colors">
+            <Link href={routes.login()} className="mt-4 inline-block text-[var(--accent)] text-rule-link transition-colors">
               Войти, чтобы запросить новое письмо
             </Link>
           )}
@@ -81,9 +81,9 @@ export default function VerifyEmailPage() {
             Проверьте, что перешли по ссылке из письма целиком, или запросите новое.
           </p>
           {user ? (
-            <ResendVerificationButton className="mt-4 text-[var(--accent)] hover:underline transition-colors disabled:opacity-50 disabled:hover:no-underline" />
+            <ResendVerificationButton className="mt-4 text-[var(--accent)] text-rule-link transition-colors disabled:opacity-50" />
           ) : (
-            <Link href={routes.login()} className="mt-4 inline-block text-[var(--accent)] hover:underline transition-colors">
+            <Link href={routes.login()} className="mt-4 inline-block text-[var(--accent)] text-rule-link transition-colors">
               Войти, чтобы запросить новое письмо
             </Link>
           )}

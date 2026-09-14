@@ -16,7 +16,7 @@ export function EmailVerificationBanner() {
   return (
     <div className="border-b-2 border-[var(--rule)] bg-[var(--surface-muted)] px-4 py-2 text-center text-sm text-[var(--foreground)]">
       Подтвердите почту — мы отправили письмо на {user.email}.{" "}
-      <ResendVerificationButton className="font-medium text-[var(--accent)] hover:underline transition-colors disabled:opacity-50 disabled:hover:no-underline" />
+      <ResendVerificationButton className="font-medium text-[var(--accent)] text-rule-link transition-colors disabled:opacity-50" />
     </div>
   );
 }

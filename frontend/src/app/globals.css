@@ -538,6 +538,46 @@ button:not(:disabled),
     0 -1px 1px rgb(0 0 0 / 0.55);
 }
 
+/* text-rule-link — the site's one hover mark (see `.record-card::after`'s
+   bottom rule) sized for a plain inline sentence link/button instead of a
+   card or an uppercase nav label: a hairline bar under the text, off at
+   rest, growing from the left on hover/focus. `currentColor` so it always
+   matches whatever text color the caller set, rather than hardcoding one.
+   Reuse this for prose links instead of a static `underline` or inventing a
+   fourth hover treatment. */
+.text-rule-link {
+  position: relative;
+  display: inline-block;
+}
+
+.text-rule-link::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -2px;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 220ms var(--ease-out);
+}
+
+.text-rule-link:hover::after,
+.text-rule-link:focus-visible::after {
+  transform: scaleX(1);
+}
+
+.text-rule-link:disabled::after,
+.text-rule-link[aria-disabled="true"]::after {
+  transform: scaleX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text-rule-link::after {
+    transition-duration: 1ms;
+  }
+}
+
 /* заполнение — the signed-in name in the header. Same chisel vocabulary as
    `.label-link` above, but a name is not an arrow link: it doesn't step
    forward or grow, it fills. Two background layers ride the one shorthand,
