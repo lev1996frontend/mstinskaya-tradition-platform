@@ -26,3 +26,8 @@ class LoginRequest(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+class VerifyEmailRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+    token: str = Field(..., min_length=1)

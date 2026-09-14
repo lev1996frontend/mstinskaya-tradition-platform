@@ -1,3 +1,3 @@
-from .auth import LoginRequest, MessageResponse, RegisterRequest
+from .auth import LoginRequest, MessageResponse, RegisterRequest, VerifyEmailRequest
 
-__all__ = ["RegisterRequest", "LoginRequest", "MessageResponse"]
+__all__ = ["RegisterRequest", "LoginRequest", "MessageResponse", "VerifyEmailRequest"]

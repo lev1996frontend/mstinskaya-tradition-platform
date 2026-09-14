@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import secrets
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -9,9 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.identity_access import User, get_user
 from app.core.identity_access import has_permission as identity_has_permission
-from app.modules.auth.models import AuditLog, RefreshToken
+from app.modules.auth.models import AuditLog, EmailVerificationToken, RefreshToken
 from app.modules.auth.security import create_access_token, create_refresh_token, decode_token, hash_token
 from app.modules.identity.services.auth_service import AuthService as IdentityAuthService
+
+EMAIL_VERIFICATION_TOKEN_EXPIRES = timedelta(hours=24)
 
 
 class AuthService:
@@ -100,3 +103,57 @@ class AuthService:
         session.add(entry)
         await session.flush()
         return entry
+
+    @staticmethod
+    async def create_email_verification_token(session: AsyncSession, user_id: UUID) -> str:
+        raw_token = secrets.token_urlsafe(32)
+        session.add(
+            EmailVerificationToken(
+                user_id=user_id,
+                token_hash=hash_token(raw_token),
+                expires_at=datetime.now(timezone.utc) + EMAIL_VERIFICATION_TOKEN_EXPIRES,
+                used_at=None,
+                created_at=datetime.now(timezone.utc),
+            )
+        )
+        await session.flush()
+        return raw_token
+
+    @staticmethod
+    async def verify_email(session: AsyncSession, raw_token: str) -> User:
+        record = await session.scalar(
+            select(EmailVerificationToken).where(EmailVerificationToken.token_hash == hash_token(raw_token))
+        )
+        if record is None or record.used_at is not None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid verification token")
+
+        expires_at = record.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at <= datetime.now(timezone.utc):
+            raise HTTPException(status_code=status.HTTP_410_GONE, detail="Verification token expired")
+
+        user = await get_user(session, record.user_id)
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        record.used_at = datetime.now(timezone.utc)
+        user.email_verified_at = datetime.now(timezone.utc)
+        await session.flush()
+        return user
+
+    @staticmethod
+    async def resend_verification(session: AsyncSession, user: User) -> str | None:
+        """`None` means already verified — the caller should treat this as a
+        no-op and send no email, rather than issuing a token nobody needs."""
+        if user.email_verified_at is not None:
+            return None
+        previous = await session.scalar(
+            select(EmailVerificationToken).where(
+                EmailVerificationToken.user_id == user.id,
+                EmailVerificationToken.used_at.is_(None),
+            )
+        )
+        if previous is not None:
+            previous.used_at = datetime.now(timezone.utc)
+        return await AuthService.create_email_verification_token(session, user.id)
