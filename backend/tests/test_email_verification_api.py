@@ -168,3 +168,49 @@ def test_resend_verification_requires_session(monkeypatch):
     response = client.post("/api/v1/auth/resend-verification")
     assert response.status_code == 401, response.text
     app.dependency_overrides.clear()
+
+
+def setup_client_with_failing_email(monkeypatch):
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", future=True)
+    database_module.engine = engine
+    database_module.AsyncSessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+
+    async def setup_db():
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+
+    asyncio.run(setup_db())
+
+    async def database_session():
+        async with database_module.AsyncSessionLocal() as session:
+            yield session
+
+    app.dependency_overrides[database_module.get_db] = database_session
+
+    def _raise(*, to, verify_url, **_):
+        raise RuntimeError("smtp down")
+
+    monkeypatch.setattr(email_module.EmailService, "send_verification_email", staticmethod(_raise))
+
+    return TestClient(app)
+
+
+def test_register_succeeds_even_if_email_send_fails(monkeypatch):
+    client = setup_client_with_failing_email(monkeypatch)
+    _register(client)
+    app.dependency_overrides.clear()
+
+
+def test_resend_verification_succeeds_even_if_email_send_fails(monkeypatch):
+    client, sent_emails = setup_client(monkeypatch)
+    _register(client)
+    assert len(sent_emails) == 1
+
+    def _raise(*, to, verify_url, **_):
+        raise RuntimeError("smtp down")
+
+    monkeypatch.setattr(email_module.EmailService, "send_verification_email", staticmethod(_raise))
+
+    response = client.post("/api/v1/auth/resend-verification")
+    assert response.status_code == 200, response.text
+    app.dependency_overrides.clear()
