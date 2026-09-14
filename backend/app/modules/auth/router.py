@@ -25,6 +25,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -120,7 +121,7 @@ async def register(
     # /resend-verification later.
     verify_url = f"{get_settings().frontend_base_url}/verify-email?token={raw_token}"
     try:
-        EmailService.send_verification_email(to=str(payload.email), verify_url=verify_url)
+        await run_in_threadpool(EmailService.send_verification_email, to=str(payload.email), verify_url=verify_url)
     except Exception:
         logger.exception("Failed to send verification email for user_id=%s", user.id)
 
@@ -193,7 +194,7 @@ async def resend_verification(
 
     verify_url = f"{get_settings().frontend_base_url}/verify-email?token={raw_token}"
     try:
-        EmailService.send_verification_email(to=current_user.email, verify_url=verify_url)
+        await run_in_threadpool(EmailService.send_verification_email, to=current_user.email, verify_url=verify_url)
     except Exception:
         logger.exception("Failed to send verification email for user_id=%s", current_user.id)
     return MessageResponse(message="Verification email sent")
