@@ -12,6 +12,11 @@ implementation instead of each re-deriving it.
 Nothing here writes to identity's tables. ``User``/``Role`` are re-exported so
 a caller never has to import ``app.modules.identity.models`` itself just to
 type-hint the value this module hands back.
+
+One deliberate exception: ``auth``'s ``AuthService.verify_email`` takes the
+``User`` handed back by ``get_user`` and sets ``email_verified_at`` on it
+directly, added for email verification at registration — see
+``docs/superpowers/specs/2026-09-14-email-verification-design.md``.
 """
 
 from __future__ import annotations

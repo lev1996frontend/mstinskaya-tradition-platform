@@ -149,10 +149,12 @@ class AuthService:
         if user.email_verified_at is not None:
             return None
         previous = await session.scalar(
-            select(EmailVerificationToken).where(
+            select(EmailVerificationToken)
+            .where(
                 EmailVerificationToken.user_id == user.id,
                 EmailVerificationToken.used_at.is_(None),
             )
+            .order_by(EmailVerificationToken.created_at.desc())
         )
         if previous is not None:
             previous.used_at = datetime.now(timezone.utc)
