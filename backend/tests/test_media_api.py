@@ -43,12 +43,8 @@ def test_media_foundation_flow():
         },
     )
     assert register_response.status_code == 201, register_response.text
-    token = register_response.json()["access_token"]
 
-    me_response = client.get(
-        "/api/v1/users/me",
-        headers={"Authorization": f"Bearer {token}"},
-    )
+    me_response = client.get("/api/v1/users/me")
     assert me_response.status_code == 200, me_response.text
     uploaded_by = me_response.json()["id"]
 
@@ -63,7 +59,6 @@ def test_media_foundation_flow():
             "size": 102400,
             "mime_type": "video/mp4",
         },
-        headers={"Authorization": f"Bearer {token}"},
     )
     assert file_response.status_code == 201, file_response.text
     file_data = file_response.json()
@@ -130,9 +125,8 @@ def test_uploaded_by_cannot_be_spoofed_by_the_request_body():
         },
     )
     assert register_response.status_code == 201, register_response.text
-    token = register_response.json()["access_token"]
 
-    me_response = client.get("/api/v1/users/me", headers={"Authorization": f"Bearer {token}"})
+    me_response = client.get("/api/v1/users/me")
     assert me_response.status_code == 200, me_response.text
     caller_id = me_response.json()["id"]
 
@@ -149,7 +143,6 @@ def test_uploaded_by_cannot_be_spoofed_by_the_request_body():
             "mime_type": "video/mp4",
             "uploaded_by": someone_elses_id,
         },
-        headers={"Authorization": f"Bearer {token}"},
     )
     assert file_response.status_code == 201, file_response.text
     assert file_response.json()["uploaded_by"] == caller_id

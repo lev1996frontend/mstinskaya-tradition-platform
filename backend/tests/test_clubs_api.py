@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core import database as database_module
 from app.main import app
 from app.models.base import Base
+from tests.auth_test_helpers import snapshot_session
 
 
 def setup_app_for_tests():
@@ -43,12 +44,9 @@ def test_create_club_and_add_member():
         },
     )
     assert register_response.status_code == 201, register_response.text
-    token = register_response.json()["access_token"]
+    snapshot_session(client)
 
-    me_response = client.get(
-        "/api/v1/users/me",
-        headers={"Authorization": f"Bearer {token}"},
-    )
+    me_response = client.get("/api/v1/users/me")
     assert me_response.status_code == 200, me_response.text
     user_id = me_response.json()["id"]
 

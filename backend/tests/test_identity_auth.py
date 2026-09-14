@@ -35,6 +35,8 @@ def client():
 
 
 def test_register_and_login(client):
+    """Tokens travel only as cookies now (see auth/router.py) — nothing in
+    either response body to assert on beyond a plain success message."""
     response = client.post(
         "/api/v1/auth/register",
         json={
@@ -46,9 +48,8 @@ def test_register_and_login(client):
     )
 
     assert response.status_code == 201, response.text
-    payload = response.json()
-    assert "access_token" in payload
-    assert "refresh_token" in payload
+    assert client.cookies.get("access_token")
+    assert client.cookies.get("refresh_token")
 
     login = client.post(
         "/api/v1/auth/login",
@@ -59,9 +60,8 @@ def test_register_and_login(client):
     )
 
     assert login.status_code == 200, login.text
-    token_payload = login.json()
-    assert "access_token" in token_payload
-    assert "refresh_token" in token_payload
+    assert client.cookies.get("access_token")
+    assert client.cookies.get("refresh_token")
 
 
 def test_current_user_requires_token(client):
@@ -84,12 +84,8 @@ def test_current_user_returns_profile_and_roles(client):
         },
     )
     assert register.status_code == 201, register.text
-    token = register.json()["access_token"]
-
-    response = client.get(
-        "/api/v1/users/me",
-        headers={"Authorization": f"Bearer {token}"},
-    )
+    # register() just set this client's session cookies to this new user.
+    response = client.get("/api/v1/users/me")
 
     assert response.status_code == 200, response.text
     body = response.json()

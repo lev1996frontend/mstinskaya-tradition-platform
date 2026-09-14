@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core import database as database_module
 from app.main import app
 from app.models.base import Base
+from tests.auth_test_helpers import snapshot_session
 
 EVENT_YEAR = 2026
 START_DATE = date(EVENT_YEAR, 5, 16).isoformat()
@@ -50,8 +51,8 @@ def register(client, email: str) -> tuple[str, dict[str, str]]:
         json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Организатор"},
     )
     assert response.status_code == 201, response.text
-    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
-    return client.get("/api/v1/users/me", headers=headers).json()["id"], headers
+    session = snapshot_session(client)
+    return client.get("/api/v1/users/me").json()["id"], session
 
 
 def bootstrap(client, ages: list[int], *, max_age_gap: int | None = 2, max_age: int | None = 14):
@@ -185,7 +186,7 @@ def test_a_discipline_with_no_gap_set_is_never_split():
     state = split_preview(client, competition_id)
     assert "NO_AGE_GAP" in {b["code"] for b in state["blockers"]}
     assert state["ready"] is False
-    refused = client.post(f"/api/v1/competitions/{competition_id}/age-split", headers=headers)
+    refused = client.post(f"/api/v1/competitions/{competition_id}/age-split")
     assert refused.status_code == 409, refused.text
 
 
@@ -200,7 +201,7 @@ def test_a_missing_birth_year_blocks_the_split():
     state = split_preview(client, competition_id)
     assert "MISSING_BIRTH_YEAR" in {b["code"] for b in state["blockers"]}
     assert client.post(
-        f"/api/v1/competitions/{competition_id}/age-split", headers=headers
+        f"/api/v1/competitions/{competition_id}/age-split"
     ).status_code == 409
 
 
@@ -208,20 +209,20 @@ def test_a_started_discipline_cannot_be_split():
     client = setup_app_for_tests()
     _, competition_id, _, headers = bootstrap(client, [8, 9, 13, 14], max_age_gap=2)
     client.post(
-        f"/api/v1/competitions/{competition_id}/bracket/generate", json={}, headers=headers
+        f"/api/v1/competitions/{competition_id}/bracket/generate", json={}
     ).raise_for_status()
 
     state = split_preview(client, competition_id)
     assert "ALREADY_STARTED" in {b["code"] for b in state["blockers"]}
     assert client.post(
-        f"/api/v1/competitions/{competition_id}/age-split", headers=headers
+        f"/api/v1/competitions/{competition_id}/age-split"
     ).status_code == 409
 
 
 def test_splitting_a_field_that_fits_is_refused():
     client = setup_app_for_tests()
     _, competition_id, _, headers = bootstrap(client, [12, 13, 14], max_age_gap=2)
-    refused = client.post(f"/api/v1/competitions/{competition_id}/age-split", headers=headers)
+    refused = client.post(f"/api/v1/competitions/{competition_id}/age-split")
     assert refused.status_code == 400, refused.text
 
 
@@ -234,7 +235,7 @@ def test_the_split_turns_streams_into_real_disciplines():
         client, [8, 9, 11, 12, 13, 14], max_age_gap=2
     )
 
-    applied = client.post(f"/api/v1/competitions/{competition_id}/age-split", headers=headers)
+    applied = client.post(f"/api/v1/competitions/{competition_id}/age-split")
     assert applied.status_code == 201, applied.text
     body = applied.json()
     assert body["source_name"] == "Абсолютная детская"
@@ -262,7 +263,7 @@ def test_every_entrant_lands_in_exactly_one_stream():
     tournament_id, competition_id, ids, headers = bootstrap(
         client, [8, 9, 11, 12, 13, 14], max_age_gap=2
     )
-    client.post(f"/api/v1/competitions/{competition_id}/age-split", headers=headers).raise_for_status()
+    client.post(f"/api/v1/competitions/{competition_id}/age-split").raise_for_status()
 
     seen: list[str] = []
     for competition in competitions(client, tournament_id):
@@ -279,11 +280,11 @@ def test_each_stream_then_runs_as_an_ordinary_discipline():
     tournament_id, competition_id, _, headers = bootstrap(
         client, [8, 9, 13, 14], max_age_gap=2
     )
-    client.post(f"/api/v1/competitions/{competition_id}/age-split", headers=headers).raise_for_status()
+    client.post(f"/api/v1/competitions/{competition_id}/age-split").raise_for_status()
 
     for competition in competitions(client, tournament_id):
         built = client.post(
-            f"/api/v1/competitions/{competition['id']}/bracket/generate", json={}, headers=headers
+            f"/api/v1/competitions/{competition['id']}/bracket/generate", json={}
         )
         assert built.status_code == 201, built.text
         assert built.json()["participant_count"] == 2
@@ -292,7 +293,7 @@ def test_each_stream_then_runs_as_an_ordinary_discipline():
 def test_the_split_is_journalled_with_its_reason():
     client = setup_app_for_tests()
     _, competition_id, _, headers = bootstrap(client, [8, 9, 13, 14], max_age_gap=2)
-    client.post(f"/api/v1/competitions/{competition_id}/age-split", headers=headers).raise_for_status()
+    client.post(f"/api/v1/competitions/{competition_id}/age-split").raise_for_status()
 
     journal = client.get(f"/api/v1/competitions/{competition_id}/events").json()
     split = [e for e in journal if e["event_type"] == "AGE_BANDS_SPLIT"]
@@ -305,9 +306,9 @@ def test_the_split_is_journalled_with_its_reason():
 def test_splitting_twice_is_refused():
     client = setup_app_for_tests()
     _, competition_id, _, headers = bootstrap(client, [8, 9, 13, 14], max_age_gap=2)
-    client.post(f"/api/v1/competitions/{competition_id}/age-split", headers=headers).raise_for_status()
+    client.post(f"/api/v1/competitions/{competition_id}/age-split").raise_for_status()
 
-    again = client.post(f"/api/v1/competitions/{competition_id}/age-split", headers=headers)
+    again = client.post(f"/api/v1/competitions/{competition_id}/age-split")
     # The stream left behind holds one age, so there is nothing left to cut.
     assert again.status_code == 400, again.text
 
@@ -323,5 +324,5 @@ def test_the_split_requires_an_authorized_manager():
     assert anonymous.status_code == 401, anonymous.text
 
     _, stranger = register(client, "stranger@example.com")
-    forbidden = client.post(f"/api/v1/competitions/{competition_id}/age-split", headers=stranger)
+    forbidden = client.post(f"/api/v1/competitions/{competition_id}/age-split")
     assert forbidden.status_code == 403, forbidden.text

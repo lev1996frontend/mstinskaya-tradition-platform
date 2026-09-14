@@ -1,4 +1,4 @@
-"""Putting a fighter in the place of one who pulled out.
+﻿"""Putting a fighter in the place of one who pulled out.
 
 The rule pinned down here is the same one withdrawal already obeys: the bracket
 is never rebuilt. A replacement takes over the vacated *seat* — the same match
@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core import database as database_module
 from app.main import app
 from app.models.base import Base
+from tests.auth_test_helpers import snapshot_session
 
 
 def setup_app_for_tests():
@@ -58,14 +59,14 @@ def register_user(client, email: str) -> tuple[str, dict[str, str]]:
         },
     )
     assert register.status_code == 201, register.text
-    headers = {"Authorization": f"Bearer {register.json()['access_token']}"}
-    me = client.get("/api/v1/users/me", headers=headers)
+    session = snapshot_session(client)
+    me = client.get("/api/v1/users/me")
     assert me.status_code == 200, me.text
-    return me.json()["id"], headers
+    return me.json()["id"], session
 
 
 def make_tournament(client) -> tuple[str, dict[str, str]]:
-    organizer_id, headers = register_user(client, "organizer@example.com")
+    organizer_id, session = register_user(client, "organizer@example.com")
     ruleset = client.post(
         "/api/v1/rulesets", json={"title": "Base", "version": "1.0", "status": "ACTIVE"}
     )
@@ -80,7 +81,7 @@ def make_tournament(client) -> tuple[str, dict[str, str]]:
         },
     )
     assert tournament.status_code == 201, tournament.text
-    return tournament.json()["id"], headers
+    return tournament.json()["id"], session
 
 
 def make_competition(client, tournament_id: str, name: str, **bounds) -> str:
@@ -147,7 +148,7 @@ def four_with_reserve(client):
     Seeds make the draw deterministic, so the tests can name the exact bout a
     fighter sits in rather than searching for it.
     """
-    tournament_id, headers = make_tournament(client)
+    tournament_id, session = make_tournament(client)
     competition_id = make_competition(client, tournament_id, "Абсолютная мужская")
     ids = {}
     for index, (name, club) in enumerate(
@@ -163,10 +164,10 @@ def four_with_reserve(client):
     ids["Запас"] = entered(client, competition_id, "Запас", club_name="Мста", status="RESERVE")
 
     generated = client.post(
-        f"/api/v1/competitions/{competition_id}/bracket/generate", json={}, headers=headers
+        f"/api/v1/competitions/{competition_id}/bracket/generate", json={}
     )
     assert generated.status_code == 201, generated.text
-    return competition_id, ids, headers, generated.json()
+    return competition_id, ids, session, generated.json()
 
 
 # ------------------------------------------------------------ the reserve
@@ -186,13 +187,12 @@ def test_a_reserve_is_not_dealt_into_the_draw():
 
 def test_the_replacement_takes_the_seat_and_no_walkover_is_granted():
     client = setup_app_for_tests()
-    competition_id, ids, headers, _ = four_with_reserve(client)
+    competition_id, ids, session, _ = four_with_reserve(client)
     bout = match_of(matches(client, competition_id), ids["Иван"], ids["Фёдор"])
 
     replaced = client.post(
         f"/api/v1/participants/{ids['Иван']}/withdraw",
         json={"reason": "Травма", "replacement_participant_id": ids["Запас"]},
-        headers=headers,
     )
     assert replaced.status_code == 200, replaced.text
     body = replaced.json()
@@ -209,12 +209,11 @@ def test_the_replacement_takes_the_seat_and_no_walkover_is_granted():
 
 def test_the_replacement_leaves_registration_and_the_departed_keeps_their_row():
     client = setup_app_for_tests()
-    competition_id, ids, headers, _ = four_with_reserve(client)
+    competition_id, ids, session, _ = four_with_reserve(client)
 
     client.post(
         f"/api/v1/participants/{ids['Иван']}/withdraw",
         json={"reason": "Травма", "replacement_participant_id": ids["Запас"]},
-        headers=headers,
     )
 
     assert status_of(client, competition_id, ids["Запас"]) == "REGISTERED"
@@ -223,12 +222,11 @@ def test_the_replacement_leaves_registration_and_the_departed_keeps_their_row():
 
 def test_the_journal_names_both_fighters():
     client = setup_app_for_tests()
-    competition_id, ids, headers, _ = four_with_reserve(client)
+    competition_id, ids, session, _ = four_with_reserve(client)
 
     client.post(
         f"/api/v1/participants/{ids['Иван']}/withdraw",
         json={"reason": "Травма", "replacement_participant_id": ids["Запас"]},
-        headers=headers,
     )
 
     replaced = [e for e in events(client, competition_id) if e["event_type"] == "PARTICIPANT_REPLACED"]
@@ -242,7 +240,7 @@ def test_the_journal_names_both_fighters():
 def test_a_fought_bout_blocks_the_replacement():
     """Once a real result exists the seat is no longer free to give away."""
     client = setup_app_for_tests()
-    competition_id, ids, headers, _ = four_with_reserve(client)
+    competition_id, ids, session, _ = four_with_reserve(client)
     bout = match_of(matches(client, competition_id), ids["Иван"], ids["Фёдор"])
 
     recorded = client.post(
@@ -254,7 +252,6 @@ def test_a_fought_bout_blocks_the_replacement():
     refused = client.post(
         f"/api/v1/participants/{ids['Иван']}/withdraw",
         json={"reason": "Травма", "replacement_participant_id": ids["Запас"]},
-        headers=headers,
     )
     assert refused.status_code == 409, refused.text
     assert refused.json()["detail"]["code"] == "ALREADY_FOUGHT"
@@ -262,20 +259,18 @@ def test_a_fought_bout_blocks_the_replacement():
 
 def test_a_started_bout_blocks_the_replacement():
     client = setup_app_for_tests()
-    competition_id, ids, headers, _ = four_with_reserve(client)
+    competition_id, ids, session, _ = four_with_reserve(client)
     bout = match_of(matches(client, competition_id), ids["Иван"], ids["Фёдор"])
     for side in ("RED", "BLUE"):
         drawn = client.post(
             f"/api/v1/matches/{bout['id']}/lot",
             json={"side": side, "method": "ONLINE_DICE"},
-            headers=headers,
         )
         assert drawn.status_code == 201, drawn.text
 
     refused = client.post(
         f"/api/v1/participants/{ids['Иван']}/withdraw",
         json={"reason": "Травма", "replacement_participant_id": ids["Запас"]},
-        headers=headers,
     )
     assert refused.status_code == 409, refused.text
     assert refused.json()["detail"]["code"] == "BOUT_IN_FLIGHT"
@@ -284,12 +279,11 @@ def test_a_started_bout_blocks_the_replacement():
 def test_someone_already_in_this_draw_cannot_replace():
     """A fighter in two seats of one bracket could be made to meet themselves."""
     client = setup_app_for_tests()
-    competition_id, ids, headers, _ = four_with_reserve(client)
+    competition_id, ids, session, _ = four_with_reserve(client)
 
     refused = client.post(
         f"/api/v1/participants/{ids['Иван']}/withdraw",
         json={"reason": "Травма", "replacement_participant_id": ids["Сергей"]},
-        headers=headers,
     )
     assert refused.status_code == 400, refused.text
     assert refused.json()["detail"]["code"] == "ALREADY_IN_COMPETITION"
@@ -297,7 +291,7 @@ def test_someone_already_in_this_draw_cannot_replace():
 
 def test_a_replacement_outside_the_age_bounds_is_refused():
     client = setup_app_for_tests()
-    tournament_id, headers = make_tournament(client)
+    tournament_id, session = make_tournament(client)
     children = make_competition(client, tournament_id, "Абсолютная детская", max_age=14)
     adults = make_competition(client, tournament_id, "Абсолютная мужская")
 
@@ -307,14 +301,13 @@ def test_a_replacement_outside_the_age_bounds_is_refused():
     grown_up = entered(client, adults, "Взрослый", birth_year=1990)
 
     generated = client.post(
-        f"/api/v1/competitions/{children}/bracket/generate", json={}, headers=headers
+        f"/api/v1/competitions/{children}/bracket/generate", json={}
     )
     assert generated.status_code == 201, generated.text
 
     refused = client.post(
         f"/api/v1/participants/{ids['Мал']}/withdraw",
         json={"reason": "Заболел", "replacement_participant_id": grown_up},
-        headers=headers,
     )
     assert refused.status_code == 400, refused.text
     assert refused.json()["detail"]["code"] == "AGE_OUT_OF_BOUNDS"
@@ -337,7 +330,7 @@ def test_replacing_requires_an_authorized_manager():
 
 def test_the_suggestion_puts_a_clubmate_reserve_first():
     client = setup_app_for_tests()
-    tournament_id, headers = make_tournament(client)
+    tournament_id, session = make_tournament(client)
     competition_id = make_competition(client, tournament_id, "Абсолютная мужская")
 
     ids = {}
@@ -350,7 +343,7 @@ def test_the_suggestion_puts_a_clubmate_reserve_first():
     clubmate = entered(client, competition_id, "Свой запас", club_name="Мста", status="RESERVE")
 
     generated = client.post(
-        f"/api/v1/competitions/{competition_id}/bracket/generate", json={}, headers=headers
+        f"/api/v1/competitions/{competition_id}/bracket/generate", json={}
     )
     assert generated.status_code == 201, generated.text
 
@@ -368,7 +361,7 @@ def test_the_suggestion_puts_a_clubmate_reserve_first():
 
 def test_the_suggestion_writes_nothing():
     client = setup_app_for_tests()
-    competition_id, ids, headers, _ = four_with_reserve(client)
+    competition_id, ids, session, _ = four_with_reserve(client)
 
     before = status_of(client, competition_id, ids["Запас"])
     client.get(f"/api/v1/participants/{ids['Иван']}/replacement-candidates")
@@ -383,21 +376,20 @@ def test_the_suggestion_writes_nothing():
 
 def withdrawn_first(client):
     """Иван is out; Фёдор has the walkover and already sits in the final."""
-    competition_id, ids, headers, _ = four_with_reserve(client)
+    competition_id, ids, session, _ = four_with_reserve(client)
     gone = client.post(
         f"/api/v1/participants/{ids['Иван']}/withdraw",
         json={"reason": "Травма"},
-        headers=headers,
     )
     assert gone.status_code == 200, gone.text
     assert len(gone.json()["walkovers"]) == 1
-    return competition_id, ids, headers
+    return competition_id, ids, session
 
 
 def test_a_late_replacement_reopens_the_bout_that_was_given_away():
     """The substitute was found an hour after the withdrawal, as happens."""
     client = setup_app_for_tests()
-    competition_id, ids, headers = withdrawn_first(client)
+    competition_id, ids, session = withdrawn_first(client)
     # Фёдор now sits in two bouts — the one he was given and the final it sent
     # him to — so the semifinal has to be named by its stage.
     semifinal = [
@@ -410,7 +402,6 @@ def test_a_late_replacement_reopens_the_bout_that_was_given_away():
     late = client.post(
         f"/api/v1/participants/{ids['Иван']}/replace",
         json={"reason": "Клуб выставил замену", "replacement_participant_id": ids["Запас"]},
-        headers=headers,
     )
     assert late.status_code == 200, late.text
     assert late.json()["replacement"]["participant_id"] == ids["Запас"]
@@ -426,7 +417,7 @@ def test_a_late_replacement_reopens_the_bout_that_was_given_away():
 def test_the_opponent_is_taken_back_out_of_the_next_round():
     """A walkover that is undone must undo the advancement it caused."""
     client = setup_app_for_tests()
-    competition_id, ids, headers = withdrawn_first(client)
+    competition_id, ids, session = withdrawn_first(client)
     final_before = [m for m in matches(client, competition_id) if m["stage"] == "FINAL"][0]
     seated = {
         side["id"] for side in (final_before["participant_a"], final_before["participant_b"]) if side
@@ -436,7 +427,6 @@ def test_the_opponent_is_taken_back_out_of_the_next_round():
     client.post(
         f"/api/v1/participants/{ids['Иван']}/replace",
         json={"reason": "Клуб выставил замену", "replacement_participant_id": ids["Запас"]},
-        headers=headers,
     )
 
     final_after = [m for m in matches(client, competition_id) if m["stage"] == "FINAL"][0]
@@ -449,7 +439,7 @@ def test_the_opponent_is_taken_back_out_of_the_next_round():
 def test_a_late_replacement_is_refused_once_the_opponent_has_fought_on():
     """Undoing the walkover would invalidate a bout that really happened."""
     client = setup_app_for_tests()
-    competition_id, ids, headers = withdrawn_first(client)
+    competition_id, ids, session = withdrawn_first(client)
 
     other = match_of(matches(client, competition_id), ids["Пётр"], ids["Сергей"])
     played = client.post(
@@ -468,7 +458,6 @@ def test_a_late_replacement_is_refused_once_the_opponent_has_fought_on():
     refused = client.post(
         f"/api/v1/participants/{ids['Иван']}/replace",
         json={"reason": "Поздно", "replacement_participant_id": ids["Запас"]},
-        headers=headers,
     )
     assert refused.status_code == 409, refused.text
     assert refused.json()["detail"]["code"] == "OPPONENT_ALREADY_FOUGHT"
@@ -477,12 +466,11 @@ def test_a_late_replacement_is_refused_once_the_opponent_has_fought_on():
 def test_a_fighter_still_in_the_draw_is_not_replaced_this_way():
     """While they are still in, the substitution belongs to the withdrawal."""
     client = setup_app_for_tests()
-    competition_id, ids, headers, _ = four_with_reserve(client)
+    competition_id, ids, session, _ = four_with_reserve(client)
 
     refused = client.post(
         f"/api/v1/participants/{ids['Иван']}/replace",
         json={"reason": "Рано", "replacement_participant_id": ids["Запас"]},
-        headers=headers,
     )
     assert refused.status_code == 409, refused.text
     assert refused.json()["detail"]["code"] == "STILL_IN_THE_DRAW"
@@ -490,12 +478,11 @@ def test_a_fighter_still_in_the_draw_is_not_replaced_this_way():
 
 def test_the_journal_records_the_reversal():
     client = setup_app_for_tests()
-    competition_id, ids, headers = withdrawn_first(client)
+    competition_id, ids, session = withdrawn_first(client)
 
     client.post(
         f"/api/v1/participants/{ids['Иван']}/replace",
         json={"reason": "Клуб выставил замену", "replacement_participant_id": ids["Запас"]},
-        headers=headers,
     )
 
     journal = events(client, competition_id)
@@ -524,12 +511,11 @@ def test_a_late_replacement_requires_an_authorized_manager():
 
 def test_a_reserve_steps_in_and_goes_on_to_win():
     client = setup_app_for_tests()
-    competition_id, ids, headers, _ = four_with_reserve(client)
+    competition_id, ids, session, _ = four_with_reserve(client)
 
     swapped = client.post(
         f"/api/v1/participants/{ids['Иван']}/withdraw",
         json={"reason": "Травма", "replacement_participant_id": ids["Запас"]},
-        headers=headers,
     )
     assert swapped.status_code == 200, swapped.text
 

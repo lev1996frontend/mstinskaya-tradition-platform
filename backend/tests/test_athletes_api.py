@@ -43,12 +43,8 @@ def test_create_and_get_athlete_profile():
         },
     )
     assert register_response.status_code == 201, register_response.text
-    token = register_response.json()["access_token"]
 
-    me_response = client.get(
-        "/api/v1/users/me",
-        headers={"Authorization": f"Bearer {token}"},
-    )
+    me_response = client.get("/api/v1/users/me")
     assert me_response.status_code == 200, me_response.text
     user_id = me_response.json()["id"]
 
@@ -101,8 +97,7 @@ def test_athlete_carries_the_person_name_from_the_account():
         },
     )
     assert register_response.status_code == 201, register_response.text
-    token = register_response.json()["access_token"]
-    user_id = client.get("/api/v1/users/me", headers={"Authorization": f"Bearer {token}"}).json()["id"]
+    user_id = client.get("/api/v1/users/me").json()["id"]
 
     # No nickname at all — the case that used to leave a profile nameless.
     created = client.post("/api/v1/athletes", json={"user_id": user_id, "birth_year": 1990})

@@ -20,6 +20,7 @@ from app.main import app
 from app.models.base import Base
 from app.models.idempotency import IdempotencyKey
 from app.modules.tournaments.services.participant_import import IMPORT_COLUMNS, SHEET_ENTRIES
+from tests.auth_test_helpers import snapshot_session, use_session
 
 EVENT_YEAR = 2026
 START_DATE = date(EVENT_YEAR, 5, 16).isoformat()
@@ -56,13 +57,13 @@ def register(client, email: str) -> tuple[str, dict[str, str]]:
         json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Организатор"},
     )
     assert response.status_code == 201, response.text
-    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
-    me = client.get("/api/v1/users/me", headers=headers)
-    return me.json()["id"], headers
+    session = snapshot_session(client)
+    me = client.get("/api/v1/users/me")
+    return me.json()["id"], session
 
 
 def register_athlete(client, email: str, first_name: str, last_name: str) -> tuple[str, dict]:
-    """Учётка с профилем бойца; возвращает id атлета и заголовки."""
+    """Учётка с профилем бойца; возвращает id атлета и сессию."""
     response = client.post(
         "/api/v1/auth/register",
         json={
@@ -73,16 +74,16 @@ def register_athlete(client, email: str, first_name: str, last_name: str) -> tup
         },
     )
     assert response.status_code == 201, response.text
-    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
-    user_id = client.get("/api/v1/users/me", headers=headers).json()["id"]
+    session = snapshot_session(client)
+    user_id = client.get("/api/v1/users/me").json()["id"]
     athlete = client.post("/api/v1/athletes", json={"user_id": user_id})
     assert athlete.status_code == 201, athlete.text
-    return athlete.json()["id"], headers
+    return athlete.json()["id"], session
 
 
 def bootstrap(client):
     """A tournament with three disciplines, one of them age-bounded."""
-    organizer_id, headers = register(client, "organizer@example.com")
+    organizer_id, session = register(client, "organizer@example.com")
     ruleset = client.post("/api/v1/rulesets", json={"title": "Base", "version": "1.0", "status": "ACTIVE"})
     tournament = client.post(
         "/api/v1/tournaments",
@@ -114,13 +115,13 @@ def bootstrap(client):
             },
         )
         assert created.status_code == 201, created.text
-    return tournament_id, headers
+    return tournament_id, session
 
 
 def test_one_profile_cannot_be_entered_twice_in_a_discipline():
     """Инвариант предметной области, а не защита от кликов, — потому в схеме."""
     client = setup_app_for_tests()
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
     competitions = client.get(f"/api/v1/tournaments/{tournament_id}/competitions").json()
     absolute = next(c for c in competitions if c["name"] == "Абсолютная мужская")
 
@@ -142,7 +143,7 @@ def test_one_profile_cannot_be_entered_twice_in_a_discipline():
 def test_namesakes_without_profiles_are_still_allowed():
     """Полные тёзки — вещь возможная, и схема не вправе их запрещать."""
     client = setup_app_for_tests()
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
     competitions = client.get(f"/api/v1/tournaments/{tournament_id}/competitions").json()
     absolute = next(c for c in competitions if c["name"] == "Абсолютная мужская")
 
@@ -170,11 +171,11 @@ def sheet_of(rows: list[dict]) -> bytes:
     return stream.getvalue()
 
 
-def preview(client, tournament_id: str, payload: bytes, headers: dict[str, str]):
+def preview(client, tournament_id: str, payload: bytes, session: dict[str, str]):
+    use_session(client, session)
     return client.post(
         f"/api/v1/tournaments/{tournament_id}/participants/import/preview",
         files={"file": ("entries.xlsx", payload, XLSX)},
-        headers=headers,
     )
 
 
@@ -189,11 +190,12 @@ def participants(client, tournament_id: str) -> list[dict]:
 def test_the_same_commit_sent_twice_enters_people_once():
     """Двойной клик по «Завести» — не второй заход, а тот же самый."""
     client = setup_app_for_tests()
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
     payload = sheet_of([{"full_name": "Иван Иванов", "category": "Абсолютная мужская"}])
-    report = preview(client, tournament_id, payload, headers).json()
+    report = preview(client, tournament_id, payload, session).json()
 
-    key = {"Idempotency-Key": "11111111-1111-1111-1111-111111111111", **headers}
+    key = {"Idempotency-Key": "11111111-1111-1111-1111-111111111111"}
+    use_session(client, session)
     first = client.post(
         f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
         json={"rows": report["rows"]},
@@ -201,6 +203,7 @@ def test_the_same_commit_sent_twice_enters_people_once():
     )
     assert first.status_code == 200, first.text
 
+    use_session(client, session)
     second = client.post(
         f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
         json={"rows": report["rows"]},
@@ -215,14 +218,14 @@ def test_the_same_commit_sent_twice_enters_people_once():
 def test_a_commit_without_a_key_still_works():
     """Ключ необязателен: старый клиент не должен сломаться."""
     client = setup_app_for_tests()
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
     payload = sheet_of([{"full_name": "Пётр Петров", "category": "Абсолютная мужская"}])
-    report = preview(client, tournament_id, payload, headers).json()
+    report = preview(client, tournament_id, payload, session).json()
 
+    use_session(client, session)
     committed = client.post(
         f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
         json={"rows": report["rows"]},
-        headers=headers,
     )
     assert committed.status_code == 200, committed.text
     assert len(participants(client, tournament_id)) == 1
@@ -236,16 +239,17 @@ def test_a_rejected_batch_does_not_burn_the_key_for_the_corrected_retry():
     reason (bad data) turning into one stuck for no reason at all.
     """
     client = setup_app_for_tests()
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
     payload = sheet_of(
         [
             {"full_name": "Хороший", "category": "Абсолютная мужская"},
             {"full_name": "Плохой", "category": "Женская абсолютка"},
         ]
     )
-    report = preview(client, tournament_id, payload, headers).json()
+    report = preview(client, tournament_id, payload, session).json()
 
-    key = {"Idempotency-Key": "33333333-3333-3333-3333-333333333333", **headers}
+    key = {"Idempotency-Key": "33333333-3333-3333-3333-333333333333"}
+    use_session(client, session)
     rejected = client.post(
         f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
         json={"rows": report["rows"]},
@@ -255,6 +259,7 @@ def test_a_rejected_batch_does_not_burn_the_key_for_the_corrected_retry():
     assert participants(client, tournament_id) == []
 
     good_row = next(row for row in report["rows"] if row["full_name"] == "Хороший")
+    use_session(client, session)
     retried = client.post(
         f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
         json={"rows": [good_row]},
@@ -316,11 +321,12 @@ def test_an_oversized_idempotency_key_is_refused_not_500():
     on Postgres, letting it through to the insert raises StringDataRightTruncation.
     """
     client = setup_app_for_tests()
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
     payload = sheet_of([{"full_name": "Иван Иванов", "category": "Абсолютная мужская"}])
-    report = preview(client, tournament_id, payload, headers).json()
+    report = preview(client, tournament_id, payload, session).json()
 
-    key = {"Idempotency-Key": "x" * 129, **headers}
+    key = {"Idempotency-Key": "x" * 129}
+    use_session(client, session)
     response = client.post(
         f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
         json={"rows": report["rows"]},

@@ -43,12 +43,8 @@ def test_equipment_catalog_foundation_flow():
         },
     )
     assert register_response.status_code == 201, register_response.text
-    token = register_response.json()["access_token"]
 
-    me_response = client.get(
-        "/api/v1/users/me",
-        headers={"Authorization": f"Bearer {token}"},
-    )
+    me_response = client.get("/api/v1/users/me")
     assert me_response.status_code == 200, me_response.text
     user_id = me_response.json()["id"]
 
@@ -105,7 +101,6 @@ def test_equipment_catalog_foundation_flow():
             "mime_type": "image/jpeg",
             "uploaded_by": user_id,
         },
-        headers={"Authorization": f"Bearer {token}"},
     )
     assert media_file_response.status_code == 201, media_file_response.text
     media_file_id = media_file_response.json()["id"]

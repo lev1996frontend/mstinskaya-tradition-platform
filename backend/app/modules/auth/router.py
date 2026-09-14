@@ -1,17 +1,17 @@
 """Registration, login, refresh and logout.
 
-Tokens travel to the browser two ways at once: in the JSON body (for
-non-browser API callers — scripts, the test suite, a future mobile app —
-that keep them in their own secure storage) and as httpOnly cookies (for the
-browser, which now never puts a token anywhere its own JavaScript can read —
-see the audit that prompted this: tokens used to live in `localStorage`,
-readable by any XSS on the page). The frontend was rewired to rely on the
-cookie alone and ignore the body's tokens.
-
-`refresh` and `logout` prefer an explicit body's refresh token when one is
-sent (a non-browser caller, or a test that needs to name a specific — say,
-already-superseded — token) and otherwise fall back to the cookie; the
-browser sends no body at all and relies on the cookie alone.
+Tokens never appear in a JSON body at all now, in either direction — only as
+httpOnly cookies. They used to: the response body carried the token pair
+alongside the Set-Cookie headers (for "non-browser callers"), and refresh/
+logout accepted one explicitly in the request body as a fallback. Neither
+was actually load-bearing for anything but the test suite, and a token
+appearing in a body a browser's `fetch()` can read is exactly the exposure
+this whole change exists to close — a response body is JS-readable the
+instant it arrives, XSS or not, so "the browser just doesn't store it" was
+never the full fix. The test suite now drives the same rotation/reuse/
+logout behavior through `TestClient`'s cookie jar (see `tests/
+test_auth_foundation.py`), including a per-call `cookies=` override for the
+one case that genuinely needs to name an already-superseded token.
 
 No ``from __future__ import annotations`` here, unlike the rest of the
 codebase: ``@limiter.limit(...)`` wraps each endpoint in a function defined
@@ -31,7 +31,7 @@ from app.core.identity_access import User
 from app.core.rate_limit import limiter
 from app.core.session_auth import ACCESS_TOKEN_COOKIE
 from app.core.session_auth import get_current_user as get_session_user
-from app.modules.auth.schemas import LoginRequest, LogoutRequest, MessageResponse, RefreshRequest, RegisterRequest, TokenResponse
+from app.modules.auth.schemas import LoginRequest, MessageResponse, RegisterRequest
 from app.modules.auth.security import ACCESS_TOKEN_EXPIRES, REFRESH_TOKEN_EXPIRES
 from app.modules.auth.services.auth_service import AuthService
 from app.modules.identity.schemas.auth import UserMeResponse
@@ -56,6 +56,7 @@ async def get_me(
 ) -> UserMeResponse:
     user_data = await IdentityAuthService.get_user_me(session, str(current_user.id))
     return UserMeResponse(**user_data)
+
 
 #: Scoped to the auth routes only — the one place that ever needs to read it
 #: back — so a stolen access-cookie's XSS blast radius can never include this
@@ -92,11 +93,11 @@ def _clear_auth_cookies(response: Response) -> None:
     response.delete_cookie(REFRESH_TOKEN_COOKIE, path=REFRESH_COOKIE_PATH)
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")
 async def register(
     request: Request, payload: RegisterRequest, response: Response, session: AsyncSession = Depends(get_db)
-) -> TokenResponse:
+) -> MessageResponse:
     user, access_token, refresh_token = await AuthService.register(
         session,
         email=str(payload.email),
@@ -107,51 +108,41 @@ async def register(
     await AuthService.audit(session, user_id=user.id, action="REGISTER", entity_type="User", entity_id=str(user.id))
     await session.commit()
     _set_auth_cookies(response, access_token=access_token, refresh_token=refresh_token)
-    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+    return MessageResponse(message="Registered")
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=MessageResponse)
 @limiter.limit("10/minute")
 async def login(
     request: Request, payload: LoginRequest, response: Response, session: AsyncSession = Depends(get_db)
-) -> TokenResponse:
+) -> MessageResponse:
     user, access_token, refresh_token = await AuthService.login(session, email=str(payload.email), password=payload.password)
     await AuthService.audit(session, user_id=user.id, action="LOGIN", entity_type="User", entity_id=str(user.id))
     await session.commit()
     _set_auth_cookies(response, access_token=access_token, refresh_token=refresh_token)
-    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+    return MessageResponse(message="Logged in")
 
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post("/refresh", response_model=MessageResponse)
 @limiter.limit("30/minute")
-async def refresh(
-    request: Request,
-    response: Response,
-    payload: RefreshRequest | None = None,
-    session: AsyncSession = Depends(get_db),
-) -> TokenResponse:
-    token = (payload.refresh_token if payload else None) or request.cookies.get(REFRESH_TOKEN_COOKIE)
+async def refresh(request: Request, response: Response, session: AsyncSession = Depends(get_db)) -> MessageResponse:
+    token = request.cookies.get(REFRESH_TOKEN_COOKIE)
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing refresh token")
     access_token, refresh_token = await AuthService.refresh(session, token)
     await session.commit()
     _set_auth_cookies(response, access_token=access_token, refresh_token=refresh_token)
-    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+    return MessageResponse(message="Refreshed")
 
 
 @router.post("/logout", response_model=MessageResponse)
-async def logout(
-    request: Request,
-    response: Response,
-    payload: LogoutRequest | None = None,
-    session: AsyncSession = Depends(get_db),
-) -> MessageResponse:
+async def logout(request: Request, response: Response, session: AsyncSession = Depends(get_db)) -> MessageResponse:
     # Idempotent from the caller's point of view: whatever the cookie held —
     # nothing, an already-revoked token, one this backend never issued — the
     # end state is "no cookies, no session", so this always returns success
     # rather than surfacing an error the frontend would have nothing useful
     # to do with.
-    token = (payload.refresh_token if payload else None) or request.cookies.get(REFRESH_TOKEN_COOKIE)
+    token = request.cookies.get(REFRESH_TOKEN_COOKIE)
     if token:
         try:
             await AuthService.logout(session, token)

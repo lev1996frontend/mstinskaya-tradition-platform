@@ -1,4 +1,4 @@
-"""Withdrawing a fighter from a competition that is already under way.
+﻿"""Withdrawing a fighter from a competition that is already under way.
 
 The rule being pinned down here is that a withdrawal is *not* a rebuild. The
 bracket keeps its shape, its match ids and its numbering; what changes is that
@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core import database as database_module
 from app.main import app
 from app.models.base import Base
+from tests.auth_test_helpers import snapshot_session
 
 
 def setup_app_for_tests():
@@ -52,14 +53,14 @@ def register_user(client, email: str) -> tuple[str, dict[str, str]]:
         json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Судья"},
     )
     assert register.status_code == 201, register.text
-    headers = {"Authorization": f"Bearer {register.json()['access_token']}"}
-    me = client.get("/api/v1/users/me", headers=headers)
+    session = snapshot_session(client)
+    me = client.get("/api/v1/users/me")
     assert me.status_code == 200, me.text
-    return me.json()["id"], headers
+    return me.json()["id"], session
 
 
 def bootstrap(client, entrants: list[tuple[str, str]]):
-    organizer_id, headers = register_user(client, "organizer@example.com")
+    organizer_id, session = register_user(client, "organizer@example.com")
 
     ruleset = client.post("/api/v1/rulesets", json={"title": "Base", "version": "1.0", "status": "ACTIVE"})
     assert ruleset.status_code == 201, ruleset.text
@@ -104,7 +105,7 @@ def bootstrap(client, entrants: list[tuple[str, str]]):
         )
         assert response.status_code == 201, response.text
         ids[name] = response.json()["id"]
-    return tournament_id, competition_id, ids, headers
+    return tournament_id, competition_id, ids, session
 
 
 def matches(client, competition_id: str) -> list[dict]:
@@ -133,16 +134,16 @@ def events(client, competition_id: str) -> list[dict]:
 
 def four_fighter_bracket(client):
     """A clean 4-slot bracket: two semifinals into a final, no byes."""
-    _, competition_id, ids, headers = bootstrap(
+    _, competition_id, ids, session = bootstrap(
         client,
         [("Иван", "Новгород"), ("Пётр", "Псков"), ("Сергей", "Тверь"), ("Фёдор", "Москва")],
     )
     generated = client.post(
-        f"/api/v1/competitions/{competition_id}/bracket/generate", json={}, headers=headers
+        f"/api/v1/competitions/{competition_id}/bracket/generate", json={}
     )
     assert generated.status_code == 201, generated.text
     assert generated.json()["bye_count"] == 0
-    return competition_id, ids, headers
+    return competition_id, ids, session
 
 
 # ------------------------------------------------------- the ordinary case
@@ -150,7 +151,7 @@ def four_fighter_bracket(client):
 
 def test_withdrawing_hands_the_bout_to_the_opponent_and_advances_them():
     client = setup_app_for_tests()
-    competition_id, ids, headers = four_fighter_bracket(client)
+    competition_id, ids, session = four_fighter_bracket(client)
 
     before = matches(client, competition_id)
     bout = match_of(before, ids["Иван"], ids["Фёдор"])  # seeds 1 and 4 meet
@@ -159,7 +160,6 @@ def test_withdrawing_hands_the_bout_to_the_opponent_and_advances_them():
     response = client.post(
         f"/api/v1/participants/{ids['Иван']}/withdraw",
         json={"reason": "Травма плеча"},
-        headers=headers,
     )
     assert response.status_code == 200, response.text
     body = response.json()
@@ -186,7 +186,7 @@ def test_withdrawing_hands_the_bout_to_the_opponent_and_advances_them():
 def test_the_bracket_is_not_rebuilt():
     """Match ids and pairings survive a withdrawal untouched."""
     client = setup_app_for_tests()
-    competition_id, ids, headers = four_fighter_bracket(client)
+    competition_id, ids, session = four_fighter_bracket(client)
 
     before = {row["id"]: row for row in matches(client, competition_id)}
     other_semi = match_of(list(before.values()), ids["Пётр"], ids["Сергей"])
@@ -194,7 +194,6 @@ def test_the_bracket_is_not_rebuilt():
     response = client.post(
         f"/api/v1/participants/{ids['Иван']}/withdraw",
         json={"reason": "Снялся сам"},
-        headers=headers,
     )
     assert response.status_code == 200, response.text
 
@@ -209,7 +208,7 @@ def test_the_bracket_is_not_rebuilt():
 
 def test_a_bout_that_was_already_fought_is_left_alone():
     client = setup_app_for_tests()
-    competition_id, ids, headers = four_fighter_bracket(client)
+    competition_id, ids, session = four_fighter_bracket(client)
 
     rows = matches(client, competition_id)
     fought = match_of(rows, ids["Пётр"], ids["Сергей"])
@@ -223,7 +222,6 @@ def test_a_bout_that_was_already_fought_is_left_alone():
     response = client.post(
         f"/api/v1/participants/{ids['Сергей']}/withdraw",
         json={"reason": "Уехал"},
-        headers=headers,
     )
     assert response.status_code == 200, response.text
     assert response.json()["walkovers"] == []
@@ -236,12 +234,11 @@ def test_a_bout_that_was_already_fought_is_left_alone():
 
 def test_the_reason_reaches_the_journal():
     client = setup_app_for_tests()
-    competition_id, ids, headers = four_fighter_bracket(client)
+    competition_id, ids, session = four_fighter_bracket(client)
 
     client.post(
         f"/api/v1/participants/{ids['Иван']}/withdraw",
         json={"reason": "Дисквалификация за опасный приём", "status": "DISQUALIFIED"},
-        headers=headers,
     ).raise_for_status()
 
     journal = events(client, competition_id)
@@ -262,14 +259,14 @@ def test_the_reason_reaches_the_journal():
 
 def test_withdrawing_twice_is_refused():
     client = setup_app_for_tests()
-    _, ids, headers = four_fighter_bracket(client)
+    _, ids, session = four_fighter_bracket(client)
 
     first = client.post(
-        f"/api/v1/participants/{ids['Иван']}/withdraw", json={"reason": "Травма"}, headers=headers
+        f"/api/v1/participants/{ids['Иван']}/withdraw", json={"reason": "Травма"}
     )
     assert first.status_code == 200, first.text
     second = client.post(
-        f"/api/v1/participants/{ids['Иван']}/withdraw", json={"reason": "Ещё раз"}, headers=headers
+        f"/api/v1/participants/{ids['Иван']}/withdraw", json={"reason": "Ещё раз"}
     )
     assert second.status_code == 409, second.text
 
@@ -277,21 +274,19 @@ def test_withdrawing_twice_is_refused():
 def test_a_started_bout_blocks_the_withdrawal():
     """The judge finishes or cancels it; we do not overwrite a thrown lot."""
     client = setup_app_for_tests()
-    competition_id, ids, headers = four_fighter_bracket(client)
+    competition_id, ids, session = four_fighter_bracket(client)
 
     bout = match_of(matches(client, competition_id), ids["Иван"], ids["Фёдор"])
     for side in ("RED", "BLUE"):
         drawn = client.post(
             f"/api/v1/matches/{bout['id']}/lot",
             json={"side": side, "method": "ONLINE_DICE"},
-            headers=headers,
         )
         assert drawn.status_code == 201, drawn.text
 
     refused = client.post(
         f"/api/v1/participants/{ids['Иван']}/withdraw",
         json={"reason": "Передумал"},
-        headers=headers,
     )
     assert refused.status_code == 409, refused.text
     assert refused.json()["detail"]["code"] == "BOUT_IN_FLIGHT"
@@ -315,13 +310,12 @@ def test_withdrawing_before_the_next_opponent_is_known_settles_later():
     belongs to the bout flow and is out of scope here).
     """
     client = setup_app_for_tests()
-    competition_id, ids, headers = four_fighter_bracket(client)
+    competition_id, ids, session = four_fighter_bracket(client)
 
     # Фёдор pulls out, so Иван walks into the final and sits there alone.
     client.post(
         f"/api/v1/participants/{ids['Фёдор']}/withdraw",
         json={"reason": "Не приехал"},
-        headers=headers,
     ).raise_for_status()
 
     final = next(row for row in matches(client, competition_id) if row["stage"] == "FINAL")
@@ -333,7 +327,6 @@ def test_withdrawing_before_the_next_opponent_is_known_settles_later():
     withdrawal = client.post(
         f"/api/v1/participants/{ids['Иван']}/withdraw",
         json={"reason": "Не вышел на финал"},
-        headers=headers,
     )
     assert withdrawal.status_code == 200, withdrawal.text
     body = withdrawal.json()
@@ -348,7 +341,6 @@ def test_withdrawing_before_the_next_opponent_is_known_settles_later():
     client.post(
         f"/api/v1/participants/{ids['Сергей']}/withdraw",
         json={"reason": "Травма"},
-        headers=headers,
     ).raise_for_status()
 
     settled = next(row for row in matches(client, competition_id) if row["id"] == final["id"])
@@ -364,11 +356,11 @@ def test_withdrawing_before_the_next_opponent_is_known_settles_later():
 def test_a_match_between_two_withdrawn_fighters_is_not_awarded():
     """No winner exists, so none is invented."""
     client = setup_app_for_tests()
-    competition_id, ids, headers = four_fighter_bracket(client)
+    competition_id, ids, session = four_fighter_bracket(client)
 
     bout = match_of(matches(client, competition_id), ids["Иван"], ids["Фёдор"])
     client.post(
-        f"/api/v1/participants/{ids['Иван']}/withdraw", json={"reason": "Травма"}, headers=headers
+        f"/api/v1/participants/{ids['Иван']}/withdraw", json={"reason": "Травма"}
     ).raise_for_status()
     # The first withdrawal already awarded the bout to Фёдор; his own later
     # withdrawal must not disturb that finished result.
@@ -376,7 +368,7 @@ def test_a_match_between_two_withdrawn_fighters_is_not_awarded():
     assert settled["winner_id"] == ids["Фёдор"]
 
     client.post(
-        f"/api/v1/participants/{ids['Фёдор']}/withdraw", json={"reason": "Тоже снялся"}, headers=headers
+        f"/api/v1/participants/{ids['Фёдор']}/withdraw", json={"reason": "Тоже снялся"}
     ).raise_for_status()
     unchanged = next(row for row in matches(client, competition_id) if row["id"] == bout["id"])
     assert unchanged["winner_id"] == ids["Фёдор"]
@@ -394,20 +386,19 @@ def test_withdrawal_requires_an_authorized_manager():
     anonymous = client.post(f"/api/v1/participants/{ids['Иван']}/withdraw", json={"reason": "Травма"})
     assert anonymous.status_code == 401, anonymous.text
 
-    _, stranger_headers = register_user(client, "stranger@example.com")
+    register_user(client, "stranger@example.com")
     forbidden = client.post(
         f"/api/v1/participants/{ids['Иван']}/withdraw",
         json={"reason": "Травма"},
-        headers=stranger_headers,
     )
     assert forbidden.status_code == 403, forbidden.text
 
 
 def test_a_withdrawal_must_carry_a_reason():
     client = setup_app_for_tests()
-    _, ids, headers = four_fighter_bracket(client)
+    _, ids, session = four_fighter_bracket(client)
 
     blank = client.post(
-        f"/api/v1/participants/{ids['Иван']}/withdraw", json={"reason": ""}, headers=headers
+        f"/api/v1/participants/{ids['Иван']}/withdraw", json={"reason": ""}
     )
     assert blank.status_code == 422, blank.text

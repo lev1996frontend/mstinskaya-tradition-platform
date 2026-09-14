@@ -1,4 +1,4 @@
-"""The group stage end to end: deal, play, rank, qualify.
+﻿"""The group stage end to end: deal, play, rank, qualify.
 
 The last test is the scenario the whole feature was asked for — nine entrants,
 two subgroups, three out of each, cross-seeded into a bracket, someone withdraws
@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core import database as database_module
 from app.main import app
 from app.models.base import Base
+from tests.auth_test_helpers import snapshot_session, use_session
 
 
 def setup_app_for_tests():
@@ -46,14 +47,14 @@ def register(client, email: str) -> tuple[str, dict[str, str]]:
         json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Организатор"},
     )
     assert response.status_code == 201, response.text
-    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
-    me = client.get("/api/v1/users/me", headers=headers)
-    return me.json()["id"], headers
+    session = snapshot_session(client)
+    me = client.get("/api/v1/users/me")
+    return me.json()["id"], session
 
 
 def bootstrap(client, entrants: list[tuple[str, str]], *, competition_format="GROUP_PLAYOFF"):
     """A discipline with the given ``(name, club)`` entrants, seeded in order."""
-    organizer_id, headers = register(client, "organizer@example.com")
+    organizer_id, session = register(client, "organizer@example.com")
     ruleset = client.post("/api/v1/rulesets", json={"title": "Base", "version": "1.0", "status": "ACTIVE"})
     tournament = client.post(
         "/api/v1/tournaments",
@@ -92,7 +93,7 @@ def bootstrap(client, entrants: list[tuple[str, str]], *, competition_format="GR
         )
         assert created.status_code == 201, created.text
         ids[name] = created.json()["id"]
-    return tournament_id, competition_id, ids, headers
+    return tournament_id, competition_id, ids, session
 
 
 def nine_fighters(client):
@@ -100,11 +101,11 @@ def nine_fighters(client):
     return bootstrap(client, people)
 
 
-def generate_groups(client, competition_id, headers, *, groups=2, advance=3):
+def generate_groups(client, competition_id, session, *, groups=2, advance=3):
+    use_session(client, session)
     return client.post(
         f"/api/v1/competitions/{competition_id}/groups/generate",
         json={"group_count": groups, "advance_per_group": advance},
-        headers=headers,
     )
 
 
@@ -145,10 +146,10 @@ def play_group_stage(client, competition_id: str, ranking_order: list[str], ids:
 
 def test_the_suggestion_offers_options_and_marks_one():
     client = setup_app_for_tests()
-    _, competition_id, _, headers = nine_fighters(client)
+    _, competition_id, _, session = nine_fighters(client)
 
     response = client.post(
-        f"/api/v1/competitions/{competition_id}/groups/suggest", headers=headers
+        f"/api/v1/competitions/{competition_id}/groups/suggest"
     )
     assert response.status_code == 200, response.text
     body = response.json()
@@ -165,12 +166,11 @@ def test_the_suggestion_offers_options_and_marks_one():
 
 def test_the_preview_writes_nothing():
     client = setup_app_for_tests()
-    _, competition_id, _, headers = nine_fighters(client)
+    _, competition_id, _, session = nine_fighters(client)
 
     response = client.post(
         f"/api/v1/competitions/{competition_id}/groups/preview",
         json={"group_count": 2, "advance_per_group": 3},
-        headers=headers,
     )
     assert response.status_code == 200, response.text
     assert response.json()["group_count"] == 2
@@ -183,9 +183,9 @@ def test_the_preview_writes_nothing():
 
 def test_nine_fighters_split_into_two_groups_of_five_and_four():
     client = setup_app_for_tests()
-    _, competition_id, _, headers = nine_fighters(client)
+    _, competition_id, _, session = nine_fighters(client)
 
-    generated = generate_groups(client, competition_id, headers)
+    generated = generate_groups(client, competition_id, session)
     assert generated.status_code == 201, generated.text
     plan = generated.json()
     assert plan["group_count"] == 2
@@ -203,8 +203,8 @@ def test_nine_fighters_split_into_two_groups_of_five_and_four():
 
 def test_group_bouts_are_group_stage_and_lead_nowhere_by_themselves():
     client = setup_app_for_tests()
-    _, competition_id, _, headers = nine_fighters(client)
-    generate_groups(client, competition_id, headers).raise_for_status()
+    _, competition_id, _, session = nine_fighters(client)
+    generate_groups(client, competition_id, session).raise_for_status()
 
     rows = matches(client, competition_id)
     assert rows and all(row["stage"] == "GROUP" for row in rows)
@@ -216,8 +216,8 @@ def test_group_bouts_are_group_stage_and_lead_nowhere_by_themselves():
 
 def test_everyone_meets_everyone_in_their_own_group_and_nobody_else():
     client = setup_app_for_tests()
-    _, competition_id, ids, headers = nine_fighters(client)
-    generate_groups(client, competition_id, headers).raise_for_status()
+    _, competition_id, ids, session = nine_fighters(client)
+    generate_groups(client, competition_id, session).raise_for_status()
 
     stage = group_stage(client, competition_id)
     membership = {
@@ -241,8 +241,8 @@ def test_everyone_meets_everyone_in_their_own_group_and_nobody_else():
 
 def test_the_organizers_choice_is_on_record_separately():
     client = setup_app_for_tests()
-    _, competition_id, _, headers = nine_fighters(client)
-    generate_groups(client, competition_id, headers, groups=3, advance=1).raise_for_status()
+    _, competition_id, _, session = nine_fighters(client)
+    generate_groups(client, competition_id, session, groups=3, advance=1).raise_for_status()
 
     journal = client.get(f"/api/v1/competitions/{competition_id}/events").json()
     configured = [e for e in journal if e["event_type"] == "GROUP_STAGE_CONFIGURED"]
@@ -256,36 +256,36 @@ def test_the_organizers_choice_is_on_record_separately():
 
 def test_a_group_that_advances_everyone_is_refused():
     client = setup_app_for_tests()
-    _, competition_id, _, headers = nine_fighters(client)
-    refused = generate_groups(client, competition_id, headers, groups=3, advance=3)
+    _, competition_id, _, session = nine_fighters(client)
+    refused = generate_groups(client, competition_id, session, groups=3, advance=3)
     assert refused.status_code == 400, refused.text
 
 
 def test_a_second_generation_is_refused():
     client = setup_app_for_tests()
-    _, competition_id, _, headers = nine_fighters(client)
-    generate_groups(client, competition_id, headers).raise_for_status()
-    again = generate_groups(client, competition_id, headers)
+    _, competition_id, _, session = nine_fighters(client)
+    generate_groups(client, competition_id, session).raise_for_status()
+    again = generate_groups(client, competition_id, session)
     assert again.status_code == 409, again.text
 
 
 def test_a_knockout_discipline_has_no_group_stage():
     client = setup_app_for_tests()
-    _, competition_id, _, headers = bootstrap(
+    _, competition_id, _, session = bootstrap(
         client, [(f"Боец{i}", f"Клуб{i}") for i in range(1, 9)],
         competition_format="SINGLE_ELIMINATION",
     )
-    refused = generate_groups(client, competition_id, headers)
+    refused = generate_groups(client, competition_id, session)
     assert refused.status_code == 400, refused.text
 
 
 def test_a_round_robin_discipline_is_one_group():
     client = setup_app_for_tests()
-    _, competition_id, _, headers = bootstrap(
+    _, competition_id, _, session = bootstrap(
         client, [(f"Боец{i}", f"Клуб{i}") for i in range(1, 6)], competition_format="ROUND_ROBIN"
     )
-    assert generate_groups(client, competition_id, headers, groups=2, advance=1).status_code == 400
-    assert generate_groups(client, competition_id, headers, groups=1, advance=4).status_code == 201
+    assert generate_groups(client, competition_id, session, groups=2, advance=1).status_code == 400
+    assert generate_groups(client, competition_id, session, groups=1, advance=4).status_code == 201
 
 
 def test_clubmates_are_dealt_into_different_groups():
@@ -298,8 +298,8 @@ def test_clubmates_are_dealt_into_different_groups():
         ("Гриша", "Ратник"),
         ("Тихон", "Ратник"),
     ]
-    _, competition_id, _, headers = bootstrap(client, people)
-    generated = generate_groups(client, competition_id, headers, groups=2, advance=2)
+    _, competition_id, _, session = bootstrap(client, people)
+    generated = generate_groups(client, competition_id, session, groups=2, advance=2)
     assert generated.status_code == 201, generated.text
     assert generated.json()["separation_satisfied"] is True
 
@@ -309,8 +309,8 @@ def test_clubmates_are_dealt_into_different_groups():
 
 def test_the_table_counts_results_and_marks_who_goes_through():
     client = setup_app_for_tests()
-    _, competition_id, ids, headers = nine_fighters(client)
-    generate_groups(client, competition_id, headers).raise_for_status()
+    _, competition_id, ids, session = nine_fighters(client)
+    generate_groups(client, competition_id, session).raise_for_status()
     play_group_stage(client, competition_id, [f"Боец{i}" for i in range(1, 10)], ids)
 
     stage = group_stage(client, competition_id)
@@ -327,8 +327,8 @@ def test_the_table_counts_results_and_marks_who_goes_through():
 
 def test_an_unfinished_group_is_never_decided():
     client = setup_app_for_tests()
-    _, competition_id, _, headers = nine_fighters(client)
-    generate_groups(client, competition_id, headers).raise_for_status()
+    _, competition_id, _, session = nine_fighters(client)
+    generate_groups(client, competition_id, session).raise_for_status()
     stage = group_stage(client, competition_id)
     assert stage["decided"] is False
     assert all(group["decided"] is False for group in stage["groups"])
@@ -339,17 +339,17 @@ def test_an_unfinished_group_is_never_decided():
 
 def three_way_cycle(client):
     """A group of three whose results form А→Б→В→А: no honest order exists."""
-    _, competition_id, ids, headers = bootstrap(
+    _, competition_id, ids, session = bootstrap(
         client, [("Иван", "Буза"), ("Пётр", "Сокол"), ("Сергей", "Ратник")]
     )
-    generate_groups(client, competition_id, headers, groups=1, advance=2).raise_for_status()
+    generate_groups(client, competition_id, session, groups=1, advance=2).raise_for_status()
     beats = {("Иван", "Пётр"), ("Пётр", "Сергей"), ("Сергей", "Иван")}
     for match in matches(client, competition_id):
         a = match["participant_a"]["display_name"]
         b = match["participant_b"]["display_name"]
         winner = a if (a, b) in beats else b
         record(client, match["id"], ids[winner])
-    return competition_id, ids, headers
+    return competition_id, ids, session
 
 
 def test_a_cycle_is_reported_not_broken():
@@ -368,21 +368,21 @@ def test_a_cycle_is_reported_not_broken():
 
 def test_a_cycle_blocks_the_playoff():
     client = setup_app_for_tests()
-    competition_id, _, headers = three_way_cycle(client)
+    competition_id, _, session = three_way_cycle(client)
 
     state = client.get(f"/api/v1/competitions/{competition_id}/qualification").json()
     assert state["ready"] is False
     assert "TIE_UNRESOLVED" in {blocker["code"] for blocker in state["blockers"]}
 
     refused = client.post(
-        f"/api/v1/competitions/{competition_id}/playoff/generate", json={}, headers=headers
+        f"/api/v1/competitions/{competition_id}/playoff/generate", json={}
     )
     assert refused.status_code == 409, refused.text
 
 
 def test_the_organizer_settles_the_cycle_with_a_reason():
     client = setup_app_for_tests()
-    competition_id, ids, headers = three_way_cycle(client)
+    competition_id, ids, session = three_way_cycle(client)
     group_id = group_stage(client, competition_id)["groups"][0]["id"]
 
     resolved = client.post(
@@ -391,7 +391,6 @@ def test_the_organizer_settles_the_cycle_with_a_reason():
             "ordering": [ids["Сергей"], ids["Иван"], ids["Пётр"]],
             "reason": "Решение судейской коллегии по качеству побед",
         },
-        headers=headers,
     )
     assert resolved.status_code == 200, resolved.text
     group = resolved.json()["groups"][0]
@@ -411,13 +410,12 @@ def test_the_organizer_settles_the_cycle_with_a_reason():
 
 def test_a_tie_break_needs_a_reason_and_real_members():
     client = setup_app_for_tests()
-    competition_id, ids, headers = three_way_cycle(client)
+    competition_id, ids, session = three_way_cycle(client)
     group_id = group_stage(client, competition_id)["groups"][0]["id"]
 
     blank = client.post(
         f"/api/v1/competition-groups/{group_id}/tie-break",
         json={"ordering": [ids["Иван"], ids["Пётр"]], "reason": ""},
-        headers=headers,
     )
     assert blank.status_code == 422, blank.text
 
@@ -427,7 +425,6 @@ def test_a_tie_break_needs_a_reason_and_real_members():
             "ordering": [ids["Иван"], "00000000-0000-0000-0000-000000000001"],
             "reason": "Кто угодно",
         },
-        headers=headers,
     )
     assert stray.status_code == 400, stray.text
 
@@ -437,8 +434,8 @@ def test_a_tie_break_needs_a_reason_and_real_members():
 
 def test_qualifiers_are_cross_seeded_into_the_playoff():
     client = setup_app_for_tests()
-    _, competition_id, ids, headers = nine_fighters(client)
-    generate_groups(client, competition_id, headers).raise_for_status()
+    _, competition_id, ids, session = nine_fighters(client)
+    generate_groups(client, competition_id, session).raise_for_status()
     play_group_stage(client, competition_id, [f"Боец{i}" for i in range(1, 10)], ids)
 
     state = client.get(f"/api/v1/competitions/{competition_id}/qualification").json()
@@ -453,7 +450,7 @@ def test_qualifiers_are_cross_seeded_into_the_playoff():
     assert state["plan"]["bye_count"] == 2
 
     built = client.post(
-        f"/api/v1/competitions/{competition_id}/playoff/generate", json={}, headers=headers
+        f"/api/v1/competitions/{competition_id}/playoff/generate", json={}
     )
     assert built.status_code == 201, built.text
 
@@ -477,30 +474,30 @@ def test_qualifiers_are_cross_seeded_into_the_playoff():
 
 def test_an_unplayed_group_blocks_the_playoff():
     client = setup_app_for_tests()
-    _, competition_id, _, headers = nine_fighters(client)
-    generate_groups(client, competition_id, headers).raise_for_status()
+    _, competition_id, _, session = nine_fighters(client)
+    generate_groups(client, competition_id, session).raise_for_status()
 
     state = client.get(f"/api/v1/competitions/{competition_id}/qualification").json()
     assert state["ready"] is False
     assert "GROUP_STAGE_INCOMPLETE" in {blocker["code"] for blocker in state["blockers"]}
 
     refused = client.post(
-        f"/api/v1/competitions/{competition_id}/playoff/generate", json={}, headers=headers
+        f"/api/v1/competitions/{competition_id}/playoff/generate", json={}
     )
     assert refused.status_code == 409, refused.text
 
 
 def test_the_playoff_is_built_only_once():
     client = setup_app_for_tests()
-    _, competition_id, ids, headers = nine_fighters(client)
-    generate_groups(client, competition_id, headers).raise_for_status()
+    _, competition_id, ids, session = nine_fighters(client)
+    generate_groups(client, competition_id, session).raise_for_status()
     play_group_stage(client, competition_id, [f"Боец{i}" for i in range(1, 10)], ids)
     client.post(
-        f"/api/v1/competitions/{competition_id}/playoff/generate", json={}, headers=headers
+        f"/api/v1/competitions/{competition_id}/playoff/generate", json={}
     ).raise_for_status()
 
     again = client.post(
-        f"/api/v1/competitions/{competition_id}/playoff/generate", json={}, headers=headers
+        f"/api/v1/competitions/{competition_id}/playoff/generate", json={}
     )
     assert again.status_code == 409, again.text
     assert "PLAYOFF_ALREADY_BUILT" in {
@@ -511,14 +508,14 @@ def test_the_playoff_is_built_only_once():
 def test_the_documented_five_fighter_case_works_end_to_end():
     """One round-robin group of five, four advance → 1v4 and 2v3."""
     client = setup_app_for_tests()
-    _, competition_id, ids, headers = bootstrap(
+    _, competition_id, ids, session = bootstrap(
         client, [(f"Боец{i}", f"Клуб{i}") for i in range(1, 6)], competition_format="ROUND_ROBIN"
     )
-    generate_groups(client, competition_id, headers, groups=1, advance=4).raise_for_status()
+    generate_groups(client, competition_id, session, groups=1, advance=4).raise_for_status()
     play_group_stage(client, competition_id, [f"Боец{i}" for i in range(1, 6)], ids)
 
     built = client.post(
-        f"/api/v1/competitions/{competition_id}/playoff/generate", json={}, headers=headers
+        f"/api/v1/competitions/{competition_id}/playoff/generate", json={}
     )
     assert built.status_code == 201, built.text
     assert built.json()["bracket_size"] == 4
@@ -558,9 +555,9 @@ def test_group_writes_require_an_authorized_manager():
 def test_the_configuration_has_no_defaults():
     """The platform must not be able to build a stage nobody specified."""
     client = setup_app_for_tests()
-    _, competition_id, _, headers = nine_fighters(client)
+    _, competition_id, _, session = nine_fighters(client)
     empty = client.post(
-        f"/api/v1/competitions/{competition_id}/groups/generate", json={}, headers=headers
+        f"/api/v1/competitions/{competition_id}/groups/generate", json={}
     )
     assert empty.status_code == 422, empty.text
 
@@ -571,15 +568,15 @@ def test_the_configuration_has_no_defaults():
 def test_nine_entrants_through_groups_a_withdrawal_and_a_champion():
     """The case this feature was asked for, start to finish."""
     client = setup_app_for_tests()
-    _, competition_id, ids, headers = nine_fighters(client)
+    _, competition_id, ids, session = nine_fighters(client)
 
-    generate_groups(client, competition_id, headers, groups=2, advance=3).raise_for_status()
+    generate_groups(client, competition_id, session, groups=2, advance=3).raise_for_status()
     play_group_stage(client, competition_id, [f"Боец{i}" for i in range(1, 10)], ids)
 
     state = client.get(f"/api/v1/competitions/{competition_id}/qualification").json()
     assert state["ready"] is True
     client.post(
-        f"/api/v1/competitions/{competition_id}/playoff/generate", json={}, headers=headers
+        f"/api/v1/competitions/{competition_id}/playoff/generate", json={}
     ).raise_for_status()
 
     # Someone pulls out of an unfought quarterfinal; their opponent goes through
@@ -597,7 +594,6 @@ def test_nine_entrants_through_groups_a_withdrawal_and_a_champion():
     withdrawal = client.post(
         f"/api/v1/participants/{leaving}/withdraw",
         json={"reason": "Травма"},
-        headers=headers,
     )
     assert withdrawal.status_code == 200, withdrawal.text
 

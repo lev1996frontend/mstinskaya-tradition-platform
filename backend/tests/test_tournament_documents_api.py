@@ -1,4 +1,4 @@
-"""Документы турнира ссылаются на файл.
+﻿"""Документы турнира ссылаются на файл.
 
 Until now a `tournament_documents` row was only ever a bare `file_url` pointing
 somewhere else. This adds a second way to fill that row — an uploaded file —
@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core import database as database_module
 from app.main import app
 from app.models.base import Base
+from tests.auth_test_helpers import snapshot_session
 
 DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
@@ -66,15 +67,15 @@ def register(client, email: str) -> tuple[str, dict[str, str]]:
         json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Организатор"},
     )
     assert response.status_code == 201, response.text
-    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
-    me = client.get("/api/v1/users/me", headers=headers)
+    session = snapshot_session(client)
+    me = client.get("/api/v1/users/me")
     assert me.status_code == 200, me.text
-    return me.json()["id"], headers
+    return me.json()["id"], session
 
 
 def bootstrap(client):
     """A tournament with three disciplines, one of them age-bounded."""
-    organizer_id, headers = register(client, "organizer@example.com")
+    organizer_id, session = register(client, "organizer@example.com")
     ruleset = client.post("/api/v1/rulesets", json={"title": "Base", "version": "1.0", "status": "ACTIVE"})
     tournament = client.post(
         "/api/v1/tournaments",
@@ -87,25 +88,23 @@ def bootstrap(client):
         },
     )
     assert tournament.status_code == 201, tournament.text
-    return tournament.json()["id"], headers
+    return tournament.json()["id"], session
 
 
 def test_an_uploaded_file_becomes_a_tournament_document(tmp_path):
     """Загрузили файл, приложили к турниру, скачали по ссылке из списка."""
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
 
     uploaded = client.post(
         "/api/v1/media/uploads",
         files={"file": ("положение.docx", docx_bytes(), DOCX)},
-        headers=headers,
     ).json()
 
     created = client.post(
         f"/api/v1/tournaments/{tournament_id}/documents",
         json={"title": "Положение", "media_file_id": uploaded["id"], "type": "POSITION"},
-        headers=headers,
     )
     assert created.status_code == 201, created.text
     assert created.json()["file_url"] == uploaded["url"]
@@ -119,12 +118,11 @@ def test_an_external_link_still_works(tmp_path):
     """Старый способ — голая ссылка наружу — ломать нельзя."""
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
 
     created = client.post(
         f"/api/v1/tournaments/{tournament_id}/documents",
         json={"title": "Регламент", "file_url": "https://example.org/reg.docx"},
-        headers=headers,
     )
     assert created.status_code == 201, created.text
 
@@ -132,12 +130,11 @@ def test_an_external_link_still_works(tmp_path):
 def test_a_document_neither_uploaded_nor_linked_is_refused(tmp_path):
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
 
     refused = client.post(
         f"/api/v1/tournaments/{tournament_id}/documents",
         json={"title": "Ничто"},
-        headers=headers,
     )
     assert refused.status_code == 422, refused.text
 
@@ -146,20 +143,18 @@ def test_removing_a_document_hides_it_but_keeps_the_file(tmp_path):
     """Снятие со страницы — не удаление: старое положение могли процитировать."""
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
     uploaded = client.post(
         "/api/v1/media/uploads",
         files={"file": ("положение.docx", docx_bytes(), DOCX)},
-        headers=headers,
     ).json()
     document = client.post(
         f"/api/v1/tournaments/{tournament_id}/documents",
         json={"title": "Положение", "media_file_id": uploaded["id"]},
-        headers=headers,
     ).json()
 
     removed = client.delete(
-        f"/api/v1/tournaments/{tournament_id}/documents/{document['id']}", headers=headers
+        f"/api/v1/tournaments/{tournament_id}/documents/{document['id']}"
     )
     assert removed.status_code == 204, removed.text
     assert client.get(f"/api/v1/tournaments/{tournament_id}/documents").json() == []
@@ -170,12 +165,11 @@ def test_an_unparsable_media_file_id_is_a_bad_request_not_a_crash(tmp_path):
     """Same convention as get_tournament: malformed id is 400, not a 500."""
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
 
     refused = client.post(
         f"/api/v1/tournaments/{tournament_id}/documents",
         json={"title": "Положение", "media_file_id": "not-a-uuid"},
-        headers=headers,
     )
     assert refused.status_code == 400, refused.text
 
@@ -183,10 +177,10 @@ def test_an_unparsable_media_file_id_is_a_bad_request_not_a_crash(tmp_path):
 def test_removing_with_an_unparsable_document_id_is_a_bad_request_not_a_crash(tmp_path):
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
 
     refused = client.delete(
-        f"/api/v1/tournaments/{tournament_id}/documents/not-a-uuid", headers=headers
+        f"/api/v1/tournaments/{tournament_id}/documents/not-a-uuid"
     )
     assert refused.status_code == 400, refused.text
 
@@ -196,24 +190,21 @@ def test_attaching_the_same_file_twice_to_the_same_tournament_is_a_conflict(tmp_
     a second time is refused, naming the document that already has it."""
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
     uploaded = client.post(
         "/api/v1/media/uploads",
         files={"file": ("положение.docx", docx_bytes(), DOCX)},
-        headers=headers,
     ).json()
 
     first = client.post(
         f"/api/v1/tournaments/{tournament_id}/documents",
         json={"title": "Положение (черновик)", "media_file_id": uploaded["id"], "type": "POSITION"},
-        headers=headers,
     )
     assert first.status_code == 201, first.text
 
     second = client.post(
         f"/api/v1/tournaments/{tournament_id}/documents",
         json={"title": "Положение (копия)", "media_file_id": uploaded["id"], "type": "POSITION"},
-        headers=headers,
     )
     assert second.status_code == 409, second.text
     assert "Положение (черновик)" in second.json()["detail"]
@@ -224,22 +215,20 @@ def test_attaching_the_same_file_to_a_different_tournament_still_succeeds(tmp_pa
     can cite the same uploaded file with no conflict."""
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
     uploaded = client.post(
         "/api/v1/media/uploads",
         files={"file": ("положение.docx", docx_bytes(), DOCX)},
-        headers=headers,
     ).json()
 
     first = client.post(
         f"/api/v1/tournaments/{tournament_id}/documents",
         json={"title": "Положение", "media_file_id": uploaded["id"], "type": "POSITION"},
-        headers=headers,
     )
     assert first.status_code == 201, first.text
 
     ruleset = client.post("/api/v1/rulesets", json={"title": "Base", "version": "1.0", "status": "ACTIVE"})
-    me = client.get("/api/v1/users/me", headers=headers).json()
+    me = client.get("/api/v1/users/me").json()
     other_tournament = client.post(
         "/api/v1/tournaments",
         json={
@@ -256,7 +245,6 @@ def test_attaching_the_same_file_to_a_different_tournament_still_succeeds(tmp_pa
     second = client.post(
         f"/api/v1/tournaments/{other_tournament_id}/documents",
         json={"title": "Положение", "media_file_id": uploaded["id"], "type": "POSITION"},
-        headers=headers,
     )
     assert second.status_code == 201, second.text
 
@@ -264,13 +252,12 @@ def test_attaching_the_same_file_to_a_different_tournament_still_succeeds(tmp_pa
 def test_attaching_a_document_requires_a_manager(tmp_path):
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
     _, stranger = register(client, "stranger@example.com")
 
     refused = client.post(
         f"/api/v1/tournaments/{tournament_id}/documents",
         json={"title": "Чужое", "file_url": "https://example.org/x.docx"},
-        headers=stranger,
     )
     assert refused.status_code == 403, refused.text
 
@@ -282,7 +269,7 @@ def test_attaching_a_document_requires_a_manager(tmp_path):
 
 def test_the_organizer_can_repoint_the_tournament_at_another_edition():
     client = setup_app_for_tests()
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
     second_ruleset = client.post(
         "/api/v1/rulesets", json={"title": "Base", "version": "2.0", "status": "ACTIVE"}
     )
@@ -291,7 +278,6 @@ def test_the_organizer_can_repoint_the_tournament_at_another_edition():
     updated = client.patch(
         f"/api/v1/tournaments/{tournament_id}/ruleset",
         json={"ruleset_id": second_ruleset.json()["id"]},
-        headers=headers,
     )
     assert updated.status_code == 200, updated.text
     assert updated.json()["ruleset_id"] == second_ruleset.json()["id"]
@@ -303,24 +289,22 @@ def test_the_organizer_can_repoint_the_tournament_at_another_edition():
 
 def test_repointing_at_a_nonexistent_edition_is_refused():
     client = setup_app_for_tests()
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
 
     refused = client.patch(
         f"/api/v1/tournaments/{tournament_id}/ruleset",
         json={"ruleset_id": "00000000-0000-0000-0000-000000000000"},
-        headers=headers,
     )
     assert refused.status_code == 404, refused.text
 
 
 def test_repointing_with_a_malformed_id_is_a_bad_request_not_a_crash():
     client = setup_app_for_tests()
-    tournament_id, headers = bootstrap(client)
+    tournament_id, session = bootstrap(client)
 
     refused = client.patch(
         f"/api/v1/tournaments/{tournament_id}/ruleset",
         json={"ruleset_id": "not-a-uuid"},
-        headers=headers,
     )
     assert refused.status_code == 400, refused.text
 
@@ -334,7 +318,6 @@ def test_repointing_requires_a_manager():
     refused = client.patch(
         f"/api/v1/tournaments/{tournament_id}/ruleset",
         json={"ruleset_id": ruleset.json()["id"]},
-        headers=stranger,
     )
     assert refused.status_code == 403, refused.text
 

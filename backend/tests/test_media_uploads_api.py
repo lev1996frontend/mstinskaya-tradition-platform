@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core import database as database_module
 from app.main import app
 from app.models.base import Base
+from tests.auth_test_helpers import snapshot_session, use_session
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -66,10 +67,10 @@ def register(client, email: str) -> tuple[str, dict[str, str]]:
         json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Организатор"},
     )
     assert response.status_code == 201, response.text
-    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
-    me = client.get("/api/v1/users/me", headers=headers)
+    session = snapshot_session(client)
+    me = client.get("/api/v1/users/me")
     assert me.status_code == 200, me.text
-    return me.json()["id"], headers
+    return me.json()["id"], session
 
 
 def use_temp_storage(tmp_path):
@@ -84,13 +85,13 @@ def use_temp_storage(tmp_path):
 def test_a_word_document_is_accepted_and_comes_back_byte_for_byte(tmp_path):
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
-    _, headers = register(client, "organizer@example.com")
+    _, session = register(client, "organizer@example.com")
 
     payload = docx_bytes()
+    use_session(client, session)
     uploaded = client.post(
         "/api/v1/media/uploads",
         files={"file": ("положение.docx", payload, DOCX)},
-        headers=headers,
     )
     assert uploaded.status_code == 201, uploaded.text
     body = uploaded.json()
@@ -110,11 +111,11 @@ def test_downloading_needs_no_login(tmp_path):
     """Положение раздают тренерам, а тренер не залогинен."""
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
-    _, headers = register(client, "organizer@example.com")
+    _, session = register(client, "organizer@example.com")
+    use_session(client, session)
     body = client.post(
         "/api/v1/media/uploads",
         files={"file": ("регламент.docx", docx_bytes(), DOCX)},
-        headers=headers,
     ).json()
 
     assert client.get(f"/api/v1/media/files/{body['id']}/download").status_code == 200
@@ -123,12 +124,12 @@ def test_downloading_needs_no_login(tmp_path):
 def test_a_pdf_is_refused_by_name_not_by_shrug(tmp_path):
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
-    _, headers = register(client, "organizer@example.com")
+    _, session = register(client, "organizer@example.com")
 
+    use_session(client, session)
     refused = client.post(
         "/api/v1/media/uploads",
         files={"file": ("положение.pdf", b"%PDF-1.7\n", "application/pdf")},
-        headers=headers,
     )
     assert refused.status_code == 400, refused.text
     assert "pdf" in refused.json()["detail"].lower()
@@ -138,12 +139,12 @@ def test_an_executable_renamed_to_docx_is_refused(tmp_path):
     """Расширение — заявление отправителя, а не факт."""
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
-    _, headers = register(client, "organizer@example.com")
+    _, session = register(client, "organizer@example.com")
 
+    use_session(client, session)
     refused = client.post(
         "/api/v1/media/uploads",
         files={"file": ("положение.docx", b"MZ\x90\x00 not a document", DOCX)},
-        headers=headers,
     )
     assert refused.status_code == 400, refused.text
 
@@ -151,18 +152,18 @@ def test_an_executable_renamed_to_docx_is_refused(tmp_path):
 def test_the_same_bytes_twice_do_not_make_a_second_file(tmp_path):
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
-    _, headers = register(client, "organizer@example.com")
+    _, session = register(client, "organizer@example.com")
     payload = docx_bytes()
 
+    use_session(client, session)
     first = client.post(
         "/api/v1/media/uploads",
         files={"file": ("положение.docx", payload, DOCX)},
-        headers=headers,
     ).json()
+    use_session(client, session)
     second = client.post(
         "/api/v1/media/uploads",
         files={"file": ("оно-же.docx", payload, DOCX)},
-        headers=headers,
     ).json()
 
     assert second["duplicate_of"] == first["id"]
@@ -183,12 +184,12 @@ def test_an_oversized_upload_is_refused_and_nothing_lands_in_storage(tmp_path, m
 
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
-    _, headers = register(client, "organizer@example.com")
+    _, session = register(client, "organizer@example.com")
 
+    use_session(client, session)
     refused = client.post(
         "/api/v1/media/uploads",
         files={"file": ("положение.docx", b"x" * 100, DOCX)},
-        headers=headers,
     )
     assert refused.status_code == 413, refused.text
     assert list(tmp_path.rglob("*")) == [], "ничего не должно попасть на диск"
@@ -211,7 +212,7 @@ def test_an_oversized_upload_without_a_declared_length_is_refused_by_the_chunk_l
 
     client = setup_app_for_tests()
     use_temp_storage(tmp_path)
-    _, headers = register(client, "organizer@example.com")
+    _, session = register(client, "organizer@example.com")
 
     boundary = "xxxxxxxxxxxxxxxxxxxxboundary"
     body = (
@@ -223,10 +224,11 @@ def test_an_oversized_upload_without_a_declared_length_is_refused_by_the_chunk_l
     def body_generator():
         yield body
 
+    use_session(client, session)
     refused = client.post(
         "/api/v1/media/uploads",
         content=body_generator(),
-        headers={**headers, "Content-Type": f"multipart/form-data; boundary={boundary}"},
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
     )
     assert refused.status_code == 413, refused.text
     assert list(tmp_path.rglob("*")) == [], "ничего не должно попасть на диск"

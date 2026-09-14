@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core import database as database_module
 from app.main import app
 from app.models.base import Base
+from tests.auth_test_helpers import snapshot_session, use_session
 
 PALKA, NOZH, HANDS, KISTEN = 1, 2, 3, 4
 
@@ -46,9 +47,9 @@ def register(client, email: str) -> tuple[str, dict[str, str]]:
         json={"email": email, "password": "StrongPassword123!", "first_name": "Ivan", "last_name": "Judge"},
     )
     assert response.status_code == 201, response.text
-    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
-    me = client.get("/api/v1/users/me", headers=headers)
-    return me.json()["id"], headers
+    session = snapshot_session(client)
+    me = client.get("/api/v1/users/me")
+    return me.json()["id"], session
 
 
 def bootstrap_bracket(client, entrants=None, *, competition_type="INDIVIDUAL", final_weapon=None):
@@ -58,7 +59,7 @@ def bootstrap_bracket(client, entrants=None, *, competition_type="INDIVIDUAL", f
         ("Сидоров", "Тверь"),
         ("Кузнецов", "Москва"),
     ]
-    organizer_id, headers = register(client, "organizer@example.com")
+    organizer_id, session = register(client, "organizer@example.com")
 
     ruleset = client.post("/api/v1/rulesets", json={"title": "Base", "version": "1.0", "status": "ACTIVE"})
     tournament = client.post(
@@ -90,11 +91,10 @@ def bootstrap_bracket(client, entrants=None, *, competition_type="INDIVIDUAL", f
         assert response.status_code == 201, response.text
 
     body = {"final_weapon": final_weapon} if final_weapon else {}
-    generated = client.post(
-        f"/api/v1/competitions/{competition_id}/bracket/generate", json=body, headers=headers
-    )
+    use_session(client, session)
+    generated = client.post(f"/api/v1/competitions/{competition_id}/bracket/generate", json=body)
     assert generated.status_code == 201, generated.text
-    return tournament_id, competition_id, headers
+    return tournament_id, competition_id, session
 
 
 def rounds_of(client, competition_id: str) -> list[dict]:
@@ -110,33 +110,35 @@ def final_of(client, competition_id: str) -> dict:
     return rounds_of(client, competition_id)[-1]["matches"][0]
 
 
-def draw(client, match_id, headers, side, face):
+def draw(client, match_id, session, side, face):
+    use_session(client, session)
     return client.post(
         f"/api/v1/matches/{match_id}/lot",
         json={"side": side, "method": "PHYSICAL_DICE", "die_value": face},
-        headers=headers,
     )
 
 
-def run_bout(client, match_id, headers, *, red_face, blue_face):
+def run_bout(client, match_id, session, *, red_face, blue_face):
     """Draw both lots and start the bout."""
-    assert draw(client, match_id, headers, "RED", red_face).status_code == 201
-    assert draw(client, match_id, headers, "BLUE", blue_face).status_code == 201
-    started = client.post(f"/api/v1/matches/{match_id}/start", headers=headers)
+    assert draw(client, match_id, session, "RED", red_face).status_code == 201
+    assert draw(client, match_id, session, "BLUE", blue_face).status_code == 201
+    use_session(client, session)
+    started = client.post(f"/api/v1/matches/{match_id}/start")
     assert started.status_code == 200, started.text
     return started.json()
 
 
-def score(client, match_id, headers, round_number, participant_id, action_code):
+def score(client, match_id, session, round_number, participant_id, action_code):
+    use_session(client, session)
     return client.post(
         f"/api/v1/matches/{match_id}/rounds/{round_number}/score",
         json={"participant_id": participant_id, "action_code": action_code},
-        headers=headers,
     )
 
 
-def open_round(client, match_id, headers):
-    response = client.post(f"/api/v1/matches/{match_id}/rounds", headers=headers)
+def open_round(client, match_id, session):
+    use_session(client, session)
+    response = client.post(f"/api/v1/matches/{match_id}/rounds")
     assert response.status_code == 201, response.text
     return response.json()["round_number"]
 
@@ -146,15 +148,15 @@ def open_round(client, match_id, headers):
 
 def test_a_second_lot_on_the_same_side_is_rejected():
     client = setup_app_for_tests()
-    _, competition_id, headers = bootstrap_bracket(client)
+    _, competition_id, session = bootstrap_bracket(client)
     match = semis(client, competition_id)[0]
 
-    first = draw(client, match["id"], headers, "RED", NOZH)
+    first = draw(client, match["id"], session, "RED", NOZH)
     assert first.status_code == 201, first.text
     assert first.json()["weapon"] == "NOZH"
     assert first.json()["die_value"] == NOZH
 
-    again = draw(client, match["id"], headers, "RED", PALKA)
+    again = draw(client, match["id"], session, "RED", PALKA)
     assert again.status_code == 409, again.text
     assert "already drawn" in again.json()["detail"]
 
@@ -166,10 +168,10 @@ def test_a_second_lot_on_the_same_side_is_rejected():
 
 def test_no_lot_may_be_drawn_for_a_final():
     client = setup_app_for_tests()
-    _, competition_id, headers = bootstrap_bracket(client)
+    _, competition_id, session = bootstrap_bracket(client)
     final = final_of(client, competition_id)
 
-    refused = draw(client, final["id"], headers, "RED", NOZH)
+    refused = draw(client, final["id"], session, "RED", NOZH)
     assert refused.status_code == 400, refused.text
     assert "final" in refused.json()["detail"].lower()
 
@@ -181,13 +183,13 @@ def test_no_lot_may_be_drawn_for_a_final():
 
 def test_online_lot_is_generated_and_persisted_by_the_server():
     client = setup_app_for_tests()
-    _, competition_id, headers = bootstrap_bracket(client)
+    _, competition_id, session = bootstrap_bracket(client)
     match = semis(client, competition_id)[0]
 
+    use_session(client, session)
     response = client.post(
         f"/api/v1/matches/{match['id']}/lot",
         json={"side": "RED", "method": "ONLINE_DICE"},
-        headers=headers,
     )
     assert response.status_code == 201, response.text
     body = response.json()
@@ -202,10 +204,11 @@ def test_online_lot_is_generated_and_persisted_by_the_server():
 
 def test_lot_override_supersedes_and_is_audited():
     client = setup_app_for_tests()
-    _, competition_id, headers = bootstrap_bracket(client)
+    _, competition_id, session = bootstrap_bracket(client)
     match = semis(client, competition_id)[0]
-    assert draw(client, match["id"], headers, "RED", NOZH).status_code == 201
+    assert draw(client, match["id"], session, "RED", NOZH).status_code == 201
 
+    use_session(client, session)
     override = client.post(
         f"/api/v1/matches/{match['id']}/lot/override",
         json={
@@ -214,7 +217,6 @@ def test_lot_override_supersedes_and_is_audited():
             "die_value": PALKA,
             "reason": "Кубик упал со стола, перебросили",
         },
-        headers=headers,
     )
     assert override.status_code == 201, override.text
     assert override.json()["weapon"] == "PALKA"
@@ -233,18 +235,21 @@ def test_lot_override_supersedes_and_is_audited():
 
 def test_a_bout_cannot_start_before_both_sides_have_drawn():
     client = setup_app_for_tests()
-    _, competition_id, headers = bootstrap_bracket(client)
+    _, competition_id, session = bootstrap_bracket(client)
     match = semis(client, competition_id)[0]
 
-    premature = client.post(f"/api/v1/matches/{match['id']}/start", headers=headers)
+    use_session(client, session)
+    premature = client.post(f"/api/v1/matches/{match['id']}/start")
     assert premature.status_code == 409, premature.text
 
-    assert draw(client, match["id"], headers, "RED", NOZH).status_code == 201
-    still = client.post(f"/api/v1/matches/{match['id']}/start", headers=headers)
+    assert draw(client, match["id"], session, "RED", NOZH).status_code == 201
+    use_session(client, session)
+    still = client.post(f"/api/v1/matches/{match['id']}/start")
     assert still.status_code == 409, still.text
 
-    assert draw(client, match["id"], headers, "BLUE", PALKA).status_code == 201
-    started = client.post(f"/api/v1/matches/{match['id']}/start", headers=headers)
+    assert draw(client, match["id"], session, "BLUE", PALKA).status_code == 201
+    use_session(client, session)
+    started = client.post(f"/api/v1/matches/{match['id']}/start")
     assert started.status_code == 200, started.text
     assert started.json()["status"] == "IN_PROGRESS"
 
@@ -254,17 +259,17 @@ def test_a_bout_cannot_start_before_both_sides_have_drawn():
 
 def test_unarmed_wins_the_whole_bout_with_a_single_disarm():
     client = setup_app_for_tests()
-    _, competition_id, headers = bootstrap_bracket(client)
+    _, competition_id, session = bootstrap_bracket(client)
     match = semis(client, competition_id)[0]
-    run_bout(client, match["id"], headers, red_face=HANDS, blue_face=NOZH)
+    run_bout(client, match["id"], session, red_face=HANDS, blue_face=NOZH)
 
     bout = client.get(f"/api/v1/matches/{match['id']}/bout").json()
     assert bout["weapon_red"] == "HANDS"
     assert bout["required_rounds_red"] == 1
     assert bout["required_rounds_blue"] == 3
 
-    number = open_round(client, match["id"], headers)
-    result = score(client, match["id"], headers, number, match["participant_a"]["id"], "DISARM")
+    number = open_round(client, match["id"], session)
+    result = score(client, match["id"], session, number, match["participant_a"]["id"], "DISARM")
     assert result.status_code == 200, result.text
     body = result.json()
 
@@ -277,9 +282,9 @@ def test_unarmed_wins_the_whole_bout_with_a_single_disarm():
 
 def test_armed_fighter_must_win_all_three_rounds_against_unarmed():
     client = setup_app_for_tests()
-    _, competition_id, headers = bootstrap_bracket(client)
+    _, competition_id, session = bootstrap_bracket(client)
     match = semis(client, competition_id)[0]
-    run_bout(client, match["id"], headers, red_face=NOZH, blue_face=HANDS)
+    run_bout(client, match["id"], session, red_face=NOZH, blue_face=HANDS)
 
     red = match["participant_a"]["id"]
     bout = client.get(f"/api/v1/matches/{match['id']}/bout").json()
@@ -287,14 +292,14 @@ def test_armed_fighter_must_win_all_three_rounds_against_unarmed():
     assert bout["required_rounds_blue"] == 1
 
     for expected_wins in (1, 2):
-        number = open_round(client, match["id"], headers)
-        body = score(client, match["id"], headers, number, red, "NOZH_ACCENTED").json()
+        number = open_round(client, match["id"], session)
+        body = score(client, match["id"], session, number, red, "NOZH_ACCENTED").json()
         assert body["rounds_won_red"] == expected_wins
         # Two соступ are not enough — the поединок is still running.
         assert body["match"]["status"] == "IN_PROGRESS"
 
-    number = open_round(client, match["id"], headers)
-    body = score(client, match["id"], headers, number, red, "NOZH_NECK").json()
+    number = open_round(client, match["id"], session)
+    body = score(client, match["id"], session, number, red, "NOZH_NECK").json()
     assert body["rounds_won_red"] == 3
     assert body["match"]["status"] == "FINISHED"
     assert body["match"]["winner_id"] == red
@@ -303,9 +308,9 @@ def test_armed_fighter_must_win_all_three_rounds_against_unarmed():
 
 def test_weapon_versus_weapon_is_first_to_two_rounds():
     client = setup_app_for_tests()
-    _, competition_id, headers = bootstrap_bracket(client)
+    _, competition_id, session = bootstrap_bracket(client)
     match = semis(client, competition_id)[0]
-    run_bout(client, match["id"], headers, red_face=PALKA, blue_face=NOZH)
+    run_bout(client, match["id"], session, red_face=PALKA, blue_face=NOZH)
 
     red, blue = match["participant_a"]["id"], match["participant_b"]["id"]
     bout = client.get(f"/api/v1/matches/{match['id']}/bout").json()
@@ -313,14 +318,14 @@ def test_weapon_versus_weapon_is_first_to_two_rounds():
     # нож vs тростка carries the judge-facing staging note.
     assert bout["staging_note"] and "трость" in bout["staging_note"]
 
-    number = open_round(client, match["id"], headers)
-    score(client, match["id"], headers, number, red, "PALKA_HEAD")
+    number = open_round(client, match["id"], session)
+    score(client, match["id"], session, number, red, "PALKA_HEAD")
 
-    number = open_round(client, match["id"], headers)
-    score(client, match["id"], headers, number, blue, "NOZH_NECK")
+    number = open_round(client, match["id"], session)
+    score(client, match["id"], session, number, blue, "NOZH_NECK")
 
-    number = open_round(client, match["id"], headers)
-    body = score(client, match["id"], headers, number, red, "PALKA_HEAD").json()
+    number = open_round(client, match["id"], session)
+    body = score(client, match["id"], session, number, red, "PALKA_HEAD").json()
 
     assert body["rounds_won_red"] == 2
     assert body["rounds_won_blue"] == 1
@@ -330,17 +335,17 @@ def test_weapon_versus_weapon_is_first_to_two_rounds():
 
 def test_points_accumulate_to_three_within_a_sostup():
     client = setup_app_for_tests()
-    _, competition_id, headers = bootstrap_bracket(client)
+    _, competition_id, session = bootstrap_bracket(client)
     match = semis(client, competition_id)[0]
-    run_bout(client, match["id"], headers, red_face=PALKA, blue_face=PALKA)
+    run_bout(client, match["id"], session, red_face=PALKA, blue_face=PALKA)
     red = match["participant_a"]["id"]
 
-    number = open_round(client, match["id"], headers)
-    body = score(client, match["id"], headers, number, red, "PALKA_BODY").json()
+    number = open_round(client, match["id"], session)
+    body = score(client, match["id"], session, number, red, "PALKA_BODY").json()
     assert body["rounds"][0]["points_red"] == 2
     assert body["rounds"][0]["status"] == "IN_PROGRESS"
 
-    body = score(client, match["id"], headers, number, red, "PALKA_LIMB").json()
+    body = score(client, match["id"], session, number, red, "PALKA_LIMB").json()
     assert body["rounds"][0]["points_red"] == 3
     assert body["rounds"][0]["status"] == "COMPLETED"
     assert body["rounds"][0]["end_reason"] == "POINTS"
@@ -351,25 +356,25 @@ def test_points_accumulate_to_three_within_a_sostup():
 
 def test_an_action_from_another_weapon_is_refused():
     client = setup_app_for_tests()
-    _, competition_id, headers = bootstrap_bracket(client)
+    _, competition_id, session = bootstrap_bracket(client)
     match = semis(client, competition_id)[0]
-    run_bout(client, match["id"], headers, red_face=PALKA, blue_face=NOZH)
+    run_bout(client, match["id"], session, red_face=PALKA, blue_face=NOZH)
 
-    number = open_round(client, match["id"], headers)
-    wrong = score(client, match["id"], headers, number, match["participant_a"]["id"], "NOZH_NECK")
+    number = open_round(client, match["id"], session)
+    wrong = score(client, match["id"], session, number, match["participant_a"]["id"], "NOZH_NECK")
     assert wrong.status_code == 400, wrong.text
     assert "PALKA" in wrong.json()["detail"]
 
 
 def test_kisten_rounds_carry_a_binary_winner_and_no_invented_points():
     client = setup_app_for_tests()
-    _, competition_id, headers = bootstrap_bracket(client)
+    _, competition_id, session = bootstrap_bracket(client)
     match = semis(client, competition_id)[0]
-    run_bout(client, match["id"], headers, red_face=KISTEN, blue_face=PALKA)
+    run_bout(client, match["id"], session, red_face=KISTEN, blue_face=PALKA)
     red = match["participant_a"]["id"]
 
-    number = open_round(client, match["id"], headers)
-    body = score(client, match["id"], headers, number, red, "KISTEN_CLEAN").json()
+    number = open_round(client, match["id"], session)
+    body = score(client, match["id"], session, number, red, "KISTEN_CLEAN").json()
 
     assert body["rounds"][0]["status"] == "COMPLETED"
     assert body["rounds"][0]["end_reason"] == "KISTEN_CLEAN"
@@ -381,17 +386,18 @@ def test_kisten_rounds_carry_a_binary_winner_and_no_invented_points():
 
 def test_a_fourth_sostup_cannot_be_opened():
     client = setup_app_for_tests()
-    _, competition_id, headers = bootstrap_bracket(client)
+    _, competition_id, session = bootstrap_bracket(client)
     match = semis(client, competition_id)[0]
-    run_bout(client, match["id"], headers, red_face=NOZH, blue_face=HANDS)
+    run_bout(client, match["id"], session, red_face=NOZH, blue_face=HANDS)
     red = match["participant_a"]["id"]
 
     for _ in range(3):
-        number = open_round(client, match["id"], headers)
-        score(client, match["id"], headers, number, red, "NOZH_ACCENTED")
+        number = open_round(client, match["id"], session)
+        score(client, match["id"], session, number, red, "NOZH_ACCENTED")
 
     # The bout ended on the third соступ, so a fourth is refused twice over.
-    fourth = client.post(f"/api/v1/matches/{match['id']}/rounds", headers=headers)
+    use_session(client, session)
+    fourth = client.post(f"/api/v1/matches/{match['id']}/rounds")
     assert fourth.status_code == 409, fourth.text
 
 
@@ -400,24 +406,24 @@ def test_a_clinched_weapon_v_weapon_bout_still_plays_its_third_sostup():
     side reaches 2 — all three соступ are always played, and only the third
     one's completion finishes the поединок."""
     client = setup_app_for_tests()
-    _, competition_id, headers = bootstrap_bracket(client)
+    _, competition_id, session = bootstrap_bracket(client)
     match = semis(client, competition_id)[0]
-    run_bout(client, match["id"], headers, red_face=PALKA, blue_face=PALKA)
+    run_bout(client, match["id"], session, red_face=PALKA, blue_face=PALKA)
     red = match["participant_a"]["id"]
     blue = match["participant_b"]["id"]
 
     # Red clinches the win-condition threshold (2 of 3) after just two соступ...
     for _ in range(2):
-        number = open_round(client, match["id"], headers)
-        body = score(client, match["id"], headers, number, red, "PALKA_HEAD").json()
+        number = open_round(client, match["id"], session)
+        body = score(client, match["id"], session, number, red, "PALKA_HEAD").json()
     assert body["rounds_won_red"] == 2
     # ...but the поединок must not be over yet.
     assert body["match"]["status"] == "IN_PROGRESS"
 
     # A third соступ can still be opened and fought (won by the other side —
     # it changes nothing about who takes the поединок, only that it happened).
-    number = open_round(client, match["id"], headers)
-    body = score(client, match["id"], headers, number, blue, "PALKA_HEAD").json()
+    number = open_round(client, match["id"], session)
+    body = score(client, match["id"], session, number, blue, "PALKA_HEAD").json()
     assert body["rounds_won_red"] == 2
     assert body["rounds_won_blue"] == 1
     assert body["match"]["status"] == "FINISHED"
@@ -430,29 +436,29 @@ def test_a_clinched_weapon_v_weapon_bout_still_plays_its_third_sostup():
 # ------------------------------------------------------------- advancement
 
 
-def _finish_bout(client, match, headers, *, winner_slot="participant_a"):
+def _finish_bout(client, match, session, *, winner_slot="participant_a"):
     """Run a бой to a decision, unarmed-disarm style, and return the winner id."""
-    run_bout(client, match["id"], headers, red_face=HANDS, blue_face=NOZH)
+    run_bout(client, match["id"], session, red_face=HANDS, blue_face=NOZH)
     winner = match[winner_slot]["id"]
-    number = open_round(client, match["id"], headers)
+    number = open_round(client, match["id"], session)
     if winner_slot == "participant_a":
-        response = score(client, match["id"], headers, number, winner, "DISARM")
+        response = score(client, match["id"], session, number, winner, "DISARM")
     else:
         # The armed side must take all three соступ.
-        response = score(client, match["id"], headers, number, winner, "NOZH_ACCENTED")
+        response = score(client, match["id"], session, number, winner, "NOZH_ACCENTED")
         for _ in range(2):
-            number = open_round(client, match["id"], headers)
-            response = score(client, match["id"], headers, number, winner, "NOZH_ACCENTED")
+            number = open_round(client, match["id"], session)
+            response = score(client, match["id"], session, number, winner, "NOZH_ACCENTED")
     assert response.status_code == 200, response.text
     return winner
 
 
 def test_completing_a_bout_seats_the_winner_in_the_next_round():
     client = setup_app_for_tests()
-    _, competition_id, headers = bootstrap_bracket(client)
+    _, competition_id, session = bootstrap_bracket(client)
     semi_a, semi_b = semis(client, competition_id)
 
-    winner_a = _finish_bout(client, semi_a, headers)
+    winner_a = _finish_bout(client, semi_a, session)
 
     final = final_of(client, competition_id)
     assert final["participant_a"] is not None
@@ -461,7 +467,7 @@ def test_completing_a_bout_seats_the_winner_in_the_next_round():
     # Half-filled, so it is still waiting rather than ready.
     assert final["status"] == "SCHEDULED"
 
-    winner_b = _finish_bout(client, semi_b, headers, winner_slot="participant_b")
+    winner_b = _finish_bout(client, semi_b, session, winner_slot="participant_b")
 
     final = final_of(client, competition_id)
     assert {final["participant_a"]["id"], final["participant_b"]["id"]} == {winner_a, winner_b}
@@ -476,18 +482,19 @@ def test_completing_a_bout_seats_the_winner_in_the_next_round():
 def test_state_survives_a_reload_and_a_champion_is_summarised():
     """Everything is reconstructed from the backend, nothing held client-side."""
     client = setup_app_for_tests()
-    _, competition_id, headers = bootstrap_bracket(client, final_weapon="PALKA")
+    _, competition_id, session = bootstrap_bracket(client, final_weapon="PALKA")
     semi_a, semi_b = semis(client, competition_id)
 
-    winner_a = _finish_bout(client, semi_a, headers)
-    _finish_bout(client, semi_b, headers, winner_slot="participant_b")
+    winner_a = _finish_bout(client, semi_a, session)
+    _finish_bout(client, semi_b, session, winner_slot="participant_b")
 
     # No champion is claimed while the final is still open.
     assert client.get(f"/api/v1/competitions/{competition_id}/champion").json()["complete"] is False
 
     final = final_of(client, competition_id)
     # A final's weapons are fixed rather than drawn, so it starts straight away.
-    started = client.post(f"/api/v1/matches/{final['id']}/start", headers=headers)
+    use_session(client, session)
+    started = client.post(f"/api/v1/matches/{final['id']}/start")
     assert started.status_code == 200, started.text
 
     champion_id = final["participant_a"]["id"]
@@ -495,8 +502,8 @@ def test_state_survives_a_reload_and_a_champion_is_summarised():
     # threshold (2 of 3, here) is already mathematically clinched — so all
     # three are recorded, not just the two that decide it.
     for _ in range(3):
-        number = open_round(client, final["id"], headers)
-        score(client, final["id"], headers, number, champion_id, "PALKA_HEAD")
+        number = open_round(client, final["id"], session)
+        score(client, final["id"], session, number, champion_id, "PALKA_HEAD")
 
     # --- the "reload": every read below is a fresh request over the wire. ---
     bracket_rounds = rounds_of(client, competition_id)
@@ -538,7 +545,7 @@ def _tournament_id(client) -> str:
 
 def test_team_bouts_aggregate_three_pairings():
     client = setup_app_for_tests()
-    organizer_id, headers = register(client, "organizer@example.com")
+    organizer_id, session = register(client, "organizer@example.com")
 
     ruleset = client.post("/api/v1/rulesets", json={"title": "Base", "version": "1.0", "status": "ACTIVE"})
     tournament = client.post(
@@ -558,6 +565,7 @@ def test_team_bouts_aggregate_three_pairings():
     competition_id = competition.json()["id"]
 
     def make_team(name: str, member_prefix: str) -> str:
+        use_session(client, session)
         team = client.post(
             f"/api/v1/competitions/{competition_id}/teams",
             json={"competition_id": competition_id, "name": name},
@@ -570,6 +578,7 @@ def test_team_bouts_aggregate_three_pairings():
                 "/api/v1/athletes", json={"user_id": user_id, "nickname": f"{member_prefix}{index}"}
             )
             assert athlete.status_code == 201, athlete.text
+            use_session(client, session)
             member = client.post(
                 f"/api/v1/teams/{team_id}/members",
                 json={"team_id": team_id, "athlete_id": athlete.json()["id"], "role": "FIGHTER"},
@@ -580,9 +589,8 @@ def test_team_bouts_aggregate_three_pairings():
     red_team = make_team("Новгород", "nov")
     make_team("Псков", "psk")
 
-    generated = client.post(
-        f"/api/v1/competitions/{competition_id}/team-bouts/generate", headers=headers
-    )
+    use_session(client, session)
+    generated = client.post(f"/api/v1/competitions/{competition_id}/team-bouts/generate")
     assert generated.status_code == 201, generated.text
     bouts = generated.json()
     assert len(bouts) == 1
@@ -592,15 +600,15 @@ def test_team_bouts_aggregate_three_pairings():
 
     # A team pairing is decided by a pin and a signalled finishing blow, so it
     # draws no weapon lot — refused by the backend, not merely hidden.
-    refused = draw(client, bout["pairings"][0]["id"], headers, "RED", NOZH)
+    refused = draw(client, bout["pairings"][0]["id"], session, "RED", NOZH)
     assert refused.status_code == 400, refused.text
 
     for index in range(2):
         pairing = bout["pairings"][index]
+        use_session(client, session)
         recorded = client.post(
             f"/api/v1/matches/{pairing['id']}/team-result",
             json={"winner_participant_id": pairing["participant_a"]["id"]},
-            headers=headers,
         )
         assert recorded.status_code == 201, recorded.text
 
@@ -616,7 +624,7 @@ def test_team_bouts_aggregate_three_pairings():
 
 def test_bout_writes_require_an_authorized_manager():
     client = setup_app_for_tests()
-    _, competition_id, headers = bootstrap_bracket(client)
+    _, competition_id, session = bootstrap_bracket(client)
     match = semis(client, competition_id)[0]
 
     client.cookies.clear()
@@ -626,10 +634,10 @@ def test_bout_writes_require_an_authorized_manager():
     assert anonymous.status_code == 401, anonymous.text
 
     _, stranger = register(client, "stranger@example.com")
+    use_session(client, stranger)
     forbidden = client.post(
         f"/api/v1/matches/{match['id']}/lot",
         json={"side": "RED", "method": "ONLINE_DICE"},
-        headers=stranger,
     )
     assert forbidden.status_code == 403, forbidden.text
 

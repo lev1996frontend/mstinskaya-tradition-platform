@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core import database as database_module
 from app.main import app
 from app.models.base import Base
+from tests.auth_test_helpers import snapshot_session
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -74,10 +75,10 @@ def register(client, email: str) -> tuple[str, dict[str, str]]:
         json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Судья"},
     )
     assert response.status_code == 201, response.text
-    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
-    me = client.get("/api/v1/users/me", headers=headers)
+    session = snapshot_session(client)
+    me = client.get("/api/v1/users/me")
     assert me.status_code == 200, me.text
-    return me.json()["id"], headers
+    return me.json()["id"], session
 
 
 def grant_role(client, session, user_id: str, code: str) -> None:
@@ -119,13 +120,11 @@ def test_only_word_is_accepted_for_rules(tmp_path):
     spreadsheet = client.post(
         "/api/v1/media/uploads",
         files={"file": ("правила.xlsx", xlsx_bytes(), XLSX)},
-        headers=headers,
     ).json()
 
     refused = client.post(
         f"/api/v1/rulesets/{ruleset['id']}/documents",
         json={"title": "Правила", "media_file_id": spreadsheet["id"]},
-        headers=headers,
     )
     assert refused.status_code == 400, refused.text
     assert "word" in refused.json()["detail"].lower()
@@ -142,11 +141,10 @@ def test_a_new_edition_does_not_take_the_old_editions_file(tmp_path):
         "/api/v1/rulesets", json={"title": "Правила", "version": "1.0", "status": "ARCHIVED"}
     ).json()
     document = client.post("/api/v1/media/uploads",
-        files={"file": ("правила-1.docx", docx_bytes(), DOCX)}, headers=headers).json()
+        files={"file": ("правила-1.docx", docx_bytes(), DOCX)}).json()
     client.post(
         f"/api/v1/rulesets/{first['id']}/documents",
         json={"title": "Редакция 1.0", "media_file_id": document["id"]},
-        headers=headers,
     )
 
     second = client.post(
@@ -168,13 +166,11 @@ def test_attaching_a_rules_file_requires_a_role(tmp_path):
     document = client.post(
         "/api/v1/media/uploads",
         files={"file": ("правила.docx", docx_bytes(), DOCX)},
-        headers=stranger,
     ).json()
 
     refused = client.post(
         f"/api/v1/rulesets/{ruleset['id']}/documents",
         json={"title": "Правила", "media_file_id": document["id"]},
-        headers=stranger,
     )
     assert refused.status_code == 403, refused.text
 
@@ -191,12 +187,10 @@ def test_the_rules_file_downloads_without_a_login(tmp_path):
     document = client.post(
         "/api/v1/media/uploads",
         files={"file": ("правила.docx", docx_bytes(), DOCX)},
-        headers=headers,
     ).json()
     client.post(
         f"/api/v1/rulesets/{ruleset['id']}/documents",
         json={"title": "Правила", "media_file_id": document["id"]},
-        headers=headers,
     )
 
     assert client.get(document["url"]).status_code == 200
@@ -213,16 +207,14 @@ def test_removing_a_rules_file_hides_it_and_keeps_the_bytes(tmp_path):
     document = client.post(
         "/api/v1/media/uploads",
         files={"file": ("правила.docx", docx_bytes(), DOCX)},
-        headers=headers,
     ).json()
     attached = client.post(
         f"/api/v1/rulesets/{ruleset['id']}/documents",
         json={"title": "Правила", "media_file_id": document["id"]},
-        headers=headers,
     ).json()
 
     removed = client.delete(
-        f"/api/v1/rulesets/{ruleset['id']}/documents/{attached['id']}", headers=headers
+        f"/api/v1/rulesets/{ruleset['id']}/documents/{attached['id']}"
     )
     assert removed.status_code == 204, removed.text
     assert client.get(f"/api/v1/rulesets/{ruleset['id']}/documents").json() == []

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core import database as database_module
 from app.main import app
 from app.models.base import Base
+from tests.auth_test_helpers import snapshot_session
 
 
 def setup_app_for_tests():
@@ -43,11 +44,8 @@ def test_rating_history_foundation_flow():
         },
     )
     assert user.status_code == 201, user.text
-    token = user.json()["access_token"]
-    me = client.get(
-        "/api/v1/users/me",
-        headers={"Authorization": f"Bearer {token}"},
-    )
+    snapshot_session(client)
+    me = client.get("/api/v1/users/me")
     assert me.status_code == 200, me.text
     athlete_user_id = me.json()["id"]
 

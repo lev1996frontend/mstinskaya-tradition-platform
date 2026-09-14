@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core import database as database_module
 from app.main import app
 from app.models.base import Base
+from tests.auth_test_helpers import snapshot_session
 
 #: The tournament's start date fixes the year every age is measured against, so
 #: these tests do not drift as the real calendar moves.
@@ -58,14 +59,14 @@ def register_organizer(client, email: str = "organizer@example.com") -> tuple[st
         json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Организатор"},
     )
     assert register.status_code == 201, register.text
-    headers = {"Authorization": f"Bearer {register.json()['access_token']}"}
-    me = client.get("/api/v1/users/me", headers=headers)
+    session = snapshot_session(client)
+    me = client.get("/api/v1/users/me")
     assert me.status_code == 200, me.text
-    return me.json()["id"], headers
+    return me.json()["id"], session
 
 
 def make_tournament(client, email: str = "organizer@example.com") -> tuple[str, dict[str, str]]:
-    organizer_id, headers = register_organizer(client, email)
+    organizer_id, session = register_organizer(client, email)
     ruleset = client.post("/api/v1/rulesets", json={"title": "Base", "version": "1.0", "status": "ACTIVE"})
     assert ruleset.status_code == 201, ruleset.text
     tournament = client.post(
@@ -79,7 +80,7 @@ def make_tournament(client, email: str = "organizer@example.com") -> tuple[str, 
         },
     )
     assert tournament.status_code == 201, tournament.text
-    return tournament.json()["id"], headers
+    return tournament.json()["id"], session
 
 
 def make_category(client, tournament_id: str, name: str) -> str:

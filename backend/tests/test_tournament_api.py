@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core import database as database_module
 from app.main import app
 from app.models.base import Base
+from tests.auth_test_helpers import snapshot_session, use_session
 
 
 def setup_app_for_tests():
@@ -43,11 +44,8 @@ def test_tournament_foundation_flow():
         },
     )
     assert register_response.status_code == 201, register_response.text
-    organizer_token = register_response.json()["access_token"]
-    organizer_me = client.get(
-        "/api/v1/users/me",
-        headers={"Authorization": f"Bearer {organizer_token}"},
-    )
+    organizer_session = snapshot_session(client)
+    organizer_me = client.get("/api/v1/users/me")
     assert organizer_me.status_code == 200, organizer_me.text
     organizer_id = organizer_me.json()["id"]
 
@@ -61,11 +59,7 @@ def test_tournament_foundation_flow():
         },
     )
     assert user2.status_code == 201, user2.text
-    judge_token = user2.json()["access_token"]
-    judge_me = client.get(
-        "/api/v1/users/me",
-        headers={"Authorization": f"Bearer {judge_token}"},
-    )
+    judge_me = client.get("/api/v1/users/me")
     assert judge_me.status_code == 200, judge_me.text
     judge_id = judge_me.json()["id"]
 
@@ -188,6 +182,7 @@ def test_tournament_foundation_flow():
     assert decision.status_code == 201, decision.text
     assert decision.json()["winner_id"] == participant_red_id
 
+    use_session(client, organizer_session)
     document = client.post(
         f"/api/v1/tournaments/{tournament_id}/documents",
         json={
@@ -195,7 +190,6 @@ def test_tournament_foundation_flow():
             "file_url": "https://example.com/rules.pdf",
             "type": "RULES",
         },
-        headers={"Authorization": f"Bearer {organizer_token}"},
     )
     assert document.status_code == 201, document.text
     assert document.json()["type"] == "RULES"
@@ -222,10 +216,7 @@ def test_tournament_entry_list_excludes_competition_entrants():
         },
     )
     assert organizer.status_code == 201, organizer.text
-    organizer_id = client.get(
-        "/api/v1/users/me",
-        headers={"Authorization": f"Bearer {organizer.json()['access_token']}"},
-    ).json()["id"]
+    organizer_id = client.get("/api/v1/users/me").json()["id"]
 
     athlete = client.post(
         "/api/v1/athletes",

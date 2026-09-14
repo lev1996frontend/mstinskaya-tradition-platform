@@ -24,23 +24,5 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=1)
 
 
-class RefreshRequest(BaseModel):
-    """Optional now: the browser sends no body at all and relies on the
-    ``refresh_token`` cookie (see ``auth/router.py``); a non-browser caller —
-    a script, the test suite — may still name the token explicitly."""
-
-    refresh_token: str | None = Field(default=None, min_length=1)
-
-
-class LogoutRequest(BaseModel):
-    refresh_token: str | None = Field(default=None, min_length=1)
-
-
-class TokenResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-
-
 class MessageResponse(BaseModel):
     message: str

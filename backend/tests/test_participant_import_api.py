@@ -22,6 +22,7 @@ from app.core import database as database_module
 from app.main import app
 from app.models.base import Base
 from app.modules.tournaments.services.participant_import import IMPORT_COLUMNS, SHEET_ENTRIES
+from tests.auth_test_helpers import snapshot_session, use_session
 
 EVENT_YEAR = 2026
 START_DATE = date(EVENT_YEAR, 5, 16).isoformat()
@@ -59,9 +60,9 @@ def register(client, email: str) -> tuple[str, dict[str, str]]:
         json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Организатор"},
     )
     assert response.status_code == 201, response.text
-    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
-    me = client.get("/api/v1/users/me", headers=headers)
-    return me.json()["id"], headers
+    session = snapshot_session(client)
+    me = client.get("/api/v1/users/me")
+    return me.json()["id"], session
 
 
 def register_athlete(client, email: str, nickname: str, first_name: str, last_name: str) -> str:
@@ -71,8 +72,7 @@ def register_athlete(client, email: str, nickname: str, first_name: str, last_na
         json={"email": email, "password": "StrongPassword123!", "first_name": first_name, "last_name": last_name},
     )
     assert response.status_code == 201, response.text
-    headers = {"Authorization": f"Bearer {response.json()['access_token']}"}
-    user_id = client.get("/api/v1/users/me", headers=headers).json()["id"]
+    user_id = client.get("/api/v1/users/me").json()["id"]
     athlete = client.post("/api/v1/athletes", json={"user_id": user_id, "nickname": nickname})
     assert athlete.status_code == 201, athlete.text
     return athlete.json()["id"]
@@ -128,11 +128,11 @@ def sheet_of(rows: list[dict]) -> bytes:
     return stream.getvalue()
 
 
-def preview(client, tournament_id: str, payload: bytes, headers: dict[str, str]):
+def preview(client, tournament_id: str, payload: bytes, session: dict[str, str]):
+    use_session(client, session)
     return client.post(
         f"/api/v1/tournaments/{tournament_id}/participants/import/preview",
         files={"file": ("entries.xlsx", payload, XLSX)},
-        headers=headers,
     )
 
 
@@ -152,9 +152,7 @@ def test_the_template_can_be_filled_in_and_uploaded_back():
     client = setup_app_for_tests()
     tournament_id, headers = bootstrap(client)
 
-    downloaded = client.get(
-        f"/api/v1/tournaments/{tournament_id}/participants/template.xlsx", headers=headers
-    )
+    downloaded = client.get(f"/api/v1/tournaments/{tournament_id}/participants/template.xlsx")
     assert downloaded.status_code == 200, downloaded.text
     assert downloaded.headers["content-type"].startswith(XLSX)
 
@@ -191,9 +189,7 @@ def test_the_template_shows_a_filled_in_example_that_it_then_ignores():
     client = setup_app_for_tests()
     tournament_id, headers = bootstrap(client)
 
-    downloaded = client.get(
-        f"/api/v1/tournaments/{tournament_id}/participants/template.xlsx", headers=headers
-    )
+    downloaded = client.get(f"/api/v1/tournaments/{tournament_id}/participants/template.xlsx")
     assert downloaded.status_code == 200, downloaded.text
     workbook = load_workbook(BytesIO(downloaded.content))
     sheet = workbook[SHEET_ENTRIES]
@@ -225,7 +221,6 @@ def test_an_entry_marked_as_a_reserve_is_entered_as_one():
     committed = client.post(
         f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
         json={"rows": report["rows"]},
-        headers=headers,
     )
     assert committed.status_code == 200, committed.text
 
@@ -274,7 +269,6 @@ def test_a_reviewed_list_is_entered_and_journalled():
     committed = client.post(
         f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
         json={"rows": report["rows"]},
-        headers=headers,
     )
     assert committed.status_code == 200, committed.text
     assert committed.json()["created"] == 2
@@ -306,7 +300,6 @@ def test_the_commit_revalidates_what_the_browser_sends():
     refused = client.post(
         f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
         json={"rows": [tampered]},
-        headers=headers,
     )
     assert refused.status_code == 400, refused.text
     assert participants(client, tournament_id) == []
@@ -327,7 +320,6 @@ def test_a_batch_with_one_bad_row_is_refused_whole():
     refused = client.post(
         f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
         json={"rows": report["rows"]},
-        headers=headers,
     )
     assert refused.status_code == 400, refused.text
     assert participants(client, tournament_id) == []
@@ -525,12 +517,12 @@ def test_a_file_that_is_not_a_spreadsheet_is_refused_clearly():
 # below are what makes a stack of them behave like a single заявка.
 
 
-def preview_files(client, tournament_id: str, uploads, headers):
+def preview_files(client, tournament_id: str, uploads, session):
     """Upload several sheets in one request, the way the panel does."""
+    use_session(client, session)
     return client.post(
         f"/api/v1/tournaments/{tournament_id}/participants/import/preview",
         files=[("file", (name, payload, XLSX)) for name, payload in uploads],
-        headers=headers,
     )
 
 
@@ -818,6 +810,5 @@ def test_entering_people_still_requires_an_authorized_manager():
     committed = client.post(
         f"/api/v1/tournaments/{tournament_id}/participants/import/commit",
         json={"rows": []},
-        headers=stranger,
     )
     assert committed.status_code == 403, committed.text
