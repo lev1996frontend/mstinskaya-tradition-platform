@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 
 import * as authApi from "@/api/auth";
 import { useAuth } from "@/features/auth/auth-context";
@@ -12,7 +12,7 @@ import { routes } from "@/lib/routes";
 
 type Status = "checking" | "success" | "invalid" | "expired" | "error";
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const { user, refresh } = useAuth();
@@ -90,5 +90,19 @@ export default function VerifyEmailPage() {
         </>
       ) : null}
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-md px-4 py-20 text-center">
+          <p className="text-[var(--muted)]">Подтверждаем почту…</p>
+        </div>
+      }
+    >
+      <VerifyEmailContent />
+    </Suspense>
   );
 }
