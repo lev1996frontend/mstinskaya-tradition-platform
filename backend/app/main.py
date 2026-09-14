@@ -13,7 +13,6 @@ from app.modules.athletes.routers import router as athletes_router
 from app.modules.clubs.routers import router as clubs_router
 from app.modules.education.routers import router as education_router
 from app.modules.equipment.routers import router as equipment_router
-from app.modules.identity.routers import router as identity_router
 from app.modules.media.router import router as media_router
 from app.modules.media.uploads import router as media_uploads_router
 from app.modules.ratings.router import router as ratings_router
@@ -49,7 +48,6 @@ app.add_middleware(SlowAPIMiddleware)
 app.include_router(router)
 app.include_router(auth_router)
 app.include_router(auth_me_router)
-app.include_router(identity_router)
 app.include_router(clubs_router)
 app.include_router(athletes_router)
 app.include_router(education_router)

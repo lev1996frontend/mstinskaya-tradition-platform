@@ -71,16 +71,13 @@ Match results are append-then-correct: `POST /matches/{id}/result` creates and r
 
 ### Frontend
 
-Next.js App Router. Public pages are server components fetching with `cache: "no-store"`; mutations happen in client components with a bearer token from `localStorage`, followed by `router.refresh()`. See `frontend/README.md` for the directory layout and the rule that the standings table shows counts only, never invented ranking points.
+Next.js App Router. Public pages are server components fetching with `cache: "no-store"`; mutations happen in client components. `next.config.ts` proxies `/api/v1/*` to the backend so browser requests are same-origin, which is what lets the session live in a plain `SameSite=Lax` httpOnly cookie rather than `localStorage` — `lib/api.ts` sends `credentials: "include"` and never handles a token directly. See `frontend/README.md` for the directory layout and the rule that the standings table shows counts only, never invented ranking points.
 
-### Known duplication: two auth implementations
+### Auth: `app/modules/auth` is canonical; `identity` is the data/service layer
 
-There are **two parallel, independently-tested auth stacks** both mounted at `/api/v1/auth/*`:
+`app/modules/auth/` owns every route at `/api/v1/auth/*` plus `/api/v1/users/me` (`me_router`), and is what the frontend and every test talk to. It issues the session as httpOnly cookies (`access_token`, `refresh_token`; see `auth/router.py`) — login/register/refresh return only `{"message": ...}` in the body, never a token, so nothing on the page can read one out of a response the way `localStorage` used to let XSS do. `app/core/session_auth.py` is the `get_current_user` dependency every *other* module actually depends on (cookie first, `Authorization: Bearer` header as an explicit-credential fallback for non-browser callers and tests).
 
-- `app/modules/auth/` (router, service, schemas, `auth_records` model) — registered **first** in `app/main.py`, so it wins route resolution for `/api/v1/auth/register`, `/login`, plus has `/refresh` and `/logout`. Covered by `tests/test_auth_foundation.py`.
-- `app/modules/identity/routers/auth.py` (uses `app/modules/identity/services/auth_service.py`) — registered after, so its own `/auth/register` and `/auth/login` routes are currently unreachable (shadowed), but `identity`'s `/api/v1/users/me` is not duplicated elsewhere and is live. Covered by `tests/test_identity_auth.py`.
-
-Both suites currently pass because they exercise the same URL surface with equivalent behavior, but this is fragile — if you touch registration/login, check both modules, and don't assume changing one updates the other. Don't delete either without confirming with the user which is meant to be canonical; `docs/clubs-domain.md` explicitly says "Identity module must not be modified," suggesting `identity` may be the one to leave alone while `auth` evolves.
+`app/modules/identity/` has no route of its own: `docs/clubs-domain.md` rule 5 forbids modifying it, so it stays confined to the `User`/`Role`/`Profile`/`Permission` models and the auth *logic* that operates on them (password hashing, `register_user`/`authenticate_user`, the `get_user_me` projection) — `auth` calls into these rather than duplicating them. `app/core/identity_access.py` and `app/core/privileged_access.py` are the read-only wrappers other domains use to reach identity's data without importing its models directly (same "cannot modify identity" constraint).
 
 ## Guardrails from docs/architecture.md
 

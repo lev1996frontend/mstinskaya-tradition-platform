@@ -10,8 +10,7 @@ this whole change exists to close — a response body is JS-readable the
 instant it arrives, XSS or not, so "the browser just doesn't store it" was
 never the full fix. The test suite now drives the same rotation/reuse/
 logout behavior through `TestClient`'s cookie jar (see `tests/
-test_auth_foundation.py`), including a per-call `cookies=` override for the
-one case that genuinely needs to name an already-superseded token.
+test_auth_foundation.py` and `tests/auth_test_helpers.py`).
 
 No ``from __future__ import annotations`` here, unlike the rest of the
 codebase: ``@limiter.limit(...)`` wraps each endpoint in a function defined
@@ -39,13 +38,15 @@ from app.modules.identity.services.auth_service import AuthService as IdentityAu
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
-#: `identity`'s own `/users/me` (`identity/routers/auth.py`) only reads the
-#: `Authorization` header — it cannot be taught about the cookie without
-#: modifying identity, which `docs/clubs-domain.md` forbids. So this route
-#: shadows it the same way `auth`'s own `/register`/`/login` already shadow
-#: identity's: same path, registered first in `app/main.py`, cookie-or-header
-#: aware. It reads identity's own `get_user_me` — the same data, unmodified —
-#: rather than duplicating that query.
+#: `identity` used to have its own `/users/me` (`identity/routers/auth.py`,
+#: since deleted) reading only the `Authorization` header; it could not be
+#: taught about the cookie without modifying identity, which
+#: `docs/clubs-domain.md` forbids, so this route shadowed it — same path,
+#: registered first in `app/main.py`. With the whole shadowed router gone
+#: (its own register/login were unreachable too, and this was its one
+#: still-reachable route), this is now simply where `/users/me` lives. It
+#: reads identity's own `get_user_me` — the same data, unmodified — rather
+#: than duplicating that query.
 me_router = APIRouter(prefix="/api/v1", tags=["auth"])
 
 

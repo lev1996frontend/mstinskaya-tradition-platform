@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
@@ -23,18 +22,6 @@ class AuthService:
     @staticmethod
     def hash_password(password: str) -> str:
         return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
-
-    @staticmethod
-    def create_access_token(subject: str, *, expires_delta: timedelta | None = None) -> str:
-        from app.modules.identity.security.jwt import create_access_token
-
-        return create_access_token(subject, expires_delta=expires_delta)
-
-    @staticmethod
-    def create_refresh_token(subject: str, *, expires_delta: timedelta | None = None) -> str:
-        from app.modules.identity.security.jwt import create_refresh_token
-
-        return create_refresh_token(subject, expires_delta=expires_delta)
 
     @staticmethod
     async def get_user_by_email(session: AsyncSession, email: str) -> User | None:

@@ -4,12 +4,14 @@
 browser now authenticates with an httpOnly cookie instead of a token it can
 read out of ``localStorage`` (see ``auth/router.py`` for where the cookie is
 set), so the dependency that resolves "who is calling" has to learn to read
-that cookie — but it cannot be added to
-``app.modules.identity.security.depends.get_current_user`` itself. This
+that cookie — but it cannot be added to identity's own equivalent (formerly
+``app.modules.identity.security.depends.get_current_user``, header-only;
+deleted once this module and the deletion of identity's own unreachable
+routes left it with no callers) without modifying identity itself. This
 module is the same kind of read-only wrapper ``app.core.identity_access``
 already is for identity's data: it reads identity's own token-decoding
-function and user lookup, adds nothing to identity, and every module that
-used to depend on ``identity.security.depends.get_current_user`` now depends
+function (``identity.security.jwt.decode_token``) and user lookup, adds
+nothing to identity, and every module that needs "who is calling" depends
 on this instead.
 
 The ``Authorization: Bearer`` header still works too, cookie-absent — tests
