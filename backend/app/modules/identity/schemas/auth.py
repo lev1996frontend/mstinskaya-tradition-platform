@@ -9,3 +9,4 @@ class UserMeResponse(BaseModel):
     name: str
     roles: list[str]
     profile: dict | None
+    email_verified: bool

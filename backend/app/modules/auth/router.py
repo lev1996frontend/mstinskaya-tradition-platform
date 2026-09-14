@@ -21,22 +21,26 @@ trying to look up ``RegisterRequest`` there. Real, already-bound-to-the-class
 annotations sidestep that lookup entirely.
 """
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.email import EmailService
 from app.core.identity_access import User
 from app.core.rate_limit import limiter
 from app.core.session_auth import ACCESS_TOKEN_COOKIE
 from app.core.session_auth import get_current_user as get_session_user
-from app.modules.auth.schemas import LoginRequest, MessageResponse, RegisterRequest
+from app.modules.auth.schemas import LoginRequest, MessageResponse, RegisterRequest, VerifyEmailRequest
 from app.modules.auth.security import ACCESS_TOKEN_EXPIRES, REFRESH_TOKEN_EXPIRES
 from app.modules.auth.services.auth_service import AuthService
 from app.modules.identity.schemas.auth import UserMeResponse
 from app.modules.identity.services.auth_service import AuthService as IdentityAuthService
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 #: `identity` used to have its own `/users/me` (`identity/routers/auth.py`,
 #: since deleted) reading only the `Authorization` header; it could not be
@@ -107,8 +111,19 @@ async def register(
         last_name=payload.last_name,
     )
     await AuthService.audit(session, user_id=user.id, action="REGISTER", entity_type="User", entity_id=str(user.id))
+    raw_token = await AuthService.create_email_verification_token(session, user.id)
     await session.commit()
     _set_auth_cookies(response, access_token=access_token, refresh_token=refresh_token)
+
+    # Never fails registration: the row committed above is real regardless of
+    # whether this send succeeds, and the user can always trigger
+    # /resend-verification later.
+    verify_url = f"{get_settings().frontend_base_url}/verify-email?token={raw_token}"
+    try:
+        EmailService.send_verification_email(to=str(payload.email), verify_url=verify_url)
+    except Exception:
+        logger.exception("Failed to send verification email for user_id=%s", user.id)
+
     return MessageResponse(message="Registered")
 
 
@@ -152,3 +167,33 @@ async def logout(request: Request, response: Response, session: AsyncSession = D
             pass
     _clear_auth_cookies(response)
     return MessageResponse(message="Logged out")
+
+
+@router.post("/verify-email", response_model=MessageResponse)
+@limiter.limit("20/minute")
+async def verify_email(
+    request: Request, payload: VerifyEmailRequest, session: AsyncSession = Depends(get_db)
+) -> MessageResponse:
+    await AuthService.verify_email(session, payload.token)
+    await session.commit()
+    return MessageResponse(message="Email verified")
+
+
+@router.post("/resend-verification", response_model=MessageResponse)
+@limiter.limit("3/hour")
+async def resend_verification(
+    request: Request,
+    current_user: User = Depends(get_session_user),
+    session: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    raw_token = await AuthService.resend_verification(session, current_user)
+    await session.commit()
+    if raw_token is None:
+        return MessageResponse(message="Email already verified")
+
+    verify_url = f"{get_settings().frontend_base_url}/verify-email?token={raw_token}"
+    try:
+        EmailService.send_verification_email(to=current_user.email, verify_url=verify_url)
+    except Exception:
+        logger.exception("Failed to send verification email for user_id=%s", current_user.id)
+    return MessageResponse(message="Verification email sent")
