@@ -10,4 +10,8 @@ export interface CurrentUser {
   name: string;
   roles: string[];
   profile: Record<string, unknown> | null;
+  // snake_case, matching the backend's `UserMeResponse` field name exactly —
+  // this type already mirrors the backend 1:1 with no case conversion, so
+  // `emailVerified` here would silently never match the real JSON key.
+  email_verified: boolean;
 }

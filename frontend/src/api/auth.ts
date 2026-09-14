@@ -24,3 +24,9 @@ export const register = (body: {
 export const logout = () => apiRequest<{ message: string }>("/api/v1/auth/logout", { method: "POST" });
 
 export const getCurrentUser = () => apiRequest<CurrentUser>("/api/v1/users/me");
+
+export const verifyEmail = (token: string) =>
+  apiRequest<{ message?: string }>("/api/v1/auth/verify-email", { method: "POST", body: { token } });
+
+export const resendVerification = () =>
+  apiRequest<{ message?: string }>("/api/v1/auth/resend-verification", { method: "POST" });
