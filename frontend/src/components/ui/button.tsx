@@ -128,10 +128,17 @@ export function ButtonLink({
   iconPosition = "start",
   className,
   children,
+  // Off by default only for the mobile menu's full-width "Войти": at that
+  // width the ring's `scale(1.9)` bleed sits close enough to the panel edge
+  // that hovering read as the menu itself moving/scrolling sideways. Every
+  // other primary button keeps the ring — plenty of room for it to bleed
+  // into there.
+  stampRing = true,
   ...props
 }: Omit<ComponentProps<typeof Link>, MotionConflictKeys> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  stampRing?: boolean;
 } & IconProps) {
   const reduceMotion = useReducedMotion();
   return (
@@ -143,7 +150,7 @@ export function ButtonLink({
       className={cn(buttonBase, buttonVariants[variant], buttonSizes[size], className)}
       {...props}
     >
-      {variant === "primary" && !reduceMotion ? <span aria-hidden="true" className="btn-stamp-ring" /> : null}
+      {variant === "primary" && stampRing && !reduceMotion ? <span aria-hidden="true" className="btn-stamp-ring" /> : null}
       {icon && iconPosition === "start" ? <IconSlot icon={icon} reduceMotion={reduceMotion} /> : null}
       {children}
       {icon && iconPosition === "end" ? <IconSlot icon={icon} reduceMotion={reduceMotion} /> : null}

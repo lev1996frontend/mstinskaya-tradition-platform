@@ -210,8 +210,15 @@ export function Paintings() {
                   on rather than as a gap. Equal frames are also what keeps the
                   row aligned — the captions sit on one line across all three
                   however tall the picture inside is. */}
+              {/* `max-h-[55vh]` below `sm` only (the grid is a single stacked
+                  column until `sm:grid-cols-3`): three `aspect-[4/5]`
+                  portraits full-width and stacked ran to roughly 1.5 phone
+                  screens of pictures alone before any caption. `object-contain`
+                  above means the cap pillarboxes rather than cropping into the
+                  plates — keeps the "mounted, not cropped" intent from the
+                  comment above intact while still bounding the height. */}
               <PhotoReveal
-                className="block aspect-[4/5] w-full overflow-hidden border border-[var(--border-strong)] bg-[var(--surface-muted)] p-2"
+                className="block aspect-[4/5] w-full max-h-[55vh] overflow-hidden border border-[var(--border-strong)] bg-[var(--surface-muted)] p-2 sm:max-h-none"
                 style={{ animationDelay: `${index * 120}ms` }}
               >
                 <MountedPlate>

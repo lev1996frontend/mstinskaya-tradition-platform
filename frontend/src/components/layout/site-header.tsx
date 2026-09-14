@@ -10,7 +10,7 @@ import { SiteLogo } from "@/components/brand/site-logo";
 import { WEAPON_MOTIFS, type WeaponMotifKey } from "@/components/brand/weapon-glyphs";
 import { ButtonLink, Container, cn } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
-import { IMPULSE_TAP, TURN_EASE, stepIn } from "@/lib/motion";
+import { IMPULSE_TAP, TURN_EASE, TURN_EASE_EXIT, stepIn } from "@/lib/motion";
 import { routes } from "@/lib/routes";
 import { useFocusTrap } from "@/lib/use-focus-trap";
 import type { CurrentUser } from "@/types";
@@ -145,7 +145,13 @@ function AccountAction({
     );
   }
   return compact ? (
-    <ButtonLink href={routes.login()} size="lg" onClick={onNavigate} className="w-full justify-center">
+    <ButtonLink
+      href={routes.login()}
+      size="lg"
+      onClick={onNavigate}
+      className="w-full justify-center"
+      stampRing={false}
+    >
       Войти
     </ButtonLink>
   ) : (
@@ -167,14 +173,53 @@ export function SiteHeader() {
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
+  // The scroll lock's own previous inline styles + scroll position, restored
+  // once the close animation actually finishes (see
+  // `restoreScrollLock`/`onExitComplete` below) rather than in this effect's
+  // cleanup — a ref because that restoration happens well after `open` has
+  // already flipped back to `false` and this effect has already torn down.
+  const scrollLock = useRef<{
+    position: string;
+    top: string;
+    left: string;
+    right: string;
+    width: string;
+    scrollY: number;
+  } | null>(null);
+
   // A full-screen takeover locks page scroll behind it and closes on Escape,
   // same as any modal-ish overlay — the old accordion needed neither, since
   // it never covered the page. Also moves focus onto the panel's own close
   // button so Tab starts inside it, matching the focus trap below.
   useEffect(() => {
     if (!open) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    // `position: fixed` on `body` at its current scroll offset, not
+    // `overflow: hidden` — two earlier versions of this lock toggled
+    // `overflow` (first bare, then with a JS-measured `padding-right`
+    // compensation, then backed by `scrollbar-gutter: stable` in globals.css)
+    // and all three still changed the page's width the instant the lock
+    // engaged: `scrollbar-gutter: stable` only reserves space for `auto`/
+    // `scroll` overflow — browsers never show a scrollbar for `hidden` in
+    // the first place, so there's no gutter to reserve and `documentElement.
+    // clientWidth` snapped back to the full viewport width every time
+    // regardless. Fixing `body` in place instead never touches `overflow`
+    // at all, so there is nothing for any of that to recompute — the widely
+    // used scroll-lock pattern for exactly this reason (react-remove-scroll,
+    // Radix, etc. all do the same thing under the hood).
+    const scrollY = window.scrollY;
+    scrollLock.current = {
+      position: document.body.style.position,
+      top: document.body.style.top,
+      left: document.body.style.left,
+      right: document.body.style.right,
+      width: document.body.style.width,
+      scrollY,
+    };
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
     menuRef.current?.querySelector<HTMLElement>('button[aria-label="Закрыть меню"]')?.focus();
     // Captured now, not read from the ref inside the cleanup: React may have
     // already cleared `menuToggleRef.current` (unmount) by the time cleanup
@@ -185,7 +230,11 @@ export function SiteHeader() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
-      document.body.style.overflow = previousOverflow;
+      // NOT restoring the lock styles here: this cleanup fires the instant
+      // `open` flips to `false` — well before the panel's own exit animation
+      // below has actually played. That restoration happens in
+      // `restoreScrollLock`, called from the panel's own `onExitComplete`
+      // once it's really gone.
       window.removeEventListener("keydown", onKeyDown);
       // Otherwise closing (Escape, the panel's own close button, or picking
       // a nav item) drops focus to <body> — the menu unmounts taking
@@ -195,11 +244,34 @@ export function SiteHeader() {
     };
   }, [open]);
 
+  function restoreScrollLock() {
+    const lock = scrollLock.current;
+    if (!lock) return;
+    document.body.style.position = lock.position;
+    document.body.style.top = lock.top;
+    document.body.style.left = lock.left;
+    document.body.style.right = lock.right;
+    document.body.style.width = lock.width;
+    // `window.scrollTo` (not `scrollIntoView` or letting the browser figure
+    // it out): unfixing `body` drops it back into normal flow at its
+    // natural scroll-0 position first, so without this the page would jump
+    // to the top instead of back to where the menu was opened from.
+    window.scrollTo(0, lock.scrollY);
+    scrollLock.current = null;
+  }
+
   useFocusTrap(menuRef, open);
 
   return (
     <header
-      className="sticky top-0 z-30 border-b-2 border-[var(--rule)] bg-[var(--background)] shadow-[0_3px_0_-2px_var(--rule)]"
+      // z-40, not z-30: `<ScrollToTop>` (layout.tsx) is a sibling, also
+      // z-30 — a tie the later-DOM element (the scroll button) would win,
+      // painting it over this header's own full-screen mobile menu despite
+      // the menu's internal z-40 (that value only ranks within this header's
+      // own stacking context, it can't out-rank a same-z-index sibling one
+      // level up). Bumping the header itself above the button's z-30 fixes it
+      // at the source instead of chasing z-index inside the menu.
+      className="sticky top-0 z-40 border-b-2 border-[var(--rule)] bg-[var(--background)] shadow-[0_3px_0_-2px_var(--rule)]"
       style={{ viewTransitionName: "site-header" }}
     >
       <Container className="flex h-16 items-center gap-6">
@@ -291,22 +363,54 @@ export function SiteHeader() {
           same pattern `directory-index.tsx` uses for its real-route ToC)
           instead of a small accordion panel, so the "table of contents"
           pattern carries the primary nav too. */}
-      <AnimatePresence>
+      <AnimatePresence onExitComplete={restoreScrollLock}>
         {open ? (
           <motion.div
             key="mobile-menu"
             id="mobile-menu-panel"
             ref={menuRef}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={reduceMotion ? { duration: 0 } : { duration: 0.25, ease: TURN_EASE }}
+            // Exit is the true time-reverse of the entrance, not a separate
+            // faster cut: same 250ms, same `scale: 1 <-> 0.98`, but
+            // `TURN_EASE_EXIT` (`TURN_EASE`'s mirror image) instead of
+            // reusing `TURN_EASE` itself. An earlier version gave exit a
+            // longer duration (380ms) still on `TURN_EASE` — but that curve
+            // is fast-start/slow-finish, so most of the opacity drop still
+            // landed in the first third and the rest was an invisible tail;
+            // it *felt* just as fast, only technically lasted longer.
+            // `TURN_EASE_EXIT` is slow-start/fast-finish, so the panel stays
+            // visibly present for most of the duration and then leaves —
+            // matching how the entrance visibly arrives — instead of
+            // vanishing early and lingering unseen.
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              transition: reduceMotion ? { duration: 0 } : { duration: 0.25, ease: TURN_EASE },
+            }}
+            exit={{
+              opacity: 0,
+              scale: reduceMotion ? 1 : 0.98,
+              // 0.4s, not 0.25s: matches the total length of the nav list's
+              // own reverse-stagger exit below (5 × 0.035s delay + 0.22s for
+              // the last item to finish, ≈0.4s) — otherwise the panel's own
+              // background hit opacity 0 while items were still mid-cascade,
+              // which made the *whole* close read as one abrupt cut the
+              // instant the background vanished, no matter how staggered the
+              // items themselves were underneath it.
+              transition: reduceMotion ? { duration: 0 } : { duration: 0.4, ease: TURN_EASE_EXIT },
+            }}
             // `h-dvh` (dynamic viewport height), not just `inset-0`/implicit
             // 100%: on real mobile browsers the address bar shows/hides as
             // you scroll, and a plain `vh`-based full-screen overlay visibly
             // jumps/resizes as that happens — `dvh` tracks the *current*
             // visual viewport instead of the largest possible one.
-            className="fixed inset-x-0 top-0 z-40 flex h-dvh flex-col overflow-y-auto bg-[var(--background)] lg:hidden"
+            // `overflow-x-hidden` alongside `overflow-y-auto`, not just the
+            // latter alone: per the CSS overflow spec, a box with one axis
+            // set to non-`visible` computes the other axis as `auto` too —
+            // so `.btn-stamp-ring` on the "Войти" button (bleeds out to
+            // `scale(1.9)` on hover, see globals.css) turned into real
+            // horizontal scrollable overflow on every hover, without this.
+            className="fixed inset-x-0 top-0 z-40 flex h-dvh flex-col overflow-x-hidden overflow-y-auto bg-[var(--background)] lg:hidden"
           >
             <div className="flex h-16 shrink-0 items-center justify-between border-b-2 border-[var(--rule)] px-4 sm:px-6">
               <SiteLogo size={20} onNavigate={() => setOpen(false)} />
@@ -339,11 +443,29 @@ export function SiteHeader() {
                 // transition entirely). 50ms/item keeps five items inside
                 // the 30–80ms stagger band while still reading as a cascade.
                 const { initial, animate, transition } = stepIn(14);
+                // `exit` mirrors the entrance (`initial`'s own target)
+                // instead of being left undefined: without one,
+                // AnimatePresence has nothing to wait for on *this* element
+                // specifically, so every item just vanished together with
+                // the panel the instant its own 250ms fade finished, no
+                // matter how nicely staggered the entrance was. Its own
+                // `transition` (nested inside the target object — the only
+                // way to give exit a different delay than the top-level
+                // `transition` prop, which only ever applies to enter) runs
+                // the same stagger in reverse: the bottom item leaves first
+                // (`NAV.length - 1 - index`), so closing reads as unwinding
+                // the same reveal — the list rolling back the way it rolled
+                // in, not a mirror-image cascade starting from the top again.
                 return (
                   <motion.div
                     key={item.href}
                     initial={reduceMotion ? { opacity: 0 } : initial}
                     animate={reduceMotion ? { opacity: 1 } : animate}
+                    exit={
+                      reduceMotion
+                        ? { opacity: 0 }
+                        : { ...initial, transition: { ...transition, delay: (NAV.length - 1 - index) * 0.035 } }
+                    }
                     transition={{ ...transition, delay: reduceMotion ? 0 : index * 0.05 }}
                   >
                     <Link
@@ -351,7 +473,7 @@ export function SiteHeader() {
                       onClick={() => setOpen(false)}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "group flex items-baseline gap-5 border-b border-[var(--border)] py-5 transition-colors",
+                        "group flex items-center gap-5 border-b border-[var(--border)] py-5 transition-colors",
                         active ? "text-[var(--accent)]" : "hover:text-[var(--accent)]",
                       )}
                     >

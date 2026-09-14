@@ -234,6 +234,20 @@
   --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+html {
+  /* Reserves the scrollbar's track permanently, whether or not there is
+     anything to scroll — so toggling `overflow: hidden` on `body` (the
+     mobile menu's scroll lock, `site-header.tsx`) never changes the page's
+     available width. Without this, hiding the scrollbar widened the
+     viewport by its own width, and the `sticky` header (in normal flow,
+     not `fixed`) visibly resized/shifted every time the menu opened or
+     closed — a JS-measured `padding-right` compensation covered most of it,
+     but the two could still land a frame apart. Reserving the gutter up
+     front removes the width change at its source instead of racing to
+     cancel it out. */
+  scrollbar-gutter: stable;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

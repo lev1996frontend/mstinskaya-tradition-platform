@@ -14,14 +14,19 @@ type GlyphProps = { className?: string; size?: number };
  * spaced. Open: the outer two rotate 45°/-45° about the box's own centre to
  * form an X, the middle one shrinks and fades out from under them.
  *
- * Two curves, on purpose: the outer bars are *moving on screen* (rotating
- * into an X), so they get the strong ease-in-out morph curve; the middle bar
- * is *entering/exiting* (a plain fade), so it gets the codebase's own
- * `--ease-out` token instead of a second invented curve. A ~40ms stagger
- * mirrors itself on the way out — opening fades the middle bar first, then
- * swings the outer two in behind it; closing snaps the outer two back
- * immediately, then fades the middle bar in after — so open and close read
- * as the same motion in reverse, not two different animations.
+ * One curve for both bars, on purpose: rotating bars and the fading middle
+ * bar both now ride the codebase's own `--ease-out` token (a gentle glide to
+ * a stop, not an invented curve) — an earlier version gave the rotate a
+ * steep ease-in-out-quint (`cubic-bezier(0.77,0,0.175,1)`) meant to read as
+ * a firmer "morph", but nearly all of that curve's motion is crammed into
+ * its middle third, so at 220ms it read as a stall-then-snap rather than
+ * smooth. `--ease-out` starts moving immediately and settles gradually,
+ * which is what "smooth" meant here; duration went up slightly (260ms) to
+ * give that glide room to read before it lands. Outer bars still start
+ * rotating with no delay in either direction, opening or closing. The
+ * middle bar keeps its ~40ms stagger: opening fades it out immediately
+ * (concurrent with the rotate), closing fades it back in ~40ms after the
+ * outer bars have snapped back, so it never flashes through the X shape.
  *
  * `reduceMotion` collapses everything to 0ms — same graceful-degradation
  * pattern as the mobile menu's own `AnimatePresence` transitions nearby in
@@ -40,7 +45,7 @@ export function MenuToggleGlyph({
   // hamburger. 0.3 matches the original static `MenuGlyph`'s own
   // width:spread ratio (15:9 in its 24-unit viewBox, ≈1.67:1).
   const offset = size * 0.3;
-  const rotateMs = reduceMotion ? 0 : 220;
+  const rotateMs = reduceMotion ? 0 : 260;
   const fadeMs = reduceMotion ? 0 : 140;
   const staggerMs = reduceMotion ? 0 : 40;
 
@@ -54,7 +59,7 @@ export function MenuToggleGlyph({
     background: "currentColor",
     transformOrigin: "center",
     transition: [
-      `transform ${rotateMs}ms cubic-bezier(0.77, 0, 0.175, 1) ${isMiddle ? 0 : open ? staggerMs : 0}ms`,
+      `transform ${rotateMs}ms var(--ease-out)`,
       `opacity ${fadeMs}ms var(--ease-out) ${isMiddle ? (open ? 0 : staggerMs) : 0}ms`,
     ].join(", "),
     transform: open

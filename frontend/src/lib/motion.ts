@@ -15,6 +15,19 @@ import type { Transition } from "framer-motion";
 /** разворот (turn) — the one rotate arc already used for every flip in the app. */
 export const TURN_EASE = [0.16, 1, 0.3, 1] as const;
 
+/**
+ * разворот, обратный (turn, reversed) — `TURN_EASE`'s control points mirrored
+ * across the diagonal (`[x1,y1,x2,y2] -> [1-x2,1-y2,1-x1,1-y1]`), which turns
+ * its fast-start/slow-finish "ease-out" shape into a slow-start/fast-finish
+ * "ease-in". Using `TURN_EASE` itself for an *exit* (as the mobile menu panel
+ * once did) puts most of the opacity drop in the first third of the
+ * duration, so the rest reads as an invisible tail rather than motion — the
+ * exit "felt" much faster than its own duration. This is the true time-
+ * reverse of `TURN_EASE`, for anything whose exit should read as the same
+ * gesture as its entrance, played backwards, not a separate faster cut.
+ */
+export const TURN_EASE_EXIT = [0.7, 0, 0.84, 0] as const;
+
 /** остановка (stop) — a decisive settle after a step/turn/toss: high damping, minimal overshoot. */
 export const STOP_SPRING: Transition = { type: "spring", stiffness: 400, damping: 30 };
 

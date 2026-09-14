@@ -7,6 +7,13 @@ import { IMPULSE_SPRING, IMPULSE_TAP, STOP_SPRING } from "@/lib/motion";
 import { useScrollToTop } from "@/lib/use-scroll-to-top";
 
 const SHOW_AFTER_PX = 480;
+// A raw "did scrollY go up or down since last event" flips on every single
+// pixel of scroll jitter (trackpads and inertial scrolling fire many tiny,
+// alternating-sign events even during one steady swipe), which read as the
+// button flickering in and out. Only counting a direction change once it
+// clears this many pixels since the last committed direction absorbs that
+// noise without meaningfully delaying the real thing.
+const DIRECTION_HYSTERESIS_PX = 6;
 
 // Same values as `Button`'s own `liftVariants`/`iconHoverVariants` (see
 // `components/ui/button.tsx`) — a hair of lift plus a slightly bolder icon,
@@ -54,6 +61,14 @@ const iconHoverVariants = { hover: { scale: 1.15, transition: IMPULSE_SPRING } }
  * whether it's mounted (see `SmoothScrollMount`, which skips smooth scrolling
  * entirely under reduced motion), so this stays correct in both branches
  * without depending on the Lenis context being present.
+ *
+ * Direction-aware, not just position-aware: past `SHOW_AFTER_PX`, the button
+ * shows while scrolling *up* and hides while scrolling *down* (the standard
+ * "don't compete with reading" pattern — a fixed control sitting over page
+ * content is more of a distraction while someone is actively reading their
+ * way down than a help, and it's exactly scrolling back up where wanting to
+ * jump to the top becomes likely). `DIRECTION_HYSTERESIS_PX` above is what
+ * keeps that from flickering on scroll-event noise.
  */
 export function ScrollToTop() {
   const [scrolled, setScrolled] = useState(false);
@@ -61,7 +76,20 @@ export function ScrollToTop() {
   const scrollToTop = useScrollToTop();
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > SHOW_AFTER_PX);
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      const delta = y - lastY;
+      if (y <= SHOW_AFTER_PX) {
+        setScrolled(false);
+      } else if (delta > DIRECTION_HYSTERESIS_PX) {
+        setScrolled(false); // scrolling down
+      } else if (delta < -DIRECTION_HYSTERESIS_PX) {
+        setScrolled(true); // scrolling up
+      }
+      // else: inside the hysteresis band — keep whatever it already was.
+      lastY = y;
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);

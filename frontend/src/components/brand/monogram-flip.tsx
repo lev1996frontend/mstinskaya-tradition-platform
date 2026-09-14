@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion, useAnimate, useReducedMotion } from "framer-motion";
 
 import { Monogram } from "@/components/brand/monogram";
 import { Seal } from "@/components/brand/seal";
@@ -64,6 +64,7 @@ export function MonogramFlip({
   variant?: "flip" | "slide";
 }) {
   const reduceMotion = useReducedMotion();
+  const [badgeScope, animateBadge] = useAnimate();
   const [rotation, setRotation] = useState(0);
   const [weaponIndex, setWeaponIndex] = useState(0);
   // Adjusting state on a prop change, done during render rather than in an
@@ -78,6 +79,42 @@ export function MonogramFlip({
       setWeaponIndex((current) => (current + 1) % WEAPON_MOTIFS.length);
     }
   }
+
+  // The scale dip used to live in the `motion.span`'s own declarative
+  // `animate` prop as `scale: [1, IMPULSE_TAP.scale, 1]`, alongside
+  // `rotateX`. Two problems with that: Framer Motion always plays an
+  // explicit keyframe array in full whenever it *appears* in `animate` —
+  // including on this instance's very first render (this remounts fresh
+  // every time the mobile menu panel opens, since it renders its own
+  // `<SiteLogo>`), so the badge visibly shrank on every open despite never
+  // flipping. Gating that array behind "has this instance mounted yet" (a
+  // ref flipped in `useEffect`) didn't fix it either — it just moved the
+  // false trigger to whenever this component next re-rendered for *any*
+  // reason after mount (e.g. `useAuth`'s `loading` resolving a beat later),
+  // since that re-render is what first introduces the array into `animate`.
+  //
+  // Triggering the dip imperatively from an effect, gated on a ref that
+  // starts `true` and flips to `false` on the first run, isn't safe either:
+  // React's dev-mode Strict Mode runs a fresh mount's effects *twice*
+  // (mount → cleanup → mount again) specifically to catch non-idempotent
+  // effects, and a "have I run once" flag is exactly that — the first
+  // invocation correctly skips and flips the flag, so the second invocation
+  // (same `rotation` value, same effect) now reads the flag as already
+  // flipped and plays the dip anyway. Comparing *values* instead of using a
+  // boolean is what survives that: both Strict Mode invocations close over
+  // the same `rotation`, so storing the last-seen rotation and only
+  // animating when it actually differs from that is idempotent no matter
+  // how many times this runs with the same input — it only ever fires on a
+  // genuine flip, mount or not, dev or prod.
+  const prevRotationRef = useRef<number | null>(null);
+  useEffect(() => {
+    const prev = prevRotationRef.current;
+    prevRotationRef.current = rotation;
+    if (prev === null || prev === rotation) return;
+    if (reduceMotion || variant !== "flip") return;
+    animateBadge(badgeScope.current, { scale: [1, IMPULSE_TAP.scale, 1] }, { duration: 0.34, ease: TURN_EASE });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rotation]);
 
   const { Icon } = WEAPON_MOTIFS[weaponIndex];
   const OpponentIcon = WEAPON_MOTIFS.find((motif) => motif.key === opponent)?.Icon ?? Icon;
@@ -152,11 +189,13 @@ export function MonogramFlip({
         </span>
       ) : (
         <motion.span
+          ref={badgeScope}
           className="grid size-9 place-items-center rounded-[var(--radius-sm)] bg-[var(--accent)] text-white"
           style={{ transformStyle: "preserve-3d" }}
-          // rotateX carries the turn; scale dips briefly at the edge-on hold so
-          // the flip reads as a weighted toss with a beat, not a frictionless spin.
-          animate={reduceMotion ? { rotateX: rotation } : { rotateX: rotation, scale: [1, IMPULSE_TAP.scale, 1] }}
+          // rotateX alone here — the scale dip is triggered imperatively by
+          // the `isFirstRotation` effect above instead of living in this
+          // `animate` prop, see that comment for why.
+          animate={{ rotateX: rotation }}
           transition={reduceMotion ? { duration: 0 } : { duration: 0.34, ease: TURN_EASE }}
         >
           <span className="grid place-items-center" style={{ backfaceVisibility: "hidden" }}>

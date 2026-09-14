@@ -44,7 +44,22 @@ const CHRONICLE_PHOTOS: ChroniclePhoto[] = [
 function ChroniclePhotoFrame({ photo }: { photo: ChroniclePhoto }) {
   return (
     <figure className="flex flex-col gap-3">
-      <div className={cn("relative overflow-hidden border border-[var(--border-strong)]", photo.aspect)}>
+      {/* `max-h-[60vh]` below `sm` only — NOT `lg:max-h-none`, even though
+          the grid itself stays single-column all the way up to `lg`: between
+          `sm` and `lg` the column is wide enough (600-950px) that the cap
+          became the *binding* constraint instead of a backstop, squashing
+          even the landscape (`aspect-[4/3]`) frame down to a ~2:1 box and
+          cropping well past what `object-cover` was meant to trim — checked
+          at 1023px, where the box rendered 965×480 instead of 965×724. Below
+          `sm`, on an actual phone, width is small enough that the natural
+          aspect-driven height rarely even reaches 60vh — the cap is just
+          there for the taller phones/aspect combinations where it would. */}
+      <div
+        className={cn(
+          "relative max-h-[60vh] overflow-hidden border border-[var(--border-strong)] sm:max-h-none",
+          photo.aspect,
+        )}
+      >
         {/* `fill` rather than intrinsic width/height: the frame's aspect ratio
             is set by `photo.aspect` above and the scan is cropped into it, so
             the picture's own dimensions never reach the layout. `PhotoReveal`

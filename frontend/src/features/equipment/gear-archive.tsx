@@ -253,8 +253,15 @@ export function GearArchive({ initialIndex }: { initialIndex?: number } = {}) {
                       className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-[110%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--border)]"
                       style={{ opacity: 0.3 }}
                     />
+                    {/* `max-h-[55vh]` below `sm` only (matches `SpecRows`'
+                        own `sm:block` split below): at `aspect-[4/5]` and
+                        `w-full` inside a 480px cap, a phone-width render was
+                        still ~425-450px tall with a numeral/title above and
+                        specs below in the same card — `object-contain` below
+                        means the cap pillarboxes the specimen rather than
+                        cropping it. */}
                     <motion.div
-                      className="relative aspect-[4/5] w-full cursor-grab touch-pan-y overflow-hidden border border-[var(--border)] active:cursor-grabbing"
+                      className="relative aspect-[4/5] w-full max-h-[55vh] cursor-grab touch-pan-y overflow-hidden border border-[var(--border)] active:cursor-grabbing sm:max-h-none"
                       drag={reduceMotion ? false : "x"}
                       dragConstraints={{ left: 0, right: 0 }}
                       dragElastic={0.15}
