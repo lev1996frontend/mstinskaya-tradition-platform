@@ -30,6 +30,16 @@ class Settings(BaseSettings):
     #: which `env_cookie_secure_default` below does automatically once
     #: `app_env` says so, without needing its own line in every `.env`.
     cookie_secure: bool | None = None
+    #: Resend API key. Unset in development/test on purpose — `EmailService`
+    #: logs instead of sending for real when this is `None`, so neither local
+    #: dev nor the test suite needs a real account.
+    resend_api_key: str | None = None
+    #: Must be a sender address on a domain verified in Resend, or delivery to
+    #: anyone but the Resend account owner silently fails.
+    email_from: str = "Мстинская традиция <onboarding@resend.dev>"
+    #: Used to build links inside emails (e.g. the email-verification link) —
+    #: the frontend's own origin, not this API's.
+    frontend_base_url: str = "http://localhost:3000"
 
     @property
     def cors_origin_list(self) -> list[str]:
