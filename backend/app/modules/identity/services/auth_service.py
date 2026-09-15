@@ -34,6 +34,27 @@ class AuthService:
         return result.scalar_one_or_none()
 
     @staticmethod
+    async def assign_role(session: AsyncSession, user_id: UUID, role_code: str) -> None:
+        """Idempotent: a no-op if the user already holds `role_code`. Raises
+        500 if `role_code` has no matching `Role` row — roles are a fixed
+        set seeded by migration
+        (`backend/migrations/versions/20260915_role_requests.py`), never
+        created on the fly here."""
+        role = await session.scalar(select(Role).where(Role.code == role_code))
+        if role is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Role {role_code!r} is not configured",
+            )
+        existing = await session.scalar(
+            select(UserRole).where(UserRole.user_id == user_id, UserRole.role_id == role.id)
+        )
+        if existing is not None:
+            return
+        session.add(UserRole(user_id=user_id, role_id=role.id))
+        await session.flush()
+
+    @staticmethod
     async def register_user(
         session: AsyncSession,
         *,

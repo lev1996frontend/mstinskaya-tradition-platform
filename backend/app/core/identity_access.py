@@ -17,6 +17,13 @@ One deliberate exception: ``auth``'s ``AuthService.verify_email`` takes the
 ``User`` handed back by ``get_user`` and sets ``email_verified_at`` on it
 directly, added for email verification at registration — see
 ``docs/superpowers/specs/2026-09-14-email-verification-design.md``.
+
+A second, equally deliberate exception: ``assign_role`` below is a write —
+granting a role means creating a ``UserRole`` row, which only identity's own
+``AuthService.assign_role`` may do. This module exposes it because
+``role_requests`` (approving a role request) needs to trigger it without
+importing ``app.modules.identity.models`` itself. See
+``docs/superpowers/specs/2026-09-15-role-requests-design.md``.
 """
 
 from __future__ import annotations
@@ -28,6 +35,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.identity.models import Permission, Role, RolePermission, User, UserRole
+from app.modules.identity.services.auth_service import AuthService as _IdentityAuthService
 
 __all__ = [
     "User",
@@ -37,6 +45,8 @@ __all__ = [
     "get_users_by_ids",
     "get_role_codes",
     "has_permission",
+    "assign_role",
+    "get_emails_with_role_code",
 ]
 
 
@@ -78,3 +88,17 @@ async def has_permission(session: AsyncSession, user_id: UUID, permission_code: 
         .where(UserRole.user_id == user_id, Permission.code == permission_code)
     )
     return result is not None
+
+
+async def assign_role(session: AsyncSession, user_id: UUID, role_code: str) -> None:
+    await _IdentityAuthService.assign_role(session, user_id, role_code)
+
+
+async def get_emails_with_role_code(session: AsyncSession, role_code: str) -> list[str]:
+    emails = await session.scalars(
+        select(User.email)
+        .join(UserRole, UserRole.user_id == User.id)
+        .join(Role, Role.id == UserRole.role_id)
+        .where(Role.code == role_code)
+    )
+    return list(emails)
