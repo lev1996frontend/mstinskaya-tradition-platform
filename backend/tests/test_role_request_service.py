@@ -193,6 +193,64 @@ def test_review_already_resolved_request_raises_409():
     asyncio.run(scenario())
 
 
+def test_review_rejects_self_review():
+    Session = _make_sessionmaker()
+
+    async def scenario():
+        async with Session() as session:
+            applicant = _make_user("applicant5@example.com")
+            session.add(applicant)
+            session.add(Role(code="ORGANIZER", name="Organizer"))
+            await session.flush()
+
+            request_row = await RoleRequestService.create_request(
+                session, user=applicant, role_code="ORGANIZER", justification="x"
+            )
+            await session.commit()
+
+            with pytest.raises(HTTPException) as exc_info:
+                await RoleRequestService.review(
+                    session,
+                    request_id=str(request_row.id),
+                    reviewer=applicant,
+                    decision="APPROVED",
+                    reason_code=None,
+                    reason_text=None,
+                )
+            assert exc_info.value.status_code == 403
+
+    asyncio.run(scenario())
+
+
+def test_review_rejects_invalid_decision():
+    Session = _make_sessionmaker()
+
+    async def scenario():
+        async with Session() as session:
+            applicant = _make_user("applicant6@example.com")
+            reviewer = _make_user("reviewer6@example.com")
+            session.add_all([applicant, reviewer])
+            await session.flush()
+
+            request_row = await RoleRequestService.create_request(
+                session, user=applicant, role_code="JUDGE", justification="x"
+            )
+            await session.commit()
+
+            with pytest.raises(HTTPException) as exc_info:
+                await RoleRequestService.review(
+                    session,
+                    request_id=str(request_row.id),
+                    reviewer=reviewer,
+                    decision="bogus",
+                    reason_code=None,
+                    reason_text=None,
+                )
+            assert exc_info.value.status_code == 400
+
+    asyncio.run(scenario())
+
+
 def test_reapply_after_rejection_is_allowed():
     Session = _make_sessionmaker()
 

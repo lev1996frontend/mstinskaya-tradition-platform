@@ -9,7 +9,8 @@ functions here. This is the same pattern ``tournaments/security/deps.py``
 already used locally for role codes, generalized so every module shares one
 implementation instead of each re-deriving it.
 
-Nothing here writes to identity's tables. ``User``/``Role`` are re-exported so
+Almost nothing here writes to identity's tables — see the two documented
+exceptions below. ``User``/``Role`` are re-exported so
 a caller never has to import ``app.modules.identity.models`` itself just to
 type-hint the value this module hands back.
 

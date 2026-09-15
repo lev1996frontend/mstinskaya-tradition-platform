@@ -50,10 +50,13 @@ class RoleRequestService:
         return list(rows)
 
     @staticmethod
-    async def list_for_review(session: AsyncSession, *, status_filter: str | None) -> list[RoleRequest]:
+    async def list_for_review(
+        session: AsyncSession, *, status_filter: str | None, limit: int = 50, offset: int = 0
+    ) -> list[RoleRequest]:
         query = select(RoleRequest).order_by(RoleRequest.created_at.desc())
         if status_filter is not None:
             query = query.where(RoleRequest.status == status_filter)
+        query = query.limit(limit).offset(offset)
         rows = await session.scalars(query)
         return list(rows)
 
@@ -77,6 +80,11 @@ class RoleRequestService:
             raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Role request not found")
         if request_row.status != "PENDING":
             raise HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail="Role request already resolved")
+        if request_row.user_id == reviewer.id:
+            raise HTTPException(
+                status_code=http_status.HTTP_403_FORBIDDEN,
+                detail="You cannot review your own role request",
+            )
 
         if decision == "REJECTED":
             # Cross-field validity (reason_code required, reason_text
@@ -88,9 +96,14 @@ class RoleRequestService:
             request_row.status = "REJECTED"
             request_row.rejection_reason_code = reason_code
             request_row.rejection_reason_text = reason_text if reason_code == "OTHER" else None
-        else:
+        elif decision == "APPROVED":
             request_row.status = "APPROVED"
             await assign_role(session, request_row.user_id, request_row.role_code)
+        else:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail="decision must be APPROVED or REJECTED",
+            )
 
         request_row.reviewed_by = reviewer.id
         request_row.reviewed_at = datetime.now(timezone.utc)

@@ -255,6 +255,53 @@ def test_review_already_resolved_request_is_409(monkeypatch):
     app.dependency_overrides.clear()
 
 
+def test_moderator_cannot_review_own_request(monkeypatch):
+    client, _ = setup_client(monkeypatch)
+    _register(client, "mod5@example.com")
+    _grant_moderator("mod5@example.com")
+
+    request_response = client.post(
+        "/api/v1/role-requests", json={"role_code": "ORGANIZER", "justification": "x"}
+    )
+    assert request_response.status_code == 201, request_response.text
+    request_id = request_response.json()["id"]
+
+    patch_response = client.patch(f"/api/v1/role-requests/{request_id}", json={"status": "APPROVED"})
+    assert patch_response.status_code == 403, patch_response.text
+    app.dependency_overrides.clear()
+
+
+def test_list_role_requests_pagination(monkeypatch):
+    client, _ = setup_client(monkeypatch)
+    _register(client, "mod7@example.com")
+    mod_session = snapshot_session(client)
+    _grant_moderator("mod7@example.com")
+
+    _register(client, "applicant10@example.com")
+    first = client.post("/api/v1/role-requests", json={"role_code": "INSTRUCTOR", "justification": "x"})
+    assert first.status_code == 201, first.text
+
+    _register(client, "applicant11@example.com")
+    second = client.post("/api/v1/role-requests", json={"role_code": "JUDGE", "justification": "y"})
+    assert second.status_code == 201, second.text
+
+    use_session(client, mod_session)
+    response = client.get("/api/v1/role-requests", params={"limit": 1})
+    assert response.status_code == 200, response.text
+    assert len(response.json()) == 1
+    app.dependency_overrides.clear()
+
+
+def test_list_role_requests_invalid_status_is_422(monkeypatch):
+    client, _ = setup_client(monkeypatch)
+    _register(client, "mod8@example.com")
+    _grant_moderator("mod8@example.com")
+
+    response = client.get("/api/v1/role-requests", params={"status": "bogus"})
+    assert response.status_code == 422, response.text
+    app.dependency_overrides.clear()
+
+
 def test_reapply_after_rejection_succeeds(monkeypatch):
     client, _ = setup_client(monkeypatch)
     _register(client, "mod6@example.com")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -72,7 +73,13 @@ async def create_role_request(
     )
     await session.commit()
 
-    for moderator_email in await get_emails_with_role_code(session, "MODERATOR"):
+    try:
+        moderator_emails = await get_emails_with_role_code(session, "MODERATOR")
+    except Exception:
+        logger.exception("Failed to look up moderator emails for role-request-submitted notification")
+        moderator_emails = []
+
+    for moderator_email in moderator_emails:
         try:
             await run_in_threadpool(
                 EmailService.send_role_request_submitted,
@@ -97,11 +104,15 @@ async def list_my_role_requests(
 
 @router.get("", response_model=list[RoleRequestResponse])
 async def list_role_requests(
-    status: str | None = Query(default=None),
+    status_filter: Literal["PENDING", "APPROVED", "REJECTED"] | None = Query(default=None, alias="status"),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     _: User = Depends(require_review_permission),
     session: AsyncSession = Depends(get_db),
 ) -> list[RoleRequestResponse]:
-    requests = await RoleRequestService.list_for_review(session, status_filter=status)
+    requests = await RoleRequestService.list_for_review(
+        session, status_filter=status_filter, limit=limit, offset=offset
+    )
     applicants = await get_users_by_ids(session, {row.user_id for row in requests})
     return [_to_response(row, applicants[row.user_id]) for row in requests]
 
