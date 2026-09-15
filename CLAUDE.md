@@ -81,6 +81,8 @@ Next.js App Router. Public pages are server components fetching with `cache: "no
 
 One deliberate, documented exception to that constraint: `email_verified_at` lives on identity's `User` model, added for email verification at registration — see `docs/superpowers/specs/2026-09-14-email-verification-design.md` for why.
 
+A second: `AuthService.assign_role` (identity) and its `app/core/identity_access.py` wrapper `assign_role` are the only place a `UserRole` row gets created outside registration's default `USER` grant — the `role_requests` module (self-service requests for `INSTRUCTOR`/`ORGANIZER`/`JUDGE`/`MODERATOR`, reviewed by whoever holds `MODERATOR`) calls this once a request is approved rather than writing to identity's tables itself. See `docs/superpowers/specs/2026-09-15-role-requests-design.md`.
+
 ## Guardrails from docs/architecture.md
 
 - Don't mix frontend and backend design decisions in one task.

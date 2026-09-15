@@ -100,10 +100,14 @@ Clubs:
 2. One club can have multiple instructors.
 3. Club owner manages members.
 4. Club deletion should not delete users.
-5. Identity module changes should stay rare and deliberate. One documented
-   exception exists: `email_verified_at` on `User`, added for email
+5. Identity module changes should stay rare and deliberate. Two documented
+   exceptions exist: `email_verified_at` on `User`, added for email
    verification at registration — see
-   `docs/superpowers/specs/2026-09-14-email-verification-design.md`.
+   `docs/superpowers/specs/2026-09-14-email-verification-design.md` — and
+   `AuthService.assign_role`/`identity_access.assign_role`, the write path
+   the `role_requests` module uses to grant a role once a request is
+   approved — see
+   `docs/superpowers/specs/2026-09-15-role-requests-design.md`.
 
 ---
 
