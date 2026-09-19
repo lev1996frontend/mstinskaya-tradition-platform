@@ -10,6 +10,7 @@ import { SashIcon } from "@/components/brand/sash-icon";
 import { UstavIcon } from "@/components/brand/ustav-icon";
 import { Container } from "@/components/ui";
 import { routes } from "@/lib/routes";
+import { FooterBottomRow } from "./footer-bottom-row";
 import { FooterSeals } from "./footer-seals";
 
 /**
@@ -140,25 +141,12 @@ export function SiteFooter() {
         ))}
       </Container>
 
-      {/* `sm:pr-24`: at `sm` and up this row goes horizontal and the seals
-          land flush against the container's own right edge (`justify-between`
-          below) — exactly where `scroll-to-top.tsx`'s fixed button now also
-          sits (`right-6`, ~42px wide), since that button no longer stands
-          down once the footer is on screen. `pr-16` (the first value tried
-          here) only cancelled out the button's own footprint almost exactly,
-          leaving the seals touching it with no visible gap; `pr-24` leaves a
-          real ~30px of air. Reserving room here shifts the seals clear of
-          that corner instead of the button moving for them, which is what
-          this space used to do (see that file's own comment for why it
-          doesn't any more). Not needed below `sm`: stacked, the seals sit at
-          their own natural width against the left edge, nowhere near the
-          button. */}
-      <Container className="flex flex-col gap-5 border-t border-[var(--border-strong)] py-6 sm:flex-row sm:items-center sm:justify-between sm:pr-24">
+      <FooterBottomRow>
         <p className="font-record text-[0.7rem] uppercase tracking-[0.14em] text-[var(--muted)]">
           © {new Date().getFullYear()} · Мстинская традиция
         </p>
         <FooterSeals />
-      </Container>
+      </FooterBottomRow>
     </footer>
   );
 }

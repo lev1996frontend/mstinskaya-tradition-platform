@@ -3,7 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { MenuToggleGlyph } from "@/components/brand/menu-glyph";
 import { SiteLogo } from "@/components/brand/site-logo";
@@ -15,7 +15,7 @@ import { routes } from "@/lib/routes";
 import { useFocusTrap } from "@/lib/use-focus-trap";
 import type { CurrentUser } from "@/types";
 
-const NAV = [
+const NAV_BASE = [
   { href: routes.tournaments(), label: "Турниры" },
   { href: routes.athletes(), label: "Спортсмены" },
   { href: routes.clubs(), label: "Клубы" },
@@ -23,6 +23,7 @@ const NAV = [
   { href: routes.equipment(), label: "Снаряжение" },
   { href: routes.education(), label: "Обучение" },
 ];
+const MODERATION_NAV_ITEM = { href: routes.moderationRoleRequests(), label: "Модерация" };
 
 /**
  * Weapon assigned to each nav item's dice-roll reverse face. Hand-picked
@@ -38,6 +39,7 @@ const NAV_WEAPON: Record<string, WeaponMotifKey> = {
   [routes.rules()]: "palka",
   [routes.equipment()]: "hands",
   [routes.education()]: "kisten",
+  [routes.moderationRoleRequests()]: "nozh",
 };
 
 /**
@@ -172,6 +174,11 @@ export function SiteHeader() {
   const menuToggleRef = useRef<HTMLButtonElement>(null);
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+  const NAV = useMemo(
+    () => (user?.roles.includes("MODERATOR") ? [...NAV_BASE, MODERATION_NAV_ITEM] : NAV_BASE),
+    [user],
+  );
 
   // The scroll lock's own previous inline styles + scroll position, restored
   // once the close animation actually finishes (see

@@ -4,7 +4,6 @@ import { Seal } from "@/components/brand/seal";
 import type { Tone } from "@/lib/labels";
 
 import { cn } from "./cn";
-import { PulseDot } from "./pulse-dot";
 
 export { cn };
 // Interactive button primitives live in ./button (a "use client" module, for
@@ -211,64 +210,48 @@ export function Card({
 // ------------------------------------------------------------------- badge
 
 /**
- * Badges are stamps, not pills. Square-cut, set in the record face, uppercase
- * and letterspaced — a status struck onto a document. The pill shape was the
- * single most SaaS-looking element in the old system and it appeared on
- * nearly every screen.
- */
-/**
  * Materials, not a traffic light.
  *
- * These were the framework palette — blue for "info", green for "success",
- * amber for "warning" — three hues that exist nowhere else in this design and
- * belong to no material in it. A register of fighters came out with blue rank
- * chips next to a green "active" club, which is the look of a component library
- * rather than of an archive, and it was the single loudest tell on the site.
+ * The framework palette — blue for "info", green for "success", amber for
+ * "warning" — was three hues that exist nowhere else in this design and
+ * belong to no material in it. A register of fighters came out with blue
+ * rank chips next to a green "active" club, which is the look of a
+ * component library rather than of an archive.
  *
- * Each tone is now a material the tradition actually uses, and the meaning
- * comes from what that material is for:
- *   tin      — plain plate: filed, nothing happening
- *   linen    — canvas: entered, waiting its turn
- *   wax      — the seal: this is happening now
- *   brass    — struck metal: done, and it stands
- *   ochre    — aged mark: true, with a caveat
- *   ember    — the one hot thing: broken off, disqualified
- * `--live` for the last of those on purpose: it is the palette's "something is
- * happening right now" red, and a badge that says a thing went wrong is exactly
- * the moment to spend it.
+ * Each tone is a material the tradition actually uses, rendered as that
+ * material rather than a chip that only changes fill colour — a status
+ * struck, pinned, or aged onto the record, not a pill:
+ *   tin       — plain plate: filed, nothing happening (a riveted tag)
+ *   linen     — canvas: entered, waiting its turn (a stretched-canvas tag)
+ *   wax       — the seal: this is happening now (a pulsing wax blob)
+ *   brass     — struck metal: done, and it stands (a tilted double-stamp)
+ *   ochre     — aged mark: true, with a caveat (a foxing stain under the word)
+ *   ember     — the one hot thing: broken off, disqualified (a torn edge)
+ *   highlight — not one of the six materials: a climax, not a caveat, for
+ *               the one status (the tournament's FINAL stage) that used to
+ *               share ochre's tone purely because a third colour was free.
+ *               A slow gold shine across the letters instead of a stain.
+ * `--live` for ember on purpose: it is the palette's "something is happening
+ * right now" red, and a badge that says a thing went wrong is exactly the
+ * moment to spend it.
+ *
+ * Typography: every material sets `.badge-hand` (globals.css) — a
+ * handwritten cut, never uppercase (script + caps reads badly) — distinct
+ * from `.record-label`'s typewriter voice used everywhere else on the site.
  */
-const toneClasses: Record<Tone, string> = {
-  neutral: "bg-[var(--surface-muted)] text-[var(--chrome-muted)] border-[var(--border-strong)]",
-  info: "bg-[var(--surface-muted)] text-[var(--surface-paper)] border-[var(--surface-paper)]/25",
-  active: "bg-[var(--accent-soft)] text-[var(--accent-strong)] border-[var(--accent)]/40",
-  success: "bg-[var(--gold-soft)] text-[var(--gold-strong)] border-[var(--gold)]/35",
-  warning: "bg-[var(--warning-soft)] text-[var(--warning)] border-[var(--warning)]/30",
-  danger: "bg-[var(--live-soft)] text-[var(--live)] border-[var(--live)]/35",
+const toneMaterialClass: Record<Tone, string> = {
+  neutral: "badge-tin",
+  info: "badge-linen",
+  active: "badge-wax",
+  success: "badge-stamp",
+  warning: "badge-ochre",
+  danger: "badge-ember",
+  highlight: "badge-highlight",
 };
 
-export function Badge({
-  children,
-  tone = "neutral",
-  pulse = false,
-  className,
-}: {
-  children: ReactNode;
-  tone?: Tone;
-  /** Renders a small looping dot ahead of the label — for IN_PROGRESS/live states. */
-  pulse?: boolean;
-  className?: string;
-}) {
+export function Badge({ children, tone = "neutral", className }: { children: ReactNode; tone?: Tone; className?: string }) {
   return (
-    <span
-      className={cn(
-        "record-label inline-flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] border px-2 py-1",
-        toneClasses[tone],
-        className,
-      )}
-    >
-      {pulse ? <PulseDot color={tone === "danger" ? "var(--danger)" : "var(--live)"} /> : null}
-      {children}
-    </span>
+    <span className={cn("badge-hand whitespace-nowrap", toneMaterialClass[tone], className)}>{children}</span>
   );
 }
 
@@ -318,6 +301,19 @@ export function EmptyState({
   );
 }
 
+/** Alert's own tone treatment — a near-paper fill, unrelated to Badge's
+ *  material stamps above (Alert is a margin note, not a status struck onto
+ *  the record, and was never part of this redesign). */
+const alertToneClasses: Record<Tone, string> = {
+  neutral: "bg-[var(--surface-muted)] text-[var(--chrome-muted)] border-[var(--border-strong)]",
+  info: "bg-[var(--surface-muted)] text-[var(--surface-paper)] border-[var(--surface-paper)]/25",
+  active: "bg-[var(--accent-soft)] text-[var(--accent-strong)] border-[var(--accent)]/40",
+  success: "bg-[var(--gold-soft)] text-[var(--gold-strong)] border-[var(--gold)]/35",
+  warning: "bg-[var(--warning-soft)] text-[var(--warning)] border-[var(--warning)]/30",
+  danger: "bg-[var(--live-soft)] text-[var(--live)] border-[var(--live)]/35",
+  highlight: "bg-[var(--gold-soft)] text-[var(--gold-strong)] border-[var(--gold)]/35",
+};
+
 /** A margin note stamped against a solid coloured edge, not a rounded tinted
  *  box — the edge carries the severity so the fill can stay near-paper. */
 const toneEdge: Record<Tone, string> = {
@@ -327,6 +323,7 @@ const toneEdge: Record<Tone, string> = {
   success: "border-l-[var(--success)]",
   warning: "border-l-[var(--warning)]",
   danger: "border-l-[var(--danger)]",
+  highlight: "border-l-[var(--gold)]",
 };
 
 export function Alert({
@@ -351,7 +348,7 @@ export function Alert({
       aria-live={isUrgent ? "assertive" : "polite"}
       className={cn(
         "rounded-[var(--radius-sm)] border border-l-[3px] px-4 py-3 text-sm leading-relaxed",
-        toneClasses[tone],
+        alertToneClasses[tone],
         toneEdge[tone],
       )}
     >

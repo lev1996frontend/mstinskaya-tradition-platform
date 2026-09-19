@@ -188,9 +188,7 @@ export function BracketMatchCard({
         {match.is_bye ? (
           <Badge tone="info">Свободный проход</Badge>
         ) : (
-          <Badge tone={status.tone} pulse={isLive}>
-            {status.label}
-          </Badge>
+          <Badge tone={status.tone}>{status.label}</Badge>
         )}
       </div>
 

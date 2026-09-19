@@ -146,7 +146,7 @@ function RoundCard({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-sm font-semibold">Соступ {round.round_number}</span>
         {round.status === "IN_PROGRESS" ? (
-          <Badge tone="active" pulse>
+          <Badge tone="active">
             Идёт
           </Badge>
         ) : (

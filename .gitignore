@@ -225,6 +225,7 @@ __marimo__/
 skills-lock.json
 .playwright-mcp/
 .vscode/
+.superpowers/
 
 # Local dev database
 backend/dev.db

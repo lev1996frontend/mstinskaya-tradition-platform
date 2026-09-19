@@ -16,13 +16,36 @@ import type {
   MatchStage,
   MatchStatus,
   ParticipantStatus,
+  RejectionReasonCode,
   ResultMethod,
+  RoleCode,
+  RoleRequestStatus,
   RuleType,
   TournamentStatus,
   WeaponCategory,
 } from "@/types";
 
-export type Tone = "neutral" | "info" | "active" | "success" | "warning" | "danger";
+export type Tone = "neutral" | "info" | "active" | "success" | "warning" | "danger" | "highlight";
+
+export const roleCodeLabel: Record<RoleCode, string> = {
+  INSTRUCTOR: "Инструктор",
+  ORGANIZER: "Организатор",
+  JUDGE: "Судья",
+  MODERATOR: "Модератор",
+};
+
+export const roleRequestStatus: Record<RoleRequestStatus, { label: string; tone: Tone }> = {
+  PENDING: { label: "На рассмотрении", tone: "info" },
+  APPROVED: { label: "Одобрено", tone: "success" },
+  REJECTED: { label: "Отклонено", tone: "danger" },
+};
+
+export const rejectionReasonLabel: Record<RejectionReasonCode, string> = {
+  INSUFFICIENT_EVIDENCE: "Недостаточно подтверждений",
+  NOT_RECOGNIZED: "Не удалось верифицировать",
+  DUPLICATE_REQUEST: "Дублирующая заявка",
+  OTHER: "Другое",
+};
 
 export const tournamentStatus: Record<TournamentStatus, { label: string; tone: Tone }> = {
   DRAFT: { label: "Черновик", tone: "neutral" },
@@ -31,7 +54,9 @@ export const tournamentStatus: Record<TournamentStatus, { label: string; tone: T
   BRACKET_CREATED: { label: "Сетка построена", tone: "info" },
   RUNNING: { label: "Идёт", tone: "active" },
   ACTIVE: { label: "Активен", tone: "active" },
-  FINAL: { label: "Финал", tone: "warning" },
+  // Not "warning": the final is a climax, not a caveat — see the tone→
+  // material comment on Badge in components/ui/index.tsx.
+  FINAL: { label: "Финал", tone: "highlight" },
   FINISHED: { label: "Завершён", tone: "success" },
   ARCHIVED: { label: "В архиве", tone: "neutral" },
 };

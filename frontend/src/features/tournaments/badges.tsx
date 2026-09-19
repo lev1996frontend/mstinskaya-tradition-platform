@@ -20,11 +20,7 @@ export function CompetitionStatusBadge({ status }: { status: CompetitionStatus }
 
 export function MatchStatusBadge({ status }: { status: MatchStatus }) {
   const entry = labels.matchStatus[status] ?? { label: status, tone: "neutral" as const };
-  return (
-    <Badge tone={entry.tone} pulse={status === "IN_PROGRESS"}>
-      {entry.label}
-    </Badge>
-  );
+  return <Badge tone={entry.tone}>{entry.label}</Badge>;
 }
 
 export function ParticipantStatusBadge({ status }: { status: ParticipantStatus }) {

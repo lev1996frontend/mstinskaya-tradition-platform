@@ -31,4 +31,6 @@ export const routes = {
 
   education: () => "/education",
   equipment: () => "/equipment",
+
+  moderationRoleRequests: () => "/moderation/role-requests",
 };

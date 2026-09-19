@@ -1,19 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useEffect, useState } from "react";
 
 import { IMPULSE_SPRING, IMPULSE_TAP, STOP_SPRING } from "@/lib/motion";
 import { useScrollToTop } from "@/lib/use-scroll-to-top";
-
-const SHOW_AFTER_PX = 480;
-// A raw "did scrollY go up or down since last event" flips on every single
-// pixel of scroll jitter (trackpads and inertial scrolling fire many tiny,
-// alternating-sign events even during one steady swipe), which read as the
-// button flickering in and out. Only counting a direction change once it
-// clears this many pixels since the last committed direction absorbs that
-// noise without meaningfully delaying the real thing.
-const DIRECTION_HYSTERESIS_PX = 6;
+import { useScrollToTopVisible } from "@/lib/use-scroll-to-top-visible";
 
 // Same values as `Button`'s own `liftVariants`/`iconHoverVariants` (see
 // `components/ui/button.tsx`) — a hair of lift plus a slightly bolder icon,
@@ -32,9 +23,12 @@ const iconHoverVariants = { hover: { scale: 1.15, transition: IMPULSE_SPRING } }
  * at 640–767px the colophon's bottom row has already gone horizontal (`sm`)
  * and puts the seals in this same bottom-right corner while the link columns
  * have not yet stacked away (`md`), leaving the two visually on top of each
- * other. Kept on screen everywhere now instead: `site-footer.tsx` reserves
- * clearance (`sm:pr-24` on the bottom row) so the seals sit clear of this
- * corner rather than this button stepping aside for them.
+ * other. Kept on screen everywhere now instead: `footer-bottom-row.tsx`
+ * reserves clearance (`sm:pr-24`) so the seals sit clear of this corner —
+ * but only while this exact button is actually showing (via the same
+ * `useScrollToTopVisible` hook below), not permanently. Scrolling down
+ * hides the button, and the seals sit flush against the row's right edge
+ * again — there is nothing left to clear.
  *
  * `bottom-4` at every width, not a larger offset from `sm` up: the seal
  * row's own icons sit at a fixed height above the true page bottom (the
@@ -67,33 +61,18 @@ const iconHoverVariants = { hover: { scale: 1.15, transition: IMPULSE_SPRING } }
  * "don't compete with reading" pattern — a fixed control sitting over page
  * content is more of a distraction while someone is actively reading their
  * way down than a help, and it's exactly scrolling back up where wanting to
- * jump to the top becomes likely). `DIRECTION_HYSTERESIS_PX` above is what
- * keeps that from flickering on scroll-event noise.
+ * jump to the top becomes likely). `DIRECTION_HYSTERESIS_PX` (in the shared
+ * hook below) is what keeps that from flickering on scroll-event noise.
+ *
+ * The show/hide logic itself lives in `useScrollToTopVisible`
+ * (`lib/use-scroll-to-top-visible.ts`), shared with `footer-bottom-row.tsx`
+ * so the footer's own bottom-right corner can shift the "Знаки традиции"
+ * row clear of this exact button only while it's actually on screen.
  */
 export function ScrollToTop() {
-  const [scrolled, setScrolled] = useState(false);
+  const scrolled = useScrollToTopVisible();
   const reduceMotion = useReducedMotion();
   const scrollToTop = useScrollToTop();
-
-  useEffect(() => {
-    let lastY = window.scrollY;
-    const onScroll = () => {
-      const y = window.scrollY;
-      const delta = y - lastY;
-      if (y <= SHOW_AFTER_PX) {
-        setScrolled(false);
-      } else if (delta > DIRECTION_HYSTERESIS_PX) {
-        setScrolled(false); // scrolling down
-      } else if (delta < -DIRECTION_HYSTERESIS_PX) {
-        setScrolled(true); // scrolling up
-      }
-      // else: inside the hysteresis band — keep whatever it already was.
-      lastY = y;
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   return (
     <AnimatePresence>

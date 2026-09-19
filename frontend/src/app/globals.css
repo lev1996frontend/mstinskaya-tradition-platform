@@ -232,6 +232,7 @@
   /* Tailwind's `font-mono` and our `.font-record` resolve to the same face, so
      the few existing <code> usages join the record system for free. */
   --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-hand: var(--font-bad-script), cursive;
 }
 
 html {
@@ -1167,6 +1168,253 @@ button:not(:disabled),
 .btn-primary:focus-visible .btn-stamp-ring,
 .scroll-top-btn:focus-visible .btn-stamp-ring {
   animation: stamp-ring 480ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+/* ============================================================
+   Material badges — each `Badge` tone rendered as the material it
+   actually names (see the tone→material comment in components/ui/index.tsx),
+   not a chip that only changes fill colour. Replaced the earlier flat
+   bordered-box treatment for every tone at once — brainstormed and approved
+   2026-09-15 (visual companion session), see chat history for the mockups.
+
+   Typography: every material badge sets `.badge-hand` — the handwritten cut
+   (--font-hand), never uppercase (script + caps reads badly), distinct from
+   `.record-label`'s typewriter voice used everywhere else (nav, table
+   heads, field captions — those are untouched by this pass). */
+.badge-hand {
+  font-family: var(--font-hand);
+  font-size: 0.9375rem;
+  line-height: 1;
+}
+
+/* тин — plain plate: filed, nothing happening (neutral — roles, etc.).
+   A riveted tag: two small rivets, border only, no fill. */
+.badge-tin {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  color: var(--chrome-muted);
+  padding: 0.24rem 0.75rem;
+  border: 1px solid var(--chrome-line);
+}
+.badge-tin::before,
+.badge-tin::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--chrome);
+  transform: translateY(-50%);
+  opacity: 0.85;
+}
+.badge-tin::before {
+  left: 4px;
+}
+.badge-tin::after {
+  right: 4px;
+}
+
+/* лён — on canvas: entered, waiting its turn (info — pending/registration
+   states). A stretched-canvas tag: filled parchment (not translucent text —
+   --surface-paper text on this dark ground was too close in lightness to
+   ordinary body copy and disappeared inside a real sentence), dark ink
+   text, woven cross-hatch, two corner "tacks" like fabric pinned to a
+   frame. */
+.badge-linen {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  color: var(--surface-paper-ink);
+  background: var(--surface-paper);
+  padding: 0.26rem 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  background-image:
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--surface-paper-ink) 6%, transparent) 0 1.5px, transparent 1.5px 5px),
+    repeating-linear-gradient(-45deg, color-mix(in srgb, var(--surface-paper-ink) 6%, transparent) 0 1.5px, transparent 1.5px 5px);
+}
+.badge-linen::before,
+.badge-linen::after {
+  content: "";
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface-paper-ink) 55%, transparent);
+  top: 3px;
+}
+.badge-linen::before {
+  left: 3px;
+}
+.badge-linen::after {
+  right: 3px;
+}
+
+/* воск — the seal: this is happening now (active — live/in-progress
+   states). A small wax blob (irregular border-radius + a radial-gradient
+   gloss, not a flat circle) before the text, pulsing quietly — the same
+   "something is happening" language as PulseDot, reskinned as a seal
+   instead of a flat dot. */
+.badge-wax {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--foreground);
+}
+.badge-wax::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  border-radius: 48% 52% 45% 55% / 55% 45% 55% 45%;
+  background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--live) 70%, white) 0%, var(--live) 45%, color-mix(in srgb, var(--live) 70%, black) 100%);
+  box-shadow: 0 0.5px 1.5px rgba(0, 0, 0, 0.5);
+  animation: wax-pulse 1.6s ease-in-out infinite;
+}
+@keyframes wax-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0.5px 1.5px rgba(0, 0, 0, 0.5), 0 0 0 0 color-mix(in srgb, var(--live) 50%, transparent);
+  }
+  50% {
+    box-shadow: 0 0.5px 1.5px rgba(0, 0, 0, 0.5), 0 0 0 4px color-mix(in srgb, var(--live) 0%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .badge-wax::before {
+    animation: none;
+  }
+}
+
+/* латунь — struck metal: done, and it stands (success — approved/finished
+   states). A stamped impression: double border, tilted a couple of
+   degrees, like ink struck slightly off-true onto paper. */
+.badge-stamp {
+  display: inline-block;
+  position: relative;
+  color: var(--gold-strong);
+  border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
+  padding: 0.22rem 0.6rem;
+  transform: rotate(-1.6deg);
+}
+.badge-stamp::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 1px solid color-mix(in srgb, var(--gold) 30%, transparent);
+}
+
+/* охра — aged mark: true, with a caveat (warning — genuinely uncertain
+   states like waitlisted/withdrawn; NOT the tournament's FINAL stage, which
+   is a highlight, not a caveat — see .badge-highlight below and the FINAL
+   entry in lib/labels.ts). A foxing stain: an irregular warm halo sitting
+   *under* the word, like the paper aged exactly where this was written,
+   rather than a mark beside it. */
+.badge-ochre {
+  display: inline-block;
+  position: relative;
+  color: var(--warning);
+  padding: 0.08rem 0.4rem;
+}
+.badge-ochre::before {
+  content: "";
+  position: absolute;
+  inset: -0.15rem -0.4rem;
+  z-index: -1;
+  border-radius: 42% 58% 51% 49% / 55% 45% 58% 42%;
+  background: radial-gradient(ellipse at 38% 42%, color-mix(in srgb, var(--warning) 42%, transparent) 0%, color-mix(in srgb, var(--warning) 20%, transparent) 55%, transparent 82%);
+}
+
+/* уголь — the one hot thing: broken off, disqualified (danger — rejected
+   states). A torn edge instead of a clean rectangle — reads as "broken
+   off", not just "coloured red". */
+.badge-ember {
+  display: inline-block;
+  color: var(--live);
+  padding: 0.2rem 0.6rem;
+  background: color-mix(in srgb, var(--live) 10%, transparent);
+  clip-path: polygon(0% 15%, 8% 0%, 20% 12%, 32% 2%, 45% 14%, 58% 3%, 70% 13%, 83% 1%, 100% 12%, 100% 85%, 92% 100%, 80% 88%, 68% 100%, 55% 87%, 42% 100%, 30% 89%, 18% 100%, 0% 88%);
+}
+
+/* Седьмой, не из шести материалов — a highlight for the tournament's FINAL
+   stage specifically. FINAL used to share the "warning" tone (ochre) with
+   genuinely uncertain states purely because a third colour was free — a
+   climax is not a caveat, so it gets its own mark: a slow gold shine
+   sweeping across the letters plus a soft halo, not an aged stain. */
+.badge-highlight {
+  display: inline-block;
+  position: relative;
+  padding: 0.15rem 0.6rem;
+  background: linear-gradient(100deg, var(--gold-strong) 40%, color-mix(in srgb, var(--gold-strong) 25%, white) 50%, var(--gold-strong) 60%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: badge-shine-sweep 3.2s ease-in-out infinite;
+}
+.badge-highlight::before {
+  content: "";
+  position: absolute;
+  inset: -0.35rem -0.7rem;
+  z-index: -1;
+  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--gold) 30%, transparent) 0%, color-mix(in srgb, var(--gold) 10%, transparent) 45%, transparent 75%);
+}
+@keyframes badge-shine-sweep {
+  0% {
+    background-position: 200% 0;
+  }
+  60%,
+  100% {
+    background-position: -50% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .badge-highlight {
+    animation: none;
+    background-position: 0 0;
+  }
+}
+
+/* решение (decision-mark) — hover treatment for a privileged, one-off
+   decision (approve/reject a role request), deliberately not the ordinary
+   secondary-button highlight every other secondary button on the site
+   already uses. A check/cross mark draws itself in beside the label on
+   hover/focus, stroke-first — the action gets its own sign instead of just
+   a colour change. Gold for approve (the default), oxblood for reject
+   (`.is-reject`). Icon is `aria-hidden` — the button's own text label
+   already names the action for assistive tech. */
+.decision-mark svg {
+  width: 13px;
+  height: 13px;
+  overflow: visible;
+  flex-shrink: 0;
+}
+.decision-mark svg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 20;
+  stroke-dashoffset: 20;
+  transition: stroke-dashoffset 260ms var(--ease-out, ease-out);
+}
+.decision-mark:hover svg path,
+.decision-mark:focus-visible svg path {
+  stroke-dashoffset: 0;
+}
+.decision-mark:hover,
+.decision-mark:focus-visible {
+  border-color: var(--gold);
+  color: var(--gold-strong);
+  background: var(--gold-soft);
+}
+.decision-mark.is-reject:hover,
+.decision-mark.is-reject:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  background: var(--accent-soft);
 }
 
 /* свечение (seal-glow) — the "Знаки традиции" row's own two seals light up

@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-import { Badge, Button, Card, Container, DefinitionList, PageHeader } from "@/components/ui";
+import { Badge, Button, Card, Container, DefinitionList, PageHeader, Section } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
+import { RoleRequestPanel } from "@/features/role-requests/role-request-panel";
 import { routes } from "@/lib/routes";
 
 export default function ProfilePage() {
@@ -56,6 +57,10 @@ export default function ProfilePage() {
           ]}
         />
       </Card>
+
+      <Section title="Заявки на роль">
+        <RoleRequestPanel myRoles={user.roles} />
+      </Section>
 
       <div className="space-y-3 border-t border-[var(--border)] pt-6">
         <h2 className="record-label text-[var(--chrome-muted)]">Что доступно после входа</h2>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Alegreya, Commissioner, IBM_Plex_Mono } from "next/font/google";
+import { Alegreya, Bad_Script, Commissioner, IBM_Plex_Mono } from "next/font/google";
 
 import { RiverSpine } from "@/components/layout/river-spine";
 import { ScrollToTop } from "@/components/layout/scroll-to-top";
@@ -45,6 +45,17 @@ const plexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
+// The fourth type role, added for the Badge component's material stamps
+// (roles, statuses): a handwritten cut, not the record face's typewriter
+// voice — a status here reads as marked by hand, not machine-stamped.
+// Applied only via `.badge-hand` in globals.css, never as body text.
+const badScript = Bad_Script({
+  subsets: ["latin", "cyrillic"],
+  weight: ["400"],
+  variable: "--font-bad-script",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: {
     default: "Мстинская традиция",
@@ -58,7 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="ru"
-      className={`${commissioner.variable} ${alegreya.variable} ${plexMono.variable}`}
+      className={`${commissioner.variable} ${alegreya.variable} ${plexMono.variable} ${badScript.variable}`}
     >
       <body className="flex min-h-dvh flex-col">
         <a

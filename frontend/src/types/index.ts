@@ -17,3 +17,4 @@ export * from "./equipment";
 export * from "./rules";
 export * from "./education";
 export * from "./document";
+export * from "./role-request";
