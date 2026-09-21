@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { Badge, Button, Card, Container, DefinitionList, PageHeader, Section } from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
 import { RoleRequestPanel } from "@/features/role-requests/role-request-panel";
+import { labelOf, roleCodeLabel } from "@/lib/labels";
 import { routes } from "@/lib/routes";
 
 export default function ProfilePage() {
@@ -31,9 +32,7 @@ export default function ProfilePage() {
         eyebrow="Личный кабинет"
         title={user.name || user.email}
         actions={
-          <Button variant="secondary" onClick={() => void logout()}>
-            Выйти
-          </Button>
+          <Button onClick={() => void logout()}>Выйти</Button>
         }
       />
 
@@ -47,7 +46,7 @@ export default function ProfilePage() {
                 user.roles.length > 0 ? (
                   <span className="flex flex-wrap gap-1.5">
                     {user.roles.map((role) => (
-                      <Badge key={role}>{role}</Badge>
+                      <Badge key={role}>{labelOf(roleCodeLabel, role)}</Badge>
                     ))}
                   </span>
                 ) : (

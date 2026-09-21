@@ -156,6 +156,9 @@ export interface ParticipantView {
   tournament_id: string;
   type: "ATHLETE" | "TEAM";
   display_name: string;
+  /** «Фамилия Имя» off the linked account, set only when `display_name` is
+   *  a nickname rather than the person's real name. */
+  full_name: string | null;
   athlete_id: string | null;
   team_id: string | null;
   club_id: string | null;

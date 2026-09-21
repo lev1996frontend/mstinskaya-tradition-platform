@@ -81,6 +81,15 @@
      weapon glyphs. Distinct register from --chrome-* above: this is a
      material accent (forged metal), not a structural rule color. */
   --iron: #4a3a28;
+  /* --iron itself is too close to --background-deep (#100e0c) to read as an
+     icon glyph there — same failure `hero-clash.tsx`'s Seal hit once already
+     ("не очень заметно"), fixed there by switching tone to gold entirely.
+     Here the mark still needs to read as its own material (river-spine.tsx's
+     MATERIAL map — iron is "Сетка"'s, and every mark sharing a rail has to
+     differ from its neighbours), so this lightens the same hue instead of
+     abandoning it: for a glyph's fill/text colour on a dark plate, not for
+     borders, which can stay the quieter full-strength --iron. */
+  --iron-strong: color-mix(in srgb, var(--iron) 55%, white);
 
   --border: #322820;
   --border-strong: #3a2e22;
@@ -254,6 +263,17 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  /* `cookie-notice-context.tsx` sets `padding-bottom` inline while its fixed
+     bar is up, so the page's own content (footer included) makes room for
+     it instead of sitting underneath it. This is what turns that into a
+     slide instead of a jump. */
+  transition: padding-bottom 250ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition-duration: 1ms;
+  }
 }
 
 /*
@@ -1417,6 +1437,19 @@ button:not(:disabled),
   background: var(--accent-soft);
 }
 
+/* снятие (action-remove) — the participants table's "Снять" button. Plain
+   `ghost` hover (background lightens, text goes from --muted to
+   --foreground) reads the same as every reversible action in the app;
+   withdrawing a fighter isn't reversible from here (see WithdrawDialog), so
+   on hover/focus it goes --danger instead — text, icon and a soft danger
+   wash behind it, the same three-property shift `.decision-mark.is-reject`
+   already uses for role-request rejection. */
+.action-remove:hover,
+.action-remove:focus-visible {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
 /* свечение (seal-glow) — the "Знаки традиции" row's own two seals light up
    in sync with the clash plate staged above them, so the struck pair reads
    as the *same* two marks, not an unrelated animation floating past them.
@@ -1746,6 +1779,56 @@ button:not(:disabled),
   }
 }
 
+/* документ (legal-link) — the three legal-document links in the footer's
+   bottom row (`site-footer.tsx`), sitting inline right next to the plain-text
+   copyright line. Deliberately its own class, not `.footer-link` reused:
+   those are product navigation (the letter ripple + an oxblood rule drawing
+   itself in is meant to feel alive, an invitation to explore), and a privacy
+   policy is the opposite kind of thing — read once, rarely followed, its own
+   information rather than a place on the site.
+   Rest is plain — no underline, same colour as running text — so the row
+   reads as one line until it answers a pointer. The hover is gold, not
+   oxblood: gold is already this site's colour for an official mark (the
+   footer's own nav icons, `decision-mark`'s approve state) rather than
+   "go here" — carrying that association over is what actually tells a
+   privacy policy apart from a place on the site, more than any shape could.
+   `::after` is the same draw-in-from-the-left rule `.footer-link` uses, only
+   recoloured and un-timed to `--letters` (no ripple above it to keep pace
+   with). */
+.legal-link {
+  position: relative;
+  color: var(--foreground);
+  transition: color 160ms ease;
+}
+
+.legal-link::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -3px;
+  height: 1px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 220ms var(--ease-out, ease-out);
+}
+
+.legal-link:hover,
+.legal-link:focus-visible {
+  color: var(--gold-strong);
+}
+
+.legal-link:hover::after,
+.legal-link:focus-visible::after {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .legal-link::after {
+    transition-duration: 1ms;
+  }
+}
+
 /* `BackLink` (`components/brand/back-link.tsx`) — a "← Куда-то" eyebrow reuses
    `.footer-link`'s own class (letter ripple + rule, see above) rather than a
    parallel copy of the same mechanics under a new name, since the two are
@@ -1768,15 +1851,24 @@ button:not(:disabled),
    avoid in the first place. */
 .back-link {
   color: var(--accent);
-  /* The footer's own rule sits `bottom: 2px` inside `.footer-link`'s box, and
-     the footer's line box has room for that because the column list around
-     it already gives each row breathing space. This link has no such
-     padding of its own, so the rule sat flush against the letters'
-     descenders — read as touching the text rather than underlining it.
-     Padding-bottom alone (not padding-top too, unlike `.label-link`'s
-     tap-target reasoning): this is a small inline breadcrumb, not a target
-     needing a 24px floor. */
-  padding-bottom: 4px;
+}
+
+/* The footer's own rule sits `bottom: 2px` inside `.footer-link`'s box, and
+   the footer's line box has room for that because the column list around it
+   already gives each row breathing space. This link has no such padding of
+   its own, so the rule sat flush against the letters' descenders — read as
+   touching the text rather than underlining it.
+
+   Pushed clear via the pseudo-element's own offset (`bottom: -2px`, floating
+   below the box) rather than `padding-bottom` on `.back-link` itself: this
+   eyebrow sits in a `flex items-center` row beside a fixed-height tick mark
+   (`PageHeader` in `components/ui/index.tsx`), and padding added only at the
+   bottom grows the link's box asymmetrically — centering then lands on that
+   taller box's middle, which reads as the text (and arrow) sitting a couple
+   pixels above the tick instead of level with it. An offset pseudo-element
+   costs the box nothing, so centering still measures the actual text. */
+.back-link::after {
+  bottom: -2px;
 }
 
 .back-link-arrow {
@@ -1897,8 +1989,7 @@ button:not(:disabled),
   transition:
     border-color 220ms ease,
     box-shadow 220ms ease,
-    transform 220ms var(--ease-out),
-    filter 220ms ease;
+    transform 220ms var(--ease-out);
 }
 
 .record-card::after {
@@ -1916,23 +2007,23 @@ button:not(:disabled),
   transition: transform 260ms var(--ease-out);
 }
 
-/* `outline` and not `box-shadow` for the inner ring: the Card carries its seat
-   shadow as a Tailwind utility (`shadow-[var(--shadow-sm)]`, `--shadow-md` on
-   the featured variant), and globals.css is unlayered — a `box-shadow` here
-   wins the whole property and takes the shadow with it, so the card *sank* on
-   hover instead of lifting. An outline drawn inward leaves the shadow alone. */
+/* `outline` for the inner ring, not a box-shadow layered on top of the base
+   one: the Card carries its seat shadow as a Tailwind utility
+   (`shadow-[var(--shadow-sm)]`, `--shadow-md` on the featured variant), and
+   globals.css is unlayered, so a `box-shadow` here wins the whole property —
+   which is exactly what the hover state wants, a taller cast shadow
+   replacing the resting one, not an addition to it. An outline drawn inward
+   leaves that swap alone. `box-shadow`, not `filter: drop-shadow` (tried
+   first): animating `filter` forces the browser to repaint the card's whole
+   raster on every frame instead of just compositing a layer, which is what
+   read as the hover stuttering/hanging rather than lifting smoothly. */
 .record-card:hover,
 .record-card:focus-within {
   border-color: var(--border-strong);
   outline: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
   outline-offset: -1px;
-  /* A small lift plus a soft cast shadow, on top of the rule/ring/nudge this
-     already had — `filter: drop-shadow`, not `box-shadow`: the Card already
-     carries its seat shadow as a Tailwind `shadow-[var(--shadow-sm)]`
-     utility, and this file is unlayered, so a `box-shadow` here would win the
-     whole property and replace that shadow rather than adding to it. */
   transform: translateY(-3px);
-  filter: drop-shadow(0 10px 16px color-mix(in srgb, var(--foreground) 16%, transparent));
+  box-shadow: 0 10px 16px color-mix(in srgb, var(--foreground) 16%, transparent);
 }
 
 /* A featured card already rests on `--border-strong`, so the border move above

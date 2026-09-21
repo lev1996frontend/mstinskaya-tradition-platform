@@ -198,7 +198,7 @@ const MATERIAL = {
   tin: "border-[var(--chrome)]/45 text-[var(--chrome)]",
   linen: "border-[var(--surface-paper)]/40 text-[var(--surface-paper)]",
   copper: "border-[var(--copper)]/50 text-[var(--copper)]",
-  iron: "border-[var(--iron)]/70 text-[var(--iron)]",
+  iron: "border-[var(--iron)]/70 text-[var(--iron-strong)]",
   /* Bare pine — the stretcher a canvas is stood on, not the paint.
      `--surface-paper` is already the linen one mark above and two cream marks
      in a row would read as one object drawn twice, so this is the warm ash of

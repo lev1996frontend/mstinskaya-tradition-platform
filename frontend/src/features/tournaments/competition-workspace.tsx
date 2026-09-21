@@ -228,7 +228,12 @@ export function CompetitionWorkspace({ data }: { data: CompetitionData }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Column count matches the actual tile count (3 for an individual
+          competition, 4 once "Команд" joins for a team one) — a fixed
+          `lg:grid-cols-4` left an empty trailing column for the common
+          3-tile case, which read as the row being shoved to the left rather
+          than filling its row. */}
+      <div className={cn("grid gap-3 sm:grid-cols-2", statItems.length >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3")}>
         {statItems.map((item, index) => (
           <motion.div
             key={item.label}

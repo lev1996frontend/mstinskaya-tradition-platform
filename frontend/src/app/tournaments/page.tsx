@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { Plus, Trophy } from "lucide-react";
+import { Trophy } from "lucide-react";
 
 import { listTournamentsWithStatus } from "@/api/tournaments";
 import { ApiOfflineNotice } from "@/components/api-status";
-import { ButtonLink, Container, EmptyState, PageHeader } from "@/components/ui";
+import { Container, EmptyState, PageHeader } from "@/components/ui";
 import { TournamentGrid } from "@/features/home/tournament-grid";
 import { DirectionalTransition } from "@/features/transitions/directional-transition";
+import { CreateTournamentAction } from "@/features/tournaments/create-tournament-action";
 import { BracketGrid } from "@/features/tournaments/tournament-path/bracket-grid";
 import { Dossiers } from "@/features/tournaments/tournament-path/dossiers";
 import { Poedinok } from "@/features/tournaments/tournament-path/poedinok";
 import { RulesQuiz } from "@/features/tournaments/tournament-path/rules-quiz";
 import { TournamentPathProvider } from "@/features/tournaments/tournament-path/tournament-path-context";
 import { plural } from "@/lib/format";
-import { routes } from "@/lib/routes";
 import type { Tournament, TournamentStatus } from "@/types";
 
 export const metadata: Metadata = {
@@ -59,11 +59,7 @@ export default async function TournamentsPage() {
           eyebrow="Соревнования"
           title="Турниры"
           description="Полный список событий: от регистрации до итоговых результатов. Внутри каждого турнира — дисциплины с участниками, командами, сеткой и таблицей."
-          actions={
-            <ButtonLink href={routes.tournamentNew()} icon={<Plus className="size-4" strokeWidth={2.5} />}>
-              Создать турнир
-            </ButtonLink>
-          }
+          actions={<CreateTournamentAction />}
         />
 
         {sorted.length === 0 ? (

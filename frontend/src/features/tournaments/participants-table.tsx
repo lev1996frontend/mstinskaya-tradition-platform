@@ -72,7 +72,14 @@ export function ParticipantsTable({
             <Td className="font-medium">
               <div className="flex items-center gap-2.5">
                 <Avatar name={participant.display_name} size="xs" />
-                <span className="min-w-0 truncate">{participant.display_name}</span>
+                <div className="min-w-0">
+                  <div className="truncate">{participant.display_name}</div>
+                  {participant.full_name || participant.city ? (
+                    <div className="truncate text-xs font-normal text-[var(--muted)]">
+                      {[participant.full_name, participant.city].filter(Boolean).join(" · ")}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </Td>
             <Td className="hidden text-[var(--muted)] sm:table-cell">
@@ -100,6 +107,7 @@ export function ParticipantsTable({
                     type="button"
                     variant="ghost"
                     size="sm"
+                    className="action-remove"
                     icon={<UserMinus className="size-3.5" strokeWidth={2} />}
                     onClick={() => setWithdrawing(participant)}
                   >
