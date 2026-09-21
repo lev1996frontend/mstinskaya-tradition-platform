@@ -10,8 +10,14 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base
 
 #: Requestable roles. `USER` is excluded — it is granted automatically at
-#: registration (`AuthService.register_user`), never requested.
-ROLE_CODES = ("INSTRUCTOR", "ORGANIZER", "JUDGE", "MODERATOR")
+#: registration (`AuthService.register_user`), never requested. `MODERATOR`
+#: is excluded too — it grants access to this very review queue, so a new
+#: moderator may only be appointed by an existing one via
+#: `app.core.identity_access.assign_role`, not requested self-service.
+#: Mirrored by `REQUESTABLE_ROLES` in
+#: frontend/src/features/role-requests/role-request-panel.tsx — nothing
+#: enforces the two stay in sync, so change both together.
+ROLE_CODES = ("INSTRUCTOR", "ORGANIZER", "JUDGE")
 REJECTION_REASON_CODES = ("INSUFFICIENT_EVIDENCE", "NOT_RECOGNIZED", "DUPLICATE_REQUEST", "OTHER")
 
 

@@ -70,7 +70,7 @@ def setup_client(monkeypatch):
 def _register(client: TestClient, email: str) -> None:
     response = client.post(
         "/api/v1/auth/register",
-        json={"email": email, "password": "StrongPassword123!", "first_name": "Т", "last_name": "Т"},
+        json={"email": email, "password": "StrongPassword123!", "first_name": "Т", "last_name": "Т", "privacy_consent": True},
     )
     assert response.status_code == 201, response.text
 
@@ -121,6 +121,16 @@ def test_create_request_sends_email_to_moderators(monkeypatch):
     assert response.json()["applicant_email"] == "applicant@example.com"
     assert len(mail["submitted"]) == 1
     assert mail["submitted"][0]["to"] == "mod@example.com"
+    app.dependency_overrides.clear()
+
+
+def test_create_request_moderator_is_not_requestable(monkeypatch):
+    client, _ = setup_client(monkeypatch)
+    _register(client, "applicant16@example.com")
+    response = client.post(
+        "/api/v1/role-requests", json={"role_code": "MODERATOR", "justification": "x"}
+    )
+    assert response.status_code == 422, response.text
     app.dependency_overrides.clear()
 
 
@@ -299,6 +309,57 @@ def test_list_role_requests_invalid_status_is_422(monkeypatch):
 
     response = client.get("/api/v1/role-requests", params={"status": "bogus"})
     assert response.status_code == 422, response.text
+    app.dependency_overrides.clear()
+
+
+def test_withdraw_own_pending_request_succeeds(monkeypatch):
+    client, _ = setup_client(monkeypatch)
+    _register(client, "applicant12@example.com")
+    request_response = client.post("/api/v1/role-requests", json={"role_code": "JUDGE", "justification": "x"})
+    request_id = request_response.json()["id"]
+
+    withdraw = client.delete(f"/api/v1/role-requests/{request_id}")
+    assert withdraw.status_code == 204, withdraw.text
+
+    me_response = client.get("/api/v1/role-requests/me")
+    assert me_response.json() == []
+
+    # Withdrawing frees up the (user, role) slot for a fresh request.
+    retry = client.post("/api/v1/role-requests", json={"role_code": "JUDGE", "justification": "y"})
+    assert retry.status_code == 201, retry.text
+    app.dependency_overrides.clear()
+
+
+def test_withdraw_other_users_request_is_404(monkeypatch):
+    client, _ = setup_client(monkeypatch)
+    _register(client, "applicant13@example.com")
+    request_response = client.post("/api/v1/role-requests", json={"role_code": "JUDGE", "justification": "x"})
+    request_id = request_response.json()["id"]
+
+    _register(client, "applicant14@example.com")
+    withdraw = client.delete(f"/api/v1/role-requests/{request_id}")
+    assert withdraw.status_code == 404, withdraw.text
+    app.dependency_overrides.clear()
+
+
+def test_withdraw_resolved_request_is_409(monkeypatch):
+    client, _ = setup_client(monkeypatch)
+    _register(client, "mod9@example.com")
+    mod_session = snapshot_session(client)
+    _grant_moderator("mod9@example.com")
+
+    _register(client, "applicant15@example.com")
+    applicant_session = snapshot_session(client)
+    request_response = client.post("/api/v1/role-requests", json={"role_code": "JUDGE", "justification": "x"})
+    request_id = request_response.json()["id"]
+
+    use_session(client, mod_session)
+    approve = client.patch(f"/api/v1/role-requests/{request_id}", json={"status": "APPROVED"})
+    assert approve.status_code == 200, approve.text
+
+    use_session(client, applicant_session)
+    withdraw = client.delete(f"/api/v1/role-requests/{request_id}")
+    assert withdraw.status_code == 409, withdraw.text
     app.dependency_overrides.clear()
 
 

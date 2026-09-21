@@ -5,7 +5,10 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-RoleCode = Literal["INSTRUCTOR", "ORGANIZER", "JUDGE", "MODERATOR"]
+#: Mirrors ROLE_CODES in app/modules/role_requests/models/role_request.py —
+#: MODERATOR is excluded from self-service requests (see that module's
+#: docstring); kept in sync by hand, same as the frontend mirror.
+RoleCode = Literal["INSTRUCTOR", "ORGANIZER", "JUDGE"]
 RejectionReasonCode = Literal["INSUFFICIENT_EVIDENCE", "NOT_RECOGNIZED", "DUPLICATE_REQUEST", "OTHER"]
 
 

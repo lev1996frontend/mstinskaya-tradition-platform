@@ -43,6 +43,33 @@ class RoleRequestService:
         return request_row
 
     @staticmethod
+    async def withdraw(session: AsyncSession, *, request_id: str, user: User) -> None:
+        """Let a user retract their own still-open request.
+
+        Hard-deletes the row rather than adding a fourth (WITHDRAWN) status:
+        a withdrawn request carries no decision to audit — see the same
+        "not historical correction" reasoning `review()` already applies to
+        this module (docs/superpowers/specs/2026-09-15-role-requests-design.md)
+        — and the partial unique index only covers status='PENDING' rows, so
+        deleting also lets the user immediately resubmit for the same role.
+        """
+        try:
+            request_uuid = UUID(request_id)
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Role request not found") from None
+
+        request_row = await session.scalar(
+            select(RoleRequest).where(RoleRequest.id == request_uuid).with_for_update()
+        )
+        if request_row is None or request_row.user_id != user.id:
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Role request not found")
+        if request_row.status != "PENDING":
+            raise HTTPException(status_code=http_status.HTTP_409_CONFLICT, detail="Role request already resolved")
+
+        await session.delete(request_row)
+        await session.flush()
+
+    @staticmethod
     async def list_for_user(session: AsyncSession, user_id: UUID) -> list[RoleRequest]:
         rows = await session.scalars(
             select(RoleRequest).where(RoleRequest.user_id == user_id).order_by(RoleRequest.created_at.desc())
@@ -75,7 +102,9 @@ class RoleRequestService:
         except (ValueError, TypeError):
             raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Role request not found") from None
 
-        request_row = await session.get(RoleRequest, request_uuid)
+        request_row = await session.scalar(
+            select(RoleRequest).where(RoleRequest.id == request_uuid).with_for_update()
+        )
         if request_row is None:
             raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Role request not found")
         if request_row.status != "PENDING":

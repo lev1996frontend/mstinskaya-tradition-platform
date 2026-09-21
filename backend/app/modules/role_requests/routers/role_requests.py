@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 import logging
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
@@ -16,6 +14,7 @@ from app.core.identity_access import (
     get_users_by_ids,
     has_permission,
 )
+from app.core.rate_limit import limiter
 from app.core.session_auth import get_current_user as get_session_user
 from app.modules.role_requests.models.role_request import RoleRequest
 from app.modules.role_requests.schemas.role_request import (
@@ -63,7 +62,9 @@ def _to_response(request_row: RoleRequest, applicant: User) -> RoleRequestRespon
 
 
 @router.post("", response_model=RoleRequestResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/hour")
 async def create_role_request(
+    request: Request,
     payload: RoleRequestCreateRequest,
     current_user: User = Depends(get_session_user),
     session: AsyncSession = Depends(get_db),
@@ -91,6 +92,16 @@ async def create_role_request(
             logger.exception("Failed to send role-request-submitted email to %s", moderator_email)
 
     return _to_response(request_row, current_user)
+
+
+@router.delete("/{request_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def withdraw_role_request(
+    request_id: str,
+    current_user: User = Depends(get_session_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    await RoleRequestService.withdraw(session, request_id=request_id, user=current_user)
+    await session.commit()
 
 
 @router.get("/me", response_model=list[RoleRequestResponse])

@@ -27,17 +27,29 @@ import type {
 
 export type Tone = "neutral" | "info" | "active" | "success" | "warning" | "danger" | "highlight";
 
-export const roleCodeLabel: Record<RoleCode, string> = {
+export const roleCodeLabel: Record<RoleCode | "ADMIN", string> = {
   INSTRUCTOR: "Инструктор",
   ORGANIZER: "Организатор",
   JUDGE: "Судья",
   MODERATOR: "Модератор",
+  ADMIN: "Администратор",
 };
 
 export const roleRequestStatus: Record<RoleRequestStatus, { label: string; tone: Tone }> = {
   PENDING: { label: "На рассмотрении", tone: "info" },
   APPROVED: { label: "Одобрено", tone: "success" },
   REJECTED: { label: "Отклонено", tone: "danger" },
+};
+
+/** Backend `HTTPException.detail` strings for role-requests, translated for display. */
+export const roleRequestErrorLabel: Record<string, string> = {
+  "User already has this role": "У вас уже есть эта роль.",
+  "A pending request for this role already exists": "Заявка на эту роль уже подана и ожидает рассмотрения.",
+  "Role request not found": "Заявка не найдена.",
+  "Role request already resolved": "Заявка уже рассмотрена.",
+  "You cannot review your own role request": "Нельзя рассматривать собственную заявку.",
+  "Invalid reason_code": "Некорректная причина отказа.",
+  "decision must be APPROVED or REJECTED": "Некорректное решение.",
 };
 
 export const rejectionReasonLabel: Record<RejectionReasonCode, string> = {
