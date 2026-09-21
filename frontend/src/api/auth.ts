@@ -19,6 +19,7 @@ export const register = (body: {
   password: string;
   first_name: string;
   last_name: string;
+  privacy_consent: boolean;
 }) => apiRequest<{ message?: string }>("/api/v1/auth/register", { method: "POST", body });
 
 export const logout = () => apiRequest<{ message: string }>("/api/v1/auth/logout", { method: "POST" });

@@ -55,7 +55,7 @@ def register_user(client, email: str) -> tuple[str, dict[str, str]]:
             "email": email,
             "password": "StrongPassword123!",
             "first_name": "Иван",
-            "last_name": "Судья",
+            "last_name": "Судья", "privacy_consent": True,
         },
     )
     assert register.status_code == 201, register.text

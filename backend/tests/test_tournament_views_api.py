@@ -35,7 +35,7 @@ def register_athlete(client, email: str, nickname: str) -> tuple[str, str]:
     """Register a user, read back its id and attach an athlete profile."""
     register = client.post(
         "/api/v1/auth/register",
-        json={"email": email, "password": "StrongPassword123!", "first_name": nickname, "last_name": "Fighter"},
+        json={"email": email, "password": "StrongPassword123!", "first_name": nickname, "last_name": "Fighter", "privacy_consent": True},
     )
     assert register.status_code == 201, register.text
     snapshot_session(client)

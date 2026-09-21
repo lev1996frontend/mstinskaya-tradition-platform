@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -62,6 +63,7 @@ class AuthService:
         password: str,
         first_name: str,
         last_name: str,
+        privacy_consent: bool,
     ) -> tuple[User, Profile, list[str]]:
         existing = await AuthService.get_user_by_email(session, email)
         if existing:
@@ -70,12 +72,18 @@ class AuthService:
                 detail="User with this email already exists",
             )
 
+        # `RegisterRequest` (auth/schemas/auth.py) already rejects `False` at
+        # the API boundary, so this is always True in practice — kept
+        # conditional rather than an unconditional `datetime.now(...)` so a
+        # future caller that skips that validation (a script, a test) can't
+        # silently record consent nobody gave.
         user = User(
             email=email,
             password_hash=AuthService.hash_password(password),
             first_name=first_name,
             last_name=last_name,
             status="active",
+            privacy_consent_at=datetime.now(timezone.utc) if privacy_consent else None,
         )
         session.add(user)
         await session.flush()

@@ -40,7 +40,7 @@ def test_tournament_foundation_flow():
             "email": "organizer@example.com",
             "password": "StrongPassword123!",
             "first_name": "Tournament",
-            "last_name": "Organizer",
+            "last_name": "Organizer", "privacy_consent": True,
         },
     )
     assert register_response.status_code == 201, register_response.text
@@ -55,7 +55,7 @@ def test_tournament_foundation_flow():
             "email": "judge2@example.com",
             "password": "StrongPassword123!",
             "first_name": "Second",
-            "last_name": "Judge",
+            "last_name": "Judge", "privacy_consent": True,
         },
     )
     assert user2.status_code == 201, user2.text
@@ -212,7 +212,7 @@ def test_tournament_entry_list_excludes_competition_entrants():
             "email": "entry-list@example.com",
             "password": "StrongPassword123!",
             "first_name": "Entry",
-            "last_name": "Organizer",
+            "last_name": "Organizer", "privacy_consent": True,
         },
     )
     assert organizer.status_code == 201, organizer.text

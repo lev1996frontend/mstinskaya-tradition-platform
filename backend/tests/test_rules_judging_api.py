@@ -40,7 +40,7 @@ def test_rules_and_judging_foundation_flow():
             "email": "judge@example.com",
             "password": "StrongPassword123!",
             "first_name": "Main",
-            "last_name": "Judge",
+            "last_name": "Judge", "privacy_consent": True,
         },
     )
     assert register_response.status_code == 201, register_response.text

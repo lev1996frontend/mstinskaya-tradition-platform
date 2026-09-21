@@ -39,7 +39,7 @@ def test_media_foundation_flow():
             "email": "media@example.com",
             "password": "StrongPassword123!",
             "first_name": "Media",
-            "last_name": "Owner",
+            "last_name": "Owner", "privacy_consent": True,
         },
     )
     assert register_response.status_code == 201, register_response.text
@@ -121,7 +121,7 @@ def test_uploaded_by_cannot_be_spoofed_by_the_request_body():
             "email": "spoofer@example.com",
             "password": "StrongPassword123!",
             "first_name": "Spoof",
-            "last_name": "Attempt",
+            "last_name": "Attempt", "privacy_consent": True,
         },
     )
     assert register_response.status_code == 201, register_response.text

@@ -40,7 +40,7 @@ def test_rating_history_foundation_flow():
             "email": "athlete@example.com",
             "password": "StrongPassword123!",
             "first_name": "Rated",
-            "last_name": "Athlete",
+            "last_name": "Athlete", "privacy_consent": True,
         },
     )
     assert user.status_code == 201, user.text

@@ -110,6 +110,7 @@ async def register(
         password=payload.password,
         first_name=payload.first_name,
         last_name=payload.last_name,
+        privacy_consent=payload.privacy_consent,
     )
     await AuthService.audit(session, user_id=user.id, action="REGISTER", entity_type="User", entity_id=str(user.id))
     raw_token = await AuthService.create_email_verification_token(session, user.id)

@@ -40,7 +40,7 @@ def test_create_club_and_add_member():
             "email": "owner@example.com",
             "password": "StrongPassword123!",
             "first_name": "Test",
-            "last_name": "Owner",
+            "last_name": "Owner", "privacy_consent": True,
         },
     )
     assert register_response.status_code == 201, register_response.text

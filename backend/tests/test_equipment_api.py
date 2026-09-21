@@ -39,7 +39,7 @@ def test_equipment_catalog_foundation_flow():
             "email": "equipment@example.com",
             "password": "StrongPassword123!",
             "first_name": "Equipment",
-            "last_name": "Buyer",
+            "last_name": "Buyer", "privacy_consent": True,
         },
     )
     assert register_response.status_code == 201, register_response.text

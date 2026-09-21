@@ -43,7 +43,7 @@ def test_register_and_login(client):
             "email": "user@example.com",
             "password": "StrongPassword123!",
             "first_name": "Example",
-            "last_name": "User",
+            "last_name": "User", "privacy_consent": True,
         },
     )
 
@@ -80,7 +80,7 @@ def test_current_user_returns_profile_and_roles(client):
             "email": "second@example.com",
             "password": "StrongPassword123!",
             "first_name": "Second",
-            "last_name": "User",
+            "last_name": "User", "privacy_consent": True,
         },
     )
     assert register.status_code == 201, register.text

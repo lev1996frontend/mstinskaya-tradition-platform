@@ -39,7 +39,7 @@ def test_create_and_get_athlete_profile():
             "email": "athlete@example.com",
             "password": "StrongPassword123!",
             "first_name": "Athlete",
-            "last_name": "User",
+            "last_name": "User", "privacy_consent": True,
         },
     )
     assert register_response.status_code == 201, register_response.text
@@ -93,7 +93,7 @@ def test_athlete_carries_the_person_name_from_the_account():
             "email": "noname@example.com",
             "password": "StrongPassword123!",
             "first_name": "Пётр",
-            "last_name": "Лавров",
+            "last_name": "Лавров", "privacy_consent": True,
         },
     )
     assert register_response.status_code == 201, register_response.text

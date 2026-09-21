@@ -33,6 +33,11 @@ class User(Base):
     #: ("Identity module must not be modified") — see
     #: docs/superpowers/specs/2026-09-14-email-verification-design.md.
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    #: NULL for accounts registered before this column existed; set once, at
+    #: registration, by `AuthService.register_user` below — never backfilled
+    #: for existing accounts, since that would misrepresent when consent was
+    #: actually given.
+    privacy_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         default=lambda: datetime.now(timezone.utc),

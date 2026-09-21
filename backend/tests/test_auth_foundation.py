@@ -40,7 +40,7 @@ def test_refresh_rotation_and_logout():
             "email": "auth-foundation@example.com",
             "password": "StrongPassword123!",
             "first_name": "Auth",
-            "last_name": "Foundation",
+            "last_name": "Foundation", "privacy_consent": True,
         },
     )
     assert response.status_code == 201, response.text

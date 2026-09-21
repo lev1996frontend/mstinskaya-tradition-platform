@@ -38,6 +38,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [privacyConsent, setPrivacyConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const cooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -68,6 +69,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           password,
           first_name: firstName.trim(),
           last_name: lastName.trim(),
+          privacy_consent: privacyConsent,
         });
       }
       router.push(routes.profile());
@@ -170,9 +172,33 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             )}
           </Field>
 
+          {mode === "register" ? (
+            <label className="flex items-start gap-2.5 text-sm leading-relaxed text-[var(--muted)]">
+              <input
+                type="checkbox"
+                checked={privacyConsent}
+                onChange={(event) => setPrivacyConsent(event.target.checked)}
+                required
+                disabled={busy}
+                className="mt-0.5 size-4 shrink-0 rounded-[3px] border border-[var(--chrome-line)] bg-[var(--surface)] accent-[var(--accent)]"
+              />
+              <span>
+                Я согласен(на) с{" "}
+                <Link href={routes.privacy()} className="text-[var(--accent)] hover:underline" target="_blank">
+                  политикой конфиденциальности
+                </Link>{" "}
+                и даю согласие на обработку персональных данных
+              </span>
+            </label>
+          ) : null}
+
           {error ? <Alert tone="danger">{error}</Alert> : null}
 
-          <Button type="submit" disabled={busy} className="w-full justify-center">
+          <Button
+            type="submit"
+            disabled={busy || (mode === "register" && !privacyConsent)}
+            className="w-full justify-center"
+          >
             {busy ? "Подождите…" : mode === "login" ? "Войти" : "Создать аккаунт"}
           </Button>
         </form>

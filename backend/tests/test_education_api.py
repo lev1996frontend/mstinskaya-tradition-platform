@@ -40,7 +40,7 @@ def test_course_module_lesson_and_enrollment_flow():
             "email": "student@example.com",
             "password": "StrongPassword123!",
             "first_name": "Student",
-            "last_name": "User",
+            "last_name": "User", "privacy_consent": True,
         },
     )
     assert register_response.status_code == 201, register_response.text

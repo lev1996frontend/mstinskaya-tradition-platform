@@ -56,7 +56,7 @@ def setup_app_for_tests():
 def register_organizer(client, email: str = "organizer@example.com") -> tuple[str, dict[str, str]]:
     register = client.post(
         "/api/v1/auth/register",
-        json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Организатор"},
+        json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Организатор", "privacy_consent": True},
     )
     assert register.status_code == 201, register.text
     session = snapshot_session(client)

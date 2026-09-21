@@ -17,6 +17,7 @@ type AuthState = {
     password: string;
     first_name: string;
     last_name: string;
+    privacy_consent: boolean;
   }) => Promise<void>;
   logout: () => Promise<void>;
   /** Re-fetches `/users/me` and updates `user` — for anything that changes
@@ -60,7 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(
-    async (input: { email: string; password: string; first_name: string; last_name: string }) => {
+    async (input: {
+      email: string;
+      password: string;
+      first_name: string;
+      last_name: string;
+      privacy_consent: boolean;
+    }) => {
       await authApi.register(input);
       setUser(await authApi.getCurrentUser());
     },

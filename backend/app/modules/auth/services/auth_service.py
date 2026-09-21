@@ -19,9 +19,22 @@ EMAIL_VERIFICATION_TOKEN_EXPIRES = timedelta(hours=24)
 
 class AuthService:
     @staticmethod
-    async def register(session: AsyncSession, *, email: str, password: str, first_name: str, last_name: str) -> tuple[User, str, str]:
+    async def register(
+        session: AsyncSession,
+        *,
+        email: str,
+        password: str,
+        first_name: str,
+        last_name: str,
+        privacy_consent: bool,
+    ) -> tuple[User, str, str]:
         user, _, _ = await IdentityAuthService.register_user(
-            session, email=email, password=password, first_name=first_name, last_name=last_name
+            session,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            privacy_consent=privacy_consent,
         )
         return await AuthService._issue_token_pair(session, user)
 

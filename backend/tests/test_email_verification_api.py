@@ -54,7 +54,7 @@ def _register(client: TestClient, email: str = "verify@example.com") -> None:
             "email": email,
             "password": "StrongPassword123!",
             "first_name": "Verify",
-            "last_name": "Test",
+            "last_name": "Test", "privacy_consent": True,
         },
     )
     assert response.status_code == 201, response.text

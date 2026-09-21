@@ -54,7 +54,7 @@ def setup_app_for_tests():
 def register(client, email: str) -> tuple[str, dict[str, str]]:
     response = client.post(
         "/api/v1/auth/register",
-        json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Организатор"},
+        json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Организатор", "privacy_consent": True},
     )
     assert response.status_code == 201, response.text
     session = snapshot_session(client)
@@ -70,7 +70,7 @@ def register_athlete(client, email: str, first_name: str, last_name: str) -> tup
             "email": email,
             "password": "StrongPassword123!",
             "first_name": first_name,
-            "last_name": last_name,
+            "last_name": last_name, "privacy_consent": True,
         },
     )
     assert response.status_code == 201, response.text

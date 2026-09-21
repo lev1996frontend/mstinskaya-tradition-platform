@@ -72,7 +72,7 @@ def use_temp_storage(tmp_path):
 def register(client, email: str) -> tuple[str, dict[str, str]]:
     response = client.post(
         "/api/v1/auth/register",
-        json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Судья"},
+        json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Судья", "privacy_consent": True},
     )
     assert response.status_code == 201, response.text
     session = snapshot_session(client)

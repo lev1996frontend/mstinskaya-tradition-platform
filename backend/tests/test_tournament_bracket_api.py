@@ -48,7 +48,7 @@ def register_organizer(client, email: str = "organizer@example.com") -> tuple[st
     """
     register = client.post(
         "/api/v1/auth/register",
-        json={"email": email, "password": "StrongPassword123!", "first_name": "Ivan", "last_name": "Organizer"},
+        json={"email": email, "password": "StrongPassword123!", "first_name": "Ivan", "last_name": "Organizer", "privacy_consent": True},
     )
     assert register.status_code == 201, register.text
     session = snapshot_session(client)

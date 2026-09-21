@@ -50,7 +50,7 @@ def setup_app_for_tests():
 def register_user(client, email: str) -> tuple[str, dict[str, str]]:
     register = client.post(
         "/api/v1/auth/register",
-        json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Судья"},
+        json={"email": email, "password": "StrongPassword123!", "first_name": "Иван", "last_name": "Судья", "privacy_consent": True},
     )
     assert register.status_code == 201, register.text
     session = snapshot_session(client)
