@@ -55,7 +55,7 @@ export default async function RulesPage() {
               >
                 <Link
                   href={routes.ruleSet(ruleSet.id)}
-                  className="ledger-row group flex gap-5 py-5 sm:gap-8"
+                  className="ledger-row group flex gap-5 py-5 pr-1 sm:gap-8 sm:pr-3"
                 >
                   <span className="ledger-row-edge w-16 shrink-0 border-r border-[var(--border)] pr-4 text-right sm:w-24">
                     <span className="record-label block text-[var(--muted)]">Ред.</span>

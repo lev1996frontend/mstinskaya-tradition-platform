@@ -118,12 +118,10 @@ export function TournamentRulesetPicker({
     // isn't sitting on an edge.
     <div className="space-y-2.5 overflow-x-clip overflow-y-visible">
       <div className="flex flex-wrap items-stretch gap-3">
-        {/* `flex-1`, not a fixed width: with the card at its natural size, a
-            fixed-width select left the whole row hugging the left edge with
-            a lot of dead width to its right — out of step with the blanks
-            row above it, which fills its own row edge to edge. The select is
-            the one control here that can usefully grow. */}
-        <div className="min-w-56 flex-1">
+        {/* Sized to its content, not stretched across the row: the select's
+            own text already names the edition, so there is nothing left for
+            a full-width box to hold other than empty space. */}
+        <div className="w-auto min-w-56">
           {/* Label hidden, not reworded: this block sits directly under the
               page's own "Регламент" caption (`tournaments/[id]/page.tsx`) and
               holds exactly one field, so a second `record-label` caption right
@@ -149,25 +147,25 @@ export function TournamentRulesetPicker({
             )}
           </Field>
         </div>
-        {/* Always a preview of whatever the select currently shows — even a
-            not-yet-saved pick — so switching the select never loses the
-            "go look at this edition first" affordance the old separate
-            "Открыть редакцию" link gave. Editing the redaction itself (its
-            sections, its Word file) still only happens on its own page; this
-            card only ever opens it to read. */}
+        {/* Icon-only, not a second copy of the select's own text — the select
+            already names the edition, so a same-width card repeating it back
+            (the earlier version of this row) only doubled the width for no
+            new information. This still opens whatever is currently picked,
+            even before it's saved. */}
         <Link
           href={routes.ruleSet(selected)}
-          className="record-card group flex items-center gap-2 self-stretch rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3.5 text-sm font-medium focus-visible:shadow-[inset_0_0_0_2px_var(--gold)]"
+          title={selectedRuleSet ? `Открыть «${selectedRuleSet.title}, версия ${selectedRuleSet.version}»` : "Открыть редакцию"}
+          aria-label="Открыть редакцию правил"
+          className="record-card group flex shrink-0 items-center justify-center self-stretch rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 focus-visible:shadow-[inset_0_0_0_2px_var(--gold)]"
         >
-          {selectedRuleSet ? `${selectedRuleSet.title}, версия ${selectedRuleSet.version}` : "Открыть редакцию"}
           <ArrowRight
-            className="size-3.5 shrink-0 text-[var(--muted)] transition-colors group-hover:text-[var(--accent)]"
+            className="size-4 shrink-0 text-[var(--muted)] transition-colors group-hover:text-[var(--accent)]"
             strokeWidth={2.25}
           />
         </Link>
         {/* Only exists while there is something to confirm — the resting
-            row is select + card, and this is the transient third piece that
-            appears for exactly as long as the pick doesn't match what's
+            row is select + icon link, and this is the transient third piece
+            that appears for exactly as long as the pick doesn't match what's
             actually saved. */}
         {dirty ? (
           <Button type="button" disabled={saving} onClick={() => void save()}>
