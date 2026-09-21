@@ -33,4 +33,8 @@ export const routes = {
   equipment: () => "/equipment",
 
   moderationRoleRequests: () => "/moderation/role-requests",
+
+  privacy: () => "/privacy",
+  cookies: () => "/cookies",
+  terms: () => "/terms",
 };

@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
+import { useCookieNotice } from "@/components/layout/cookie-notice-context";
 import { IMPULSE_SPRING, IMPULSE_TAP, STOP_SPRING } from "@/lib/motion";
 import { useScrollToTop } from "@/lib/use-scroll-to-top";
 import { useScrollToTopVisible } from "@/lib/use-scroll-to-top-visible";
@@ -73,6 +74,13 @@ export function ScrollToTop() {
   const scrolled = useScrollToTopVisible();
   const reduceMotion = useReducedMotion();
   const scrollToTop = useScrollToTop();
+  // The cookie notice is a full-width bar at the true page bottom (see
+  // `cookie-notice.tsx`) — without this, this button sits right underneath
+  // it, covered and unclickable, while the notice is up. `16` is the same
+  // `bottom-4` gap this button already sits at above the raw page edge, kept
+  // above the notice too rather than flush against it.
+  const { visible: noticeVisible, height: noticeHeight } = useCookieNotice();
+  const bottomOffset = 16 + (noticeVisible ? noticeHeight + 16 : 0);
 
   return (
     <AnimatePresence>
@@ -88,7 +96,8 @@ export function ScrollToTop() {
           whileHover={reduceMotion ? undefined : "hover"}
           whileTap={reduceMotion ? undefined : { scale: IMPULSE_TAP.scale, transition: STOP_SPRING }}
           variants={reduceMotion ? undefined : liftVariants}
-          className="scroll-top-btn fixed right-4 bottom-4 z-30 flex items-center justify-center rounded-[var(--radius-sm)] border-b-2 border-[var(--accent-strong)] bg-[var(--accent)] p-2.5 text-white shadow-[0_10px_20px_-12px_rgba(176,42,32,0.45)] transition-[background-color,box-shadow] hover:bg-[var(--accent-strong)] hover:shadow-[0_10px_24px_-8px_rgba(0,0,0,0.55)] sm:right-6"
+          style={{ bottom: bottomOffset }}
+          className="scroll-top-btn fixed right-4 z-30 flex items-center justify-center rounded-[var(--radius-sm)] border-b-2 border-[var(--accent-strong)] bg-[var(--accent)] p-2.5 text-white shadow-[0_10px_20px_-12px_rgba(176,42,32,0.45)] transition-[background-color,box-shadow,bottom] duration-300 hover:bg-[var(--accent-strong)] hover:shadow-[0_10px_24px_-8px_rgba(0,0,0,0.55)] sm:right-6"
         >
           {!reduceMotion ? <span aria-hidden="true" className="btn-stamp-ring" /> : null}
           <motion.svg

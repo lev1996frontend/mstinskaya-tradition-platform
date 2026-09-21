@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Alegreya, Bad_Script, Commissioner, IBM_Plex_Mono } from "next/font/google";
 
+import { CookieNotice } from "@/components/layout/cookie-notice";
+import { CookieNoticeProvider } from "@/components/layout/cookie-notice-context";
 import { RiverSpine } from "@/components/layout/river-spine";
 import { ScrollToTop } from "@/components/layout/scroll-to-top";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -86,12 +88,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SmoothScrollMount />
         <AuthProvider>
           <BuzaProvider>
-            <RiverSpine />
-            <SiteHeader />
-            <EmailVerificationBanner />
-            <main id="main-content" tabIndex={-1} className="flex-1">{children}</main>
-            <SiteFooter />
-            <ScrollToTop />
+            <CookieNoticeProvider>
+              <RiverSpine />
+              <SiteHeader />
+              <EmailVerificationBanner />
+              <main id="main-content" tabIndex={-1} className="flex-1">{children}</main>
+              <SiteFooter />
+              <ScrollToTop />
+              <CookieNotice />
+            </CookieNoticeProvider>
           </BuzaProvider>
         </AuthProvider>
       </body>

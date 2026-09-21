@@ -142,8 +142,17 @@ export function SiteFooter() {
       </Container>
 
       <FooterBottomRow>
-        <p className="font-record text-[0.7rem] uppercase tracking-[0.14em] text-[var(--muted)]">
-          © {new Date().getFullYear()} · Мстинская традиция
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-record text-[0.7rem] uppercase tracking-[0.14em]">
+          <span className="text-[var(--muted)]">© {new Date().getFullYear()} · Мстинская традиция</span>
+          <Link href={routes.privacy()} className="legal-link">
+            Конфиденциальность
+          </Link>
+          <Link href={routes.cookies()} className="legal-link">
+            Cookie
+          </Link>
+          <Link href={routes.terms()} className="legal-link">
+            Соглашение
+          </Link>
         </p>
         <FooterSeals />
       </FooterBottomRow>
