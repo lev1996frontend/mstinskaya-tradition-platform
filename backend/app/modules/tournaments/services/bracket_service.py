@@ -32,8 +32,8 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.athletes_access import Athlete, get_athletes_by_ids
 from app.core.identity_access import User, get_users_by_ids
-from app.modules.athletes.models import Athlete
 from app.modules.tournaments.domain import bracket as bracket_domain
 from app.modules.tournaments.models import (
     Bracket,
@@ -89,8 +89,7 @@ class BracketService:
         athletes: dict[UUID, Athlete] = {}
         users: dict[UUID, User] = {}
         if athlete_ids:
-            rows = await session.scalars(select(Athlete).where(Athlete.id.in_(athlete_ids)))
-            athletes = {a.id: a for a in rows}
+            athletes = await get_athletes_by_ids(session, athlete_ids)
             user_ids = {a.user_id for a in athletes.values() if a.user_id}
             users = await get_users_by_ids(session, user_ids)
 

@@ -8,8 +8,8 @@ from fastapi import status as http_status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.athletes_access import get_athlete
 from app.core.identity_access import get_user_or_404
-from app.modules.athletes.models import Athlete
 from app.modules.media.service import MediaService
 from app.modules.rules.models import RuleSet
 from app.modules.tournaments.models import (
@@ -169,7 +169,7 @@ class TournamentService:
         except (ValueError, TypeError):
             raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail="Invalid athlete id") from None
 
-        athlete = await session.get(Athlete, parsed_athlete_id)
+        athlete = await get_athlete(session, parsed_athlete_id)
         if athlete is None:
             raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Athlete not found")
 

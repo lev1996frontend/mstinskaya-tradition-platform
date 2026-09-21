@@ -33,8 +33,8 @@ from sqlalchemy.orm import selectinload
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.athletes_access import Athlete, get_athletes_by_ids
 from app.core.identity_access import User, get_users_by_ids
-from app.modules.athletes.models import Athlete
 from app.modules.tournaments.domain import eligibility
 from app.modules.tournaments.models import (
     Bracket,
@@ -62,7 +62,7 @@ from app.modules.tournaments.schemas.views import (
     TeamMemberView,
     TeamView,
 )
-from app.modules.tournaments.services.read_common import athlete_display_name, parse_id
+from app.modules.tournaments.services.read_common import athlete_display_name, full_name_of, parse_id
 
 # Re-exported so the handful of existing call sites that import these two
 # names from *this* module (rather than read_common, where they now live)
@@ -125,8 +125,7 @@ class TournamentReadService:
         athletes: dict[UUID, Athlete] = {}
         users: dict[UUID, User] = {}
         if athlete_ids:
-            rows = await session.scalars(select(Athlete).where(Athlete.id.in_(athlete_ids)))
-            athletes = {a.id: a for a in rows}
+            athletes = await get_athletes_by_ids(session, athlete_ids)
             user_ids = {a.user_id for a in athletes.values() if a.user_id is not None}
             users = await get_users_by_ids(session, user_ids)
 
@@ -138,6 +137,7 @@ class TournamentReadService:
         views: dict[UUID, ParticipantView] = {}
         for participant in participants:
             team = teams.get(participant.team_id) if participant.team_id else None
+            full_name = None
             if team is not None:
                 display_name = team.name
                 club_id = str(team.club_id) if team.club_id else None
@@ -145,6 +145,10 @@ class TournamentReadService:
                 athlete = athletes.get(participant.athlete_id) if participant.athlete_id else None
                 user = users.get(athlete.user_id) if athlete is not None else None
                 display_name = athlete_display_name(athlete, user, participant.display_name)
+                # Only worth a second line when the nickname (not the real
+                # name) is what's actually shown as `display_name`.
+                if athlete is not None and athlete.nickname:
+                    full_name = full_name_of(user)
                 club_id = None
 
             views[participant.id] = ParticipantView(
@@ -153,6 +157,7 @@ class TournamentReadService:
                 tournament_id=str(participant.tournament_id),
                 type="TEAM" if participant.team_id is not None else "ATHLETE",
                 display_name=display_name,
+                full_name=full_name,
                 athlete_id=str(participant.athlete_id) if participant.athlete_id else None,
                 team_id=str(participant.team_id) if participant.team_id else None,
                 club_id=club_id or (str(participant.club_id) if participant.club_id else None),
@@ -245,8 +250,7 @@ class TournamentReadService:
         athletes: dict[UUID, Athlete] = {}
         users: dict[UUID, User] = {}
         if member_athlete_ids:
-            rows = await session.scalars(select(Athlete).where(Athlete.id.in_(member_athlete_ids)))
-            athletes = {a.id: a for a in rows}
+            athletes = await get_athletes_by_ids(session, member_athlete_ids)
             user_ids = {a.user_id for a in athletes.values() if a.user_id is not None}
             users = await get_users_by_ids(session, user_ids)
 

@@ -12,7 +12,7 @@ from app.core.identity_access import get_user_or_404
 from app.modules.equipment.models import EquipmentCategory, EquipmentProduct, EquipmentRequest, ProductMedia, Supplier
 from app.modules.equipment.schemas.product import ProductStatus
 from app.modules.equipment.schemas.request import RequestStatus
-from app.modules.media.models import MediaFile
+from app.modules.media.service import MediaService
 
 _VALID_PRODUCT_STATUSES = frozenset(get_args(ProductStatus))
 _VALID_REQUEST_STATUSES = frozenset(get_args(RequestStatus))
@@ -116,7 +116,7 @@ class EquipmentService:
         if product is None:
             raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Product not found")
 
-        media_file = await session.get(MediaFile, parsed_media_file_id)
+        media_file = await MediaService(session).get_media_file(parsed_media_file_id)
         if media_file is None:
             raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Media file not found")
 

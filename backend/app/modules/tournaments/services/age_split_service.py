@@ -27,7 +27,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.athletes.models import Athlete
+from app.core.athletes_access import get_athletes_by_ids
 from app.modules.tournaments.domain import eligibility
 from app.modules.tournaments.models import (
     Competition,
@@ -77,8 +77,8 @@ class AgeSplitService:
         missing_year = {p.athlete_id for p in participants if p.birth_year is None and p.athlete_id}
         from_profile: dict[UUID, int | None] = {}
         if missing_year:
-            rows = await session.scalars(select(Athlete).where(Athlete.id.in_(missing_year)))
-            from_profile = {a.id: a.birth_year for a in rows}
+            athletes = await get_athletes_by_ids(session, missing_year)
+            from_profile = {athlete_id: athlete.birth_year for athlete_id, athlete in athletes.items()}
 
         event_year = await AgeSplitService._event_year(session, competition)
         ages: dict[UUID, int] = {}

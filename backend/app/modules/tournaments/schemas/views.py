@@ -22,6 +22,11 @@ class ParticipantView(BaseModel):
     tournament_id: str
     type: str
     display_name: str
+    #: «Фамилия Имя» off the linked account, set only when it differs from
+    #: `display_name` — i.e. when that name is a nickname, not the person's
+    #: real name. `None` when there is nothing to add (no nickname in play,
+    #: or no linked account at all).
+    full_name: str | None = None
     athlete_id: str | None = None
     team_id: str | None = None
     club_id: str | None = None

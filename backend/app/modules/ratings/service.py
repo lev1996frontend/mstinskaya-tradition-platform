@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.athletes.models import Athlete
+from app.core.athletes_access import get_athlete
 from app.modules.ratings.models import Achievement, AthleteCompetition, RatingEvent, RatingProfile
 from app.modules.ratings.schemas import (
     AchievementCreate,
@@ -32,7 +32,7 @@ class RatingsService:
         return result.scalar_one_or_none()
 
     async def create_rating_profile(self, payload: RatingProfileCreate) -> RatingProfile:
-        athlete = await self.db.get(Athlete, payload.athlete_id)
+        athlete = await get_athlete(self.db, payload.athlete_id)
         if athlete is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Athlete not found")
 
@@ -59,7 +59,7 @@ class RatingsService:
         return profile
 
     async def create_achievement(self, payload: AchievementCreate) -> Achievement:
-        athlete = await self.db.get(Athlete, payload.athlete_id)
+        athlete = await get_athlete(self.db, payload.athlete_id)
         if athlete is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Athlete not found")
 
@@ -77,7 +77,7 @@ class RatingsService:
         return achievement
 
     async def create_competition_record(self, payload: AthleteCompetitionCreate) -> AthleteCompetition:
-        athlete = await self.db.get(Athlete, payload.athlete_id)
+        athlete = await get_athlete(self.db, payload.athlete_id)
         if athlete is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Athlete not found")
 
@@ -97,7 +97,7 @@ class RatingsService:
         return record
 
     async def create_rating_event(self, payload: RatingEventCreate) -> RatingEvent:
-        athlete = await self.db.get(Athlete, payload.athlete_id)
+        athlete = await get_athlete(self.db, payload.athlete_id)
         if athlete is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Athlete not found")
 

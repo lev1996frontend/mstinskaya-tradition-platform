@@ -15,8 +15,8 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 
+from app.core.athletes_access import Athlete
 from app.core.identity_access import User
-from app.modules.athletes.models import Athlete
 
 
 def parse_id(value: str, label: str) -> UUID:
@@ -46,3 +46,20 @@ def athlete_display_name(
     if fallback:
         return fallback
     return "Unknown participant"
+
+
+def full_name_of(user: User | None) -> str | None:
+    """«Фамилия Имя» off the linked account, independent of nickname.
+
+    A participant list shows :func:`athlete_display_name` as the primary
+    label, which prefers an athlete's nickname (a боевое имя chosen at
+    registration, often just a first name) over their real name — several
+    fighters can share one, which is exactly why a table listing several of
+    them needs this as a secondary line. Returns ``None`` when there is
+    nothing to show (no linked account, or neither name part set), so a
+    caller can omit the line entirely rather than render an empty one.
+    """
+    if user is None:
+        return None
+    parts = [part.strip() for part in (user.last_name, user.first_name) if part and part.strip()]
+    return " ".join(parts) if parts else None

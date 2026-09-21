@@ -32,9 +32,16 @@ app = FastAPI(
     description="Backend foundation for the Mstinskaya Tradition Platform.",
 )
 
+_cors_origins = get_settings().cors_origin_list
+if "*" in _cors_origins:
+    # allow_credentials=True below is required (cookie-based sessions); browsers
+    # already reject that combination with "*", but fail loudly at startup
+    # instead of shipping a CORS_ORIGINS=* misconfiguration to prod silently.
+    raise RuntimeError("CORS_ORIGINS must not include '*' — allow_credentials=True requires an explicit origin list")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_settings().cors_origin_list,
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

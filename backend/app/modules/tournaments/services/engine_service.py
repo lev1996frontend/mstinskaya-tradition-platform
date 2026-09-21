@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.athletes.models import Athlete
+from app.core.athletes_access import get_athlete
 from app.modules.tournaments.domain import eligibility
 from app.modules.tournaments.models import (
     Bracket,
@@ -85,7 +85,7 @@ class TournamentEngineService:
         team = await session.get(Team, parse_id(data["team_id"], "team"))
         if team is None:
             raise HTTPException(status_code=404, detail="Team not found")
-        athlete = await session.get(Athlete, parse_id(data["athlete_id"], "athlete"))
+        athlete = await get_athlete(session, parse_id(data["athlete_id"], "athlete"))
         if athlete is None:
             raise HTTPException(status_code=404, detail="Athlete not found")
         item = TeamMember(team_id=team.id, athlete_id=athlete.id, role=data.get("role"))
@@ -109,7 +109,7 @@ class TournamentEngineService:
             )
         if competition.competition_type == "TEAM" and team_id is None:
             raise HTTPException(status_code=400, detail="Team participant requires a team")
-        if athlete_id is not None and await session.get(Athlete, athlete_id) is None:
+        if athlete_id is not None and await get_athlete(session, athlete_id) is None:
             raise HTTPException(status_code=404, detail="Athlete not found")
         if team_id is not None:
             team = await session.get(Team, team_id)
@@ -210,7 +210,7 @@ class TournamentEngineService:
 
         year = birth_year
         if year is None and athlete_id is not None:
-            athlete = await session.get(Athlete, athlete_id)
+            athlete = await get_athlete(session, athlete_id)
             year = athlete.birth_year if athlete is not None else None
 
         tournament = await session.get(Tournament, competition.tournament_id)

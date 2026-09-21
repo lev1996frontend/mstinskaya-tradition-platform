@@ -18,7 +18,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.athletes.models import Athlete
+from app.core.athletes_access import Athlete, get_athlete, get_athletes_by_ids
 from app.modules.tournaments.domain import eligibility
 from app.modules.tournaments.models import (
     Competition,
@@ -311,10 +311,7 @@ class WithdrawalService:
         session: AsyncSession, participants: list[Participant]
     ) -> dict[UUID, Athlete]:
         athlete_ids = {p.athlete_id for p in participants if p.athlete_id}
-        if not athlete_ids:
-            return {}
-        rows = await session.scalars(select(Athlete).where(Athlete.id.in_(athlete_ids)))
-        return {a.id: a for a in rows}
+        return await get_athletes_by_ids(session, athlete_ids)
 
     @staticmethod
     async def _resolve_replacement(
@@ -390,7 +387,7 @@ class WithdrawalService:
             )
             birth_year = replacement.birth_year
             if birth_year is None and replacement.athlete_id is not None:
-                athlete = await session.get(Athlete, replacement.athlete_id)
+                athlete = await get_athlete(session, replacement.athlete_id)
                 birth_year = athlete.birth_year if athlete is not None else None
             verdict = eligibility.check_age(
                 birth_year,
